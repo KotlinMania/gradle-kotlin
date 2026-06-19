@@ -150,7 +150,7 @@ public class CoreBuildSessionServices implements ServiceRegistrationProvider {
 
     @Provides
     BuildStartedTime createBuildStartedTime(Clock clock, BuildRequestMetaData buildRequestMetaData) {
-        long currentTime = clock.currentTime;
+        long currentTime = clock.getCurrentTime();
         return BuildStartedTime.startingAt(Math.min(currentTime, buildRequestMetaData.getStartTime()));
     }
 

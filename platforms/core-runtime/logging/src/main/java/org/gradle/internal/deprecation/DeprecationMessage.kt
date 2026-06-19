@@ -17,7 +17,7 @@ package org.gradle.internal.deprecation
 
 import org.gradle.api.problems.DocLink
 
-internal class DeprecationMessage(
+class DeprecationMessage(
     private val summary: String,
     private val removalDetails: String,
     private val advice: String?,

@@ -45,24 +45,21 @@ protected constructor() {
      *
      * @since 8.8
      */
-    @JvmField
-    abstract val name: String?
+    abstract fun getName(): String?
 
     /**
      * Returns a human-readable label describing the group.
      *
      * @since 8.8
      */
-    @JvmField
-    abstract val displayName: String?
+    abstract fun getDisplayName(): String?
 
     /**
      * Returns the parent group or `null` for root groups.
      *
      * @since 8.8
      */
-    @JvmField
-    abstract val parent: ProblemGroup?
+    abstract fun getParent(): ProblemGroup?
 
     companion object {
         /**
@@ -87,6 +84,7 @@ protected constructor() {
          * @return the new group
          * @since 8.13
          */
+        @JvmStatic
         fun create(name: String, displayName: String, parent: ProblemGroup?): ProblemGroup {
             return DefaultProblemGroup(name, displayName, parent)
         }

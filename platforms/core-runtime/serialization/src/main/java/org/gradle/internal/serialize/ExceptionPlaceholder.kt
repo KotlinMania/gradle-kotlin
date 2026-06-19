@@ -31,18 +31,18 @@ import java.lang.reflect.Constructor
 import java.util.Arrays
 import java.util.function.Function
 
-internal open class ExceptionPlaceholder(original: Throwable, objectOutputStreamCreator: Function<OutputStream?, ExceptionReplacingObjectOutputStream>, dejaVu: MutableSet<Throwable?>) : Serializable {
+open class ExceptionPlaceholder(original: Throwable, objectOutputStreamCreator: Function<OutputStream?, ExceptionReplacingObjectOutputStream>, dejaVu: MutableSet<Throwable>) : Serializable {
     private val type: String
-    private val serializedException: ByteArray?
-    private val message: String? = null
-    private val toString: String? = null
+    private var serializedException: ByteArray? = null
+    private var message: String? = null
+    private var toString: String? = null
     private val contextual: Boolean
     private val assertionError: Boolean
     private val causes: MutableList<ExceptionPlaceholder>
     private val suppressed: MutableList<ExceptionPlaceholder>
-    private var stackTrace: MutableList<StackTraceElementPlaceholder?>? = null
-    private val toStringRuntimeExec: Throwable? = null
-    private val getMessageExec: Throwable? = null
+    private var stackTrace: MutableList<StackTraceElementPlaceholder> = mutableListOf()
+    private var toStringRuntimeExec: Throwable? = null
+    private var getMessageExec: Throwable? = null
 
     init {
         val hasCycle = !dejaVu.add(original)
@@ -51,11 +51,11 @@ internal open class ExceptionPlaceholder(original: Throwable, objectOutputStream
         contextual = throwable.javaClass.getAnnotation<Contextual?>(Contextual::class.java) != null
         assertionError = throwable is AssertionError
         try {
-            stackTrace = if (throwable.getStackTrace() == null) mutableListOf<StackTraceElementPlaceholder?>() else convertStackTrace(throwable.getStackTrace())
+            stackTrace = convertStackTrace(throwable.stackTrace)
         } catch (ignored: Throwable) {
 // TODO:ADAM - switch the logging back on. Need to make sending messages from daemon to client async wrt log event generation
 //                LOGGER.debug("Ignoring failure to extract throwable stack trace.", ignored);
-            stackTrace = mutableListOf<StackTraceElementPlaceholder?>()
+            stackTrace = mutableListOf()
         }
 
         try {
@@ -74,12 +74,12 @@ internal open class ExceptionPlaceholder(original: Throwable, objectOutputStream
             toStringRuntimeExec = failure
         }
 
-        val causes: MutableList<out Throwable>
-        val suppressed: MutableList<out Throwable>
+        val causes: MutableList<Throwable>
+        val suppressed: MutableList<Throwable>
         if (hasCycle) {
             // Ignore causes and suppressed in case of cycle
-            causes = mutableListOf<Throwable?>()
-            suppressed = mutableListOf<Throwable?>()
+            causes = mutableListOf()
+            suppressed = mutableListOf()
         } else {
             causes = ExceptionSerializationUtil.extractCauses(throwable)
             suppressed = extractSuppressed(throwable)
@@ -87,7 +87,7 @@ internal open class ExceptionPlaceholder(original: Throwable, objectOutputStream
 
         val buffer = StreamByteBuffer()
         val oos = objectOutputStreamCreator.apply(buffer.outputStream)
-        oos.setObjectTransformer(object : Function<Any?, Any?> {
+        oos.objectTransformer = object : Function<Any?, Any?> {
             var seenFirst: Boolean = false
 
             override fun apply(obj: Any?): Any? {
@@ -106,7 +106,7 @@ internal open class ExceptionPlaceholder(original: Throwable, objectOutputStream
                 }
                 return obj
             }
-        })
+        }
 
         try {
             oos.writeObject(throwable)
@@ -121,44 +121,46 @@ internal open class ExceptionPlaceholder(original: Throwable, objectOutputStream
         this.suppressed = convertToExceptionPlaceholderList(suppressed, objectOutputStreamCreator, dejaVu)
     }
 
-    private fun convertStackTrace(stackTrace: Array<StackTraceElement?>): MutableList<StackTraceElementPlaceholder?> {
-        val placeholders: MutableList<StackTraceElementPlaceholder?> = ArrayList<StackTraceElementPlaceholder?>(stackTrace.size)
+    private fun convertStackTrace(stackTrace: Array<StackTraceElement>): MutableList<StackTraceElementPlaceholder> {
+        val placeholders: MutableList<StackTraceElementPlaceholder> = ArrayList<StackTraceElementPlaceholder>(stackTrace.size)
         for (stackTraceElement in stackTrace) {
             placeholders.add(StackTraceElementPlaceholder(stackTraceElement))
         }
         return placeholders
     }
 
-    private fun convertStackTrace(placeholders: MutableList<StackTraceElementPlaceholder?>): Array<StackTraceElement?> {
+    private fun convertStackTrace(placeholders: MutableList<StackTraceElementPlaceholder>): Array<StackTraceElement> {
         val stackTrace = arrayOfNulls<StackTraceElement>(placeholders.size)
         for (i in placeholders.indices) {
-            stackTrace[i] = placeholders.get(i)!!.toStackTraceElement()
+            stackTrace[i] = placeholders[i].toStackTraceElement()
         }
-        return stackTrace
+        return stackTrace.requireNoNulls()
     }
 
     @Throws(IOException::class)
-    fun read(classNameTransformer: Function<String?, Class<*>?>, objectInputStreamCreator: Function<InputStream?, ExceptionReplacingObjectInputStream>): Throwable? {
+    fun read(classNameTransformer: Function<String, Class<*>?>, objectInputStreamCreator: Function<InputStream?, ExceptionReplacingObjectInputStream>): Throwable {
         val causes: MutableList<Throwable> = recreateExceptions(this.causes, classNameTransformer, objectInputStreamCreator)
         val suppressed: MutableList<Throwable> = recreateExceptions(this.suppressed, classNameTransformer, objectInputStreamCreator)
 
         if (serializedException != null) {
             // try to deserialize the original exception
             val ois = objectInputStreamCreator.apply(ByteArrayInputStream(serializedException))
-            ois.setObjectTransformer(Function { obj: Any? ->
+            ois.objectTransformer = Function { obj: Any? ->
                 if (obj is NestedExceptionPlaceholder) {
                     val placeholder = obj
                     val index = placeholder.index
                     when (placeholder.kind) {
-                        NestedExceptionPlaceholder.Kind.cause -> return@setObjectTransformer causes.get(index)
-                        NestedExceptionPlaceholder.Kind.suppressed -> return@setObjectTransformer suppressed.get(index)
+                        NestedExceptionPlaceholder.Kind.cause -> causes[index]
+                        NestedExceptionPlaceholder.Kind.suppressed -> suppressed[index]
+                        else -> obj
                     }
+                } else {
+                    obj
                 }
-                obj
-            })
+            }
 
             try {
-                return ois.readObject() as Throwable?
+                return ois.readObject() as Throwable
             } catch (ignored: ClassNotFoundException) {
                 // Don't log
             } catch (failure: Throwable) {
@@ -175,7 +177,7 @@ internal open class ExceptionPlaceholder(original: Throwable, objectOutputStream
                 if (!causes.isEmpty()) {
                     reconstructed.initCause(causes.get(0))
                 }
-                reconstructed.setStackTrace(convertStackTrace(stackTrace!!))
+                reconstructed.stackTrace = convertStackTrace(stackTrace)
                 registerSuppressedExceptions(suppressed, reconstructed)
                 return reconstructed
             }
@@ -187,7 +189,7 @@ internal open class ExceptionPlaceholder(original: Throwable, objectOutputStream
             LOGGER.debug("Ignoring failure to recreate throwable.", ignored)
         }
 
-        val placeholder: Throwable?
+        val placeholder: Throwable
         if (causes.size <= 1) {
             if (contextual) {
                 // there are no @Contextual assertion errors in Gradle so we're safe to use this type only
@@ -202,7 +204,7 @@ internal open class ExceptionPlaceholder(original: Throwable, objectOutputStream
         } else {
             placeholder = DefaultMultiCauseException(message, causes)
         }
-        placeholder.setStackTrace(convertStackTrace(stackTrace!!))
+        placeholder.stackTrace = convertStackTrace(stackTrace)
         registerSuppressedExceptions(suppressed, placeholder)
         return placeholder
     }
@@ -237,23 +239,23 @@ internal open class ExceptionPlaceholder(original: Throwable, objectOutputStream
     companion object {
         private const val serialVersionUID = 1L
         private val LOGGER: Logger = LoggerFactory.getLogger(ExceptionPlaceholder::class.java)
-        private fun extractSuppressed(throwable: Throwable): MutableList<out Throwable> {
+        private fun extractSuppressed(throwable: Throwable): MutableList<Throwable> {
             if (isJava7) {
-                return Arrays.asList<Throwable?>(*throwable.getSuppressed())
+                return Arrays.asList(*throwable.suppressed)
             }
-            return mutableListOf<Throwable?>()
+            return mutableListOf()
         }
 
         // TODO Use only immutable collections
         private fun convertToExceptionPlaceholderList(
-            throwables: MutableList<out Throwable>,
+            throwables: MutableList<Throwable>,
             objectOutputStreamCreator: Function<OutputStream?, ExceptionReplacingObjectOutputStream>,
-            dejaVu: MutableSet<Throwable?>
+            dejaVu: MutableSet<Throwable>
         ): MutableList<ExceptionPlaceholder> {
             if (throwables.isEmpty()) {
-                return mutableListOf<ExceptionPlaceholder?>()
+                return mutableListOf()
             } else if (throwables.size == 1) {
-                return mutableListOf<ExceptionPlaceholder?>(ExceptionPlaceholder(throwables.get(0), objectOutputStreamCreator, dejaVu))
+                return mutableListOf(ExceptionPlaceholder(throwables[0], objectOutputStreamCreator, dejaVu))
             } else {
                 val placeholders: MutableList<ExceptionPlaceholder> = ArrayList<ExceptionPlaceholder>(throwables.size)
                 for (cause in throwables) {
@@ -264,7 +266,7 @@ internal open class ExceptionPlaceholder(original: Throwable, objectOutputStream
         }
 
         private val isJava7: Boolean
-            get() = JavaVersion.current().isJava7Compatible()
+            get() = JavaVersion.current().isJava7Compatible
 
         private val isJava14: Boolean
             get() = JavaVersion.current().isCompatibleWith(JavaVersion.VERSION_14)
@@ -280,17 +282,17 @@ internal open class ExceptionPlaceholder(original: Throwable, objectOutputStream
         @Throws(IOException::class)  // TODO Use only immutable collections
         private fun recreateExceptions(
             exceptions: MutableList<ExceptionPlaceholder>,
-            classNameTransformer: Function<String?, Class<*>?>,
+            classNameTransformer: Function<String, Class<*>?>,
             objectInputStreamCreator: Function<InputStream?, ExceptionReplacingObjectInputStream>
         ): MutableList<Throwable> {
             if (exceptions.isEmpty()) {
-                return mutableListOf<Throwable?>()
+                return mutableListOf()
             } else if (exceptions.size == 1) {
-                return mutableListOf<Throwable?>(exceptions.get(0).read(classNameTransformer, objectInputStreamCreator))
+                return mutableListOf(exceptions[0].read(classNameTransformer, objectInputStreamCreator))
             }
             val result: MutableList<Throwable> = ArrayList<Throwable>()
             for (placeholder in exceptions) {
-                result.add(placeholder.read(classNameTransformer, objectInputStreamCreator)!!)
+                result.add(placeholder.read(classNameTransformer, objectInputStreamCreator))
             }
             return result
         }

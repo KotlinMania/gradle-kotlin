@@ -15,18 +15,29 @@
  */
 package org.gradle.integtests.tooling.r68
 
+import org.gradle.tooling.*
+import org.gradle.tooling.model.*
+import org.gradle.tooling.model.build.*
+import org.gradle.tooling.model.eclipse.*
+import org.gradle.tooling.model.gradle.*
+import org.gradle.tooling.model.idea.*
+import org.gradle.tooling.model.kotlin.dsl.*
+import org.gradle.tooling.internal.adapter.ProtocolToModelAdapter
+import java.io.File
+import org.gradle.integtests.tooling.r48.*
+
 import org.gradle.tooling.BuildAction
 import kotlin.collections.ArrayList
 import kotlin.collections.MutableList
 
 class ActionRunsNestedActions : BuildAction<Models?> {
-    public override fun execute(controller: BuildController): Models {
+    public override fun execute(controller: BuildController?): Models {
         val buildModel: GradleBuild = controller.getBuildModel()
         val projectActions: MutableList<GetProjectModel?> = ArrayList<GetProjectModel?>()
         for (project in buildModel.getProjects()) {
             projectActions.add(GetProjectModel(project))
         }
-        val results: MutableList<CustomModel?>? = controller.run(projectActions)
+        val results: MutableList<CustomModel?> = controller.run(projectActions)
         return Models(controller.getCanQueryProjectModelInParallel(CustomModel::class.java), results)
     }
 
@@ -37,7 +48,7 @@ class ActionRunsNestedActions : BuildAction<Models?> {
             this.project = project
         }
 
-        public override fun execute(controller: BuildController): CustomModel {
+        public override fun execute(controller: BuildController?): CustomModel {
             return controller.getModel(project, CustomModel::class.java)
         }
     }

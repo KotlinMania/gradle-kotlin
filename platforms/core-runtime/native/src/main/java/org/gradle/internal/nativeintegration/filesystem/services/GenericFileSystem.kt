@@ -35,7 +35,7 @@ import java.nio.charset.StandardCharsets
 import java.util.UUID
 import javax.inject.Inject
 
-internal class GenericFileSystem(
+class GenericFileSystem(
     private val chmod: FileModeMutator,
     private val stat: FileModeAccessor,
     private val symlink: Symlink,
@@ -50,10 +50,11 @@ internal class GenericFileSystem(
         this.canCreateSymbolicLink = symlink.isSymlinkCreationSupported()
     }
 
-    public override fun isCaseSensitive(): Boolean {
-        initializeCaseSensitive()
-        return caseSensitive!!
-    }
+    override val isCaseSensitive: Boolean
+        get() {
+            initializeCaseSensitive()
+            return caseSensitive!!
+        }
 
     override fun canCreateSymbolicLink(): Boolean {
         return canCreateSymbolicLink
@@ -67,7 +68,7 @@ internal class GenericFileSystem(
         }
     }
 
-    override fun isSymlink(suspect: File?): Boolean {
+    override fun isSymlink(suspect: File): Boolean {
         return symlink.isSymlink(suspect)
     }
 
@@ -147,7 +148,7 @@ internal class GenericFileSystem(
         }
     }
 
-    internal class Factory @Inject constructor(
+    class Factory @Inject constructor(
         private val fileMetadataAccessor: FileMetadataAccessor,
         private val statisticsCollector: StatStatistics.Collector,
         private val temporaryFileProvider: TemporaryFileProvider

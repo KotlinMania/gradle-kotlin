@@ -22,7 +22,7 @@ import org.gradle.internal.serialize.Serializer
 import org.gradle.internal.serialize.SerializerRegistry
 
 internal class DefaultMethodArgsSerializer(private val serializerRegistries: MutableList<SerializerRegistry>, private val defaultArgsSerializer: MethodArgsSerializer) : MethodArgsSerializer {
-    override fun forTypes(types: Array<Class<*>?>): Serializer<Array<Any?>?>? {
+    override fun forTypes(types: Array<Class<*>>): Serializer<Array<Any?>?> {
         if (types.size == 0) {
             return EmptyArraySerializer()
         }
@@ -37,17 +37,17 @@ internal class DefaultMethodArgsSerializer(private val serializerRegistries: Mut
             return defaultArgsSerializer.forTypes(types)
         }
 
-        val serializers = Cast.uncheckedNonnullCast<Array<Serializer<Any?>?>?>(arrayOfNulls<Serializer<*>>(types.size))
+        val serializers = arrayOfNulls<Serializer<Any?>>(types.size)
         for (i in types.indices) {
             val type = types[i]
-            serializers[i] = Cast.uncheckedNonnullCast<Serializer<Any?>?>(selected.build(type))
+            serializers[i] = Cast.uncheckedCast<Serializer<Any?>>(selected.build(type))
         }
         return ArraySerializer(serializers)
     }
 
     private class ArraySerializer(private val serializers: Array<Serializer<Any?>?>) : Serializer<Array<Any?>?> {
         @Throws(Exception::class)
-        override fun read(decoder: Decoder?): Array<Any?> {
+        override fun read(decoder: Decoder): Array<Any?> {
             val result = arrayOfNulls<Any>(serializers.size)
             for (i in serializers.indices) {
                 result[i] = serializers[i]!!.read(decoder)
@@ -56,19 +56,19 @@ internal class DefaultMethodArgsSerializer(private val serializerRegistries: Mut
         }
 
         @Throws(Exception::class)
-        override fun write(encoder: Encoder?, value: Array<Any?>) {
-            for (i in value.indices) {
+        override fun write(encoder: Encoder, value: Array<Any?>?) {
+            for (i in value!!.indices) {
                 serializers[i]!!.write(encoder, value[i])
             }
         }
     }
 
     private class EmptyArraySerializer : Serializer<Array<Any?>?> {
-        override fun read(decoder: Decoder?): Array<Any?> {
+        override fun read(decoder: Decoder): Array<Any?> {
             return ZERO_ARGS
         }
 
-        override fun write(encoder: Encoder?, value: Array<Any?>?) {
+        override fun write(encoder: Encoder, value: Array<Any?>?) {
         }
     }
 

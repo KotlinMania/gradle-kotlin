@@ -31,13 +31,12 @@ class NativePlatformBackedProcessEnvironment(private val process: Process) : Abs
         process.setWorkingDirectory(processDir)
     }
 
-    override fun getProcessDir(): File? {
+    override fun getNativeProcessDir(): File? {
         return process.getWorkingDirectory()
     }
 
-    override fun getPid(): Long {
-        return process.getProcessId().toLong()
-    }
+    override val pid: Long
+        get() = process.getProcessId().toLong()
 
     override fun detachProcess() {
         process.detach()

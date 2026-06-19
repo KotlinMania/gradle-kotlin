@@ -30,23 +30,23 @@ import java.util.Collections
  * preserving the serialized (sorted) order.
  */
 @NullMarked
-class SortedMapSerializer<K : Comparable<K?>?, V>(private val keySerializer: Serializer<K?>, private val valueSerializer: Serializer<V?>) : AbstractSerializer<MutableMap<K?, V?>?>() {
+class SortedMapSerializer<K : Comparable<K>, V>(private val keySerializer: Serializer<K>, private val valueSerializer: Serializer<V>) : AbstractSerializer<MutableMap<K, V>>() {
     @Throws(Exception::class)
-    override fun write(encoder: Encoder, value: MutableMap<K?, V?>) {
-        val sortedKeys: MutableList<K?> = ArrayList<K?>(value.keys)
-        Collections.sort<K?>(sortedKeys)
+    override fun write(encoder: Encoder, value: MutableMap<K, V>) {
+        val sortedKeys: MutableList<K> = ArrayList<K>(value.keys)
+        Collections.sort<K>(sortedKeys)
 
         encoder.writeInt(sortedKeys.size)
         for (key in sortedKeys) {
             keySerializer.write(encoder, key)
-            valueSerializer.write(encoder, value.get(key))
+            valueSerializer.write(encoder, value.getValue(key))
         }
     }
 
     @Throws(Exception::class)
-    override fun read(decoder: Decoder): MutableMap<K?, V?> {
+    override fun read(decoder: Decoder): MutableMap<K, V> {
         val size = decoder.readInt()
-        val map: MutableMap<K?, V?> = Maps.newLinkedHashMapWithExpectedSize<K?, V?>(size)
+        val map: MutableMap<K, V> = Maps.newLinkedHashMapWithExpectedSize<K, V>(size)
         for (i in 0..<size) {
             val key = keySerializer.read(decoder)
             val value = valueSerializer.read(decoder)
@@ -55,7 +55,7 @@ class SortedMapSerializer<K : Comparable<K?>?, V>(private val keySerializer: Ser
         return map
     }
 
-    public override fun equals(obj: Any): Boolean {
+    public override fun equals(obj: Any?): Boolean {
         if (!super.equals(obj)) {
             return false
         }

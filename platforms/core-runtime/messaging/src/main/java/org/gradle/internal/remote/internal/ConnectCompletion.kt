@@ -27,5 +27,5 @@ interface ConnectCompletion {
      *
      * @return The serializer to use.
      */
-    fun <T> create(serializer: StatefulSerializer<T?>?): RemoteConnection<T?>?
+    fun <T> create(serializer: StatefulSerializer<T?>): RemoteConnection<T?>
 }

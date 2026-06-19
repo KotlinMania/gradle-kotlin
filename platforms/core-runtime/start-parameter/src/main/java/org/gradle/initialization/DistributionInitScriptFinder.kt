@@ -25,6 +25,6 @@ class DistributionInitScriptFinder(val gradleHome: File?) : DirectoryInitScriptF
         if (gradleHome == null) {
             return
         }
-        findScriptsInDir(File(gradleHome, "init.d"), scripts)
+        findScriptsInDir(File(gradleHome, "init.d"), scripts!!)
     }
 }

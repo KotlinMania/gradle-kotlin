@@ -40,12 +40,12 @@ import java.util.Arrays
 import java.util.Locale
 import java.util.stream.Collectors
 
-class StartParameterBuildOptions : BuildOptionSet<StartParameterInternal?>() {
-    override fun getAllOptions(): MutableList<out BuildOption<in StartParameterInternal?>?> {
+class StartParameterBuildOptions : BuildOptionSet<StartParameterInternal>() {
+    override fun getAllOptions(): MutableList<out BuildOption<in StartParameterInternal>> {
         return OPTIONS
     }
 
-    class ProjectCacheDirOption : StringBuildOption<StartParameterInternal?>(
+    class ProjectCacheDirOption : StringBuildOption<StartParameterInternal>(
         PROPERTY_NAME,
         CommandLineOptionConfiguration.create("project-cache-dir", "Specifies the project-specific cache directory. Default is .gradle in the root project directory.")
     ) {
@@ -63,7 +63,7 @@ class StartParameterBuildOptions : BuildOptionSet<StartParameterInternal?>() {
         }
     }
 
-    class RerunTasksOption : EnabledOnlyBooleanBuildOption<StartParameterInternal?>(null, CommandLineOptionConfiguration.create("rerun-tasks", "Ignores previously cached task results.")) {
+    class RerunTasksOption : EnabledOnlyBooleanBuildOption<StartParameterInternal>(null, CommandLineOptionConfiguration.create("rerun-tasks", "Ignores previously cached task results.")) {
         override fun applyTo(settings: StartParameterInternal, origin: Origin) {
             settings.setRerunTasks(true)
         }
@@ -73,7 +73,7 @@ class StartParameterBuildOptions : BuildOptionSet<StartParameterInternal?>() {
         }
     }
 
-    class ProfileOption : EnabledOnlyBooleanBuildOption<StartParameterInternal?>(
+    class ProfileOption : EnabledOnlyBooleanBuildOption<StartParameterInternal>(
         null,
         CommandLineOptionConfiguration.create("profile", "Profiles build execution time. Generates a report in the <build_dir>/reports/profile directory.")
     ) {
@@ -86,7 +86,7 @@ class StartParameterBuildOptions : BuildOptionSet<StartParameterInternal?>() {
         }
     }
 
-    class ContinueOption : BooleanBuildOption<StartParameterInternal?>(
+    class ContinueOption : BooleanBuildOption<StartParameterInternal>(
         PROPERTY_NAME,
         BooleanCommandLineOptionConfiguration.create(
             LONG_OPTION,
@@ -109,7 +109,7 @@ class StartParameterBuildOptions : BuildOptionSet<StartParameterInternal?>() {
         }
     }
 
-    class OfflineOption : EnabledOnlyBooleanBuildOption<StartParameterInternal?>(null, CommandLineOptionConfiguration.create("offline", "Runs the build without accessing network resources.")) {
+    class OfflineOption : EnabledOnlyBooleanBuildOption<StartParameterInternal>(null, CommandLineOptionConfiguration.create("offline", "Runs the build without accessing network resources.")) {
         override fun applyTo(settings: StartParameterInternal, origin: Origin) {
             settings.setOffline(true)
         }
@@ -120,7 +120,7 @@ class StartParameterBuildOptions : BuildOptionSet<StartParameterInternal?>() {
     }
 
     class RefreshDependenciesOption :
-        EnabledOnlyBooleanBuildOption<StartParameterInternal?>(null, CommandLineOptionConfiguration.create("refresh-dependencies", "U", "Refreshes the state of dependencies.")) {
+        EnabledOnlyBooleanBuildOption<StartParameterInternal>(null, CommandLineOptionConfiguration.create("refresh-dependencies", "U", "Refreshes the state of dependencies.")) {
         override fun applyTo(settings: StartParameterInternal, origin: Origin) {
             settings.setRefreshDependencies(true)
         }
@@ -130,7 +130,7 @@ class StartParameterBuildOptions : BuildOptionSet<StartParameterInternal?>() {
         }
     }
 
-    class DryRunOption : EnabledOnlyBooleanBuildOption<StartParameterInternal?>(null, CommandLineOptionConfiguration.create("dry-run", "m", "Runs the build with all task actions disabled.")) {
+    class DryRunOption : EnabledOnlyBooleanBuildOption<StartParameterInternal>(null, CommandLineOptionConfiguration.create("dry-run", "m", "Runs the build with all task actions disabled.")) {
         override fun applyTo(settings: StartParameterInternal, origin: Origin) {
             settings.setDryRun(true)
         }
@@ -140,12 +140,12 @@ class StartParameterBuildOptions : BuildOptionSet<StartParameterInternal?>() {
         }
     }
 
-    class ContinuousOption : EnabledOnlyBooleanBuildOption<StartParameterInternal?>(
+    class ContinuousOption : EnabledOnlyBooleanBuildOption<StartParameterInternal>(
         null,
         CommandLineOptionConfiguration.create("continuous", "t", "Enables continuous build. Gradle does not exit and will re-execute tasks when task file inputs change.")
     ) {
         override fun applyTo(settings: StartParameterInternal, origin: Origin) {
-            settings.setContinuous(true)
+            settings.isContinuous = true
         }
 
         override fun getCategory(): OptionCategory {
@@ -153,9 +153,9 @@ class StartParameterBuildOptions : BuildOptionSet<StartParameterInternal?>() {
         }
     }
 
-    class ContinuousBuildQuietPeriodOption : IntegerBuildOption<StartParameterInternal?>(PROPERTY_NAME) {
+    class ContinuousBuildQuietPeriodOption : IntegerBuildOption<StartParameterInternal>(PROPERTY_NAME) {
         override fun applyTo(quietPeriodMillis: Int, startParameter: StartParameterInternal, origin: Origin?) {
-            startParameter.setContinuousBuildQuietPeriod(Duration.ofMillis(quietPeriodMillis.toLong()))
+            startParameter.continuousBuildQuietPeriod = Duration.ofMillis(quietPeriodMillis.toLong())
         }
 
         override fun getCategory(): OptionCategory {
@@ -168,7 +168,7 @@ class StartParameterBuildOptions : BuildOptionSet<StartParameterInternal?>() {
     }
 
     class NoProjectDependenciesRebuildOption :
-        EnabledOnlyBooleanBuildOption<StartParameterInternal?>(null, CommandLineOptionConfiguration.create(LONG_OPTION, SHORT_OPTION, "Disables rebuilding of project dependencies.")) {
+        EnabledOnlyBooleanBuildOption<StartParameterInternal>(null, CommandLineOptionConfiguration.create(LONG_OPTION, SHORT_OPTION, "Disables rebuilding of project dependencies.")) {
         override fun applyTo(settings: StartParameterInternal, origin: Origin) {
             settings.setBuildProjectDependencies(false)
         }
@@ -183,8 +183,8 @@ class StartParameterBuildOptions : BuildOptionSet<StartParameterInternal?>() {
         }
     }
 
-    class InitScriptOption : ListBuildOption<StartParameterInternal?>(null, CommandLineOptionConfiguration.create("init-script", "I", "Specifies an initialization script.")) {
-        override fun applyTo(values: MutableList<String?>, settings: StartParameterInternal, origin: Origin) {
+    class InitScriptOption : ListBuildOption<StartParameterInternal>("", CommandLineOptionConfiguration.create("init-script", "I", "Specifies an initialization script.")) {
+        override fun applyTo(values: MutableList<String>, settings: StartParameterInternal, origin: Origin) {
             val resolver: Transformer<File?, String?> = BasicFileResolver(settings.getCurrentDir())
 
             for (script in values) {
@@ -197,8 +197,8 @@ class StartParameterBuildOptions : BuildOptionSet<StartParameterInternal?>() {
         }
     }
 
-    class ExcludeTaskOption : ListBuildOption<StartParameterInternal?>(null, CommandLineOptionConfiguration.create("exclude-task", "x", "Specifies a task to exclude from execution.")) {
-        override fun applyTo(values: MutableList<String?>, settings: StartParameterInternal, origin: Origin) {
+    class ExcludeTaskOption : ListBuildOption<StartParameterInternal>("", CommandLineOptionConfiguration.create("exclude-task", "x", "Specifies a task to exclude from execution.")) {
+        override fun applyTo(values: MutableList<String>, settings: StartParameterInternal, origin: Origin) {
             settings.setExcludedTaskNames(values)
         }
 
@@ -207,8 +207,8 @@ class StartParameterBuildOptions : BuildOptionSet<StartParameterInternal?>() {
         }
     }
 
-    class IncludeBuildOption : ListBuildOption<StartParameterInternal?>(null, CommandLineOptionConfiguration.create("include-build", "Includes the specified build in the composite.")) {
-        override fun applyTo(values: MutableList<String?>, settings: StartParameterInternal, origin: Origin) {
+    class IncludeBuildOption : ListBuildOption<StartParameterInternal>("", CommandLineOptionConfiguration.create("include-build", "Includes the specified build in the composite.")) {
+        override fun applyTo(values: MutableList<String>, settings: StartParameterInternal, origin: Origin) {
             val resolver: Transformer<File?, String?> = BasicFileResolver(settings.getCurrentDir())
 
             for (includedBuild in values) {
@@ -221,7 +221,7 @@ class StartParameterBuildOptions : BuildOptionSet<StartParameterInternal?>() {
         }
     }
 
-    class ConfigureOnDemandOption : BooleanBuildOption<StartParameterInternal?>(
+    class ConfigureOnDemandOption : BooleanBuildOption<StartParameterInternal>(
         GRADLE_PROPERTY,
         BooleanCommandLineOptionConfiguration.create(
             "configure-on-demand",
@@ -242,7 +242,7 @@ class StartParameterBuildOptions : BuildOptionSet<StartParameterInternal?>() {
         }
     }
 
-    class BuildCacheOption : BooleanBuildOption<StartParameterInternal?>(
+    class BuildCacheOption : BooleanBuildOption<StartParameterInternal>(
         GRADLE_PROPERTY,
         BooleanCommandLineOptionConfiguration.create("build-cache", "Enables the Gradle build cache. Gradle will try to reuse outputs from previous builds.", "Disables the Gradle build cache.")
     ) {
@@ -259,9 +259,9 @@ class StartParameterBuildOptions : BuildOptionSet<StartParameterInternal?>() {
         }
     }
 
-    class BuildCacheDebugLoggingOption : BooleanBuildOption<StartParameterInternal?>(GRADLE_PROPERTY) {
+    class BuildCacheDebugLoggingOption : BooleanBuildOption<StartParameterInternal>(GRADLE_PROPERTY) {
         override fun applyTo(value: Boolean, settings: StartParameterInternal, origin: Origin?) {
-            settings.setBuildCacheDebugLogging(value)
+            settings.isBuildCacheDebugLogging = value
         }
 
         override fun getCategory(): OptionCategory {
@@ -273,7 +273,7 @@ class StartParameterBuildOptions : BuildOptionSet<StartParameterInternal?>() {
         }
     }
 
-    class WatchFileSystemOption : BooleanBuildOption<StartParameterInternal?>(
+    class WatchFileSystemOption : BooleanBuildOption<StartParameterInternal>(
         GRADLE_PROPERTY, BooleanCommandLineOptionConfiguration.create(
             LONG_OPTION,
             "Enables file system watching. Reuses file system data for subsequent builds.",
@@ -299,7 +299,7 @@ class StartParameterBuildOptions : BuildOptionSet<StartParameterInternal?>() {
         }
     }
 
-    class VfsVerboseLoggingOption : BooleanBuildOption<StartParameterInternal?>(GRADLE_PROPERTY) {
+    class VfsVerboseLoggingOption : BooleanBuildOption<StartParameterInternal>(GRADLE_PROPERTY) {
         override fun applyTo(value: Boolean, startParameter: StartParameterInternal, origin: Origin?) {
             startParameter.setVfsVerboseLogging(value)
         }
@@ -313,8 +313,8 @@ class StartParameterBuildOptions : BuildOptionSet<StartParameterInternal?>() {
         }
     }
 
-    class BuildScanOption : BooleanBuildOption<StartParameterInternal?>(
-        null, BooleanCommandLineOptionConfiguration.create(
+    class BuildScanOption : BooleanBuildOption<StartParameterInternal>(
+        null, null, BooleanCommandLineOptionConfiguration.create(
             LONG_OPTION,
             "Generates a Build Scan (powered by Develocity).",
             "Disables the creation of a Build Scan."
@@ -322,9 +322,9 @@ class StartParameterBuildOptions : BuildOptionSet<StartParameterInternal?>() {
     ) {
         override fun applyTo(value: Boolean, settings: StartParameterInternal, origin: Origin?) {
             if (value) {
-                settings.setBuildScan(true)
+                settings.isBuildScan = true
             } else {
-                settings.setNoBuildScan(true)
+                settings.isNoBuildScan = true
             }
         }
 
@@ -337,7 +337,7 @@ class StartParameterBuildOptions : BuildOptionSet<StartParameterInternal?>() {
         }
     }
 
-    class DevelocityUrlOption : StringBuildOption<StartParameterInternal?>(
+    class DevelocityUrlOption : StringBuildOption<StartParameterInternal>(
         GRADLE_PROPERTY, CommandLineOptionConfiguration.create(
             LONG_OPTION,
             "Default URL of the Develocity server to publish Build Scan to. Triggers auto-application of the Develocity plugin if not already applied.\n" +
@@ -345,13 +345,13 @@ class StartParameterBuildOptions : BuildOptionSet<StartParameterInternal?>() {
         )
     ) {
         override fun applyTo(value: String, settings: StartParameterInternal, origin: Origin) {
-            settings.setDevelocityUrl(value)
+            settings.develocityUrl = value
         }
 
-        override fun applyFromEnvVar(envVars: MutableMap<String?, String?>, settings: StartParameterInternal) {
+        override fun applyFromEnvVar(envVars: MutableMap<String, String>, settings: StartParameterInternal) {
             val develocityUrlEnvVar = envVars.get(ENVIRONMENT_VARIABLE)
             if (develocityUrlEnvVar != null) {
-                settings.setDevelocityUrl(develocityUrlEnvVar)
+                settings.develocityUrl = develocityUrlEnvVar
             }
         }
 
@@ -366,7 +366,7 @@ class StartParameterBuildOptions : BuildOptionSet<StartParameterInternal?>() {
         }
     }
 
-    class DevelocityPluginVersionOption : StringBuildOption<StartParameterInternal?>(
+    class DevelocityPluginVersionOption : StringBuildOption<StartParameterInternal>(
         GRADLE_PROPERTY, CommandLineOptionConfiguration.create(
             LONG_OPTION,
             "Version of the Develocity plugin to auto-apply, must be 4.4.0 or higher if Develocity URL is specified as well.\n" +
@@ -374,13 +374,13 @@ class StartParameterBuildOptions : BuildOptionSet<StartParameterInternal?>() {
         )
     ) {
         override fun applyTo(value: String, settings: StartParameterInternal, origin: Origin) {
-            settings.setDevelocityPluginVersion(value)
+            settings.develocityPluginVersion = value
         }
 
-        override fun applyFromEnvVar(envVars: MutableMap<String?, String?>, settings: StartParameterInternal) {
+        override fun applyFromEnvVar(envVars: MutableMap<String, String>, settings: StartParameterInternal) {
             val develocityPluginVersionEnvVar = envVars.get(ENVIRONMENT_VARIABLE)
             if (develocityPluginVersionEnvVar != null) {
-                settings.setDevelocityPluginVersion(develocityPluginVersionEnvVar)
+                settings.develocityPluginVersion = develocityPluginVersionEnvVar
             }
         }
 
@@ -395,7 +395,7 @@ class StartParameterBuildOptions : BuildOptionSet<StartParameterInternal?>() {
         }
     }
 
-    class DependencyLockingWriteOption : EnabledOnlyBooleanBuildOption<StartParameterInternal?>(
+    class DependencyLockingWriteOption : EnabledOnlyBooleanBuildOption<StartParameterInternal>(
         null,
         CommandLineOptionConfiguration.create(LONG_OPTION, "Persists dependency resolution for locked configurations. Ignores existing locking information if it exists.")
     ) {
@@ -412,8 +412,8 @@ class StartParameterBuildOptions : BuildOptionSet<StartParameterInternal?>() {
         }
     }
 
-    class DependencyVerificationWriteOption internal constructor() : StringBuildOption<StartParameterInternal?>(
-        null, CommandLineOptionConfiguration.create(
+    class DependencyVerificationWriteOption internal constructor() : StringBuildOption<StartParameterInternal>(
+        "", CommandLineOptionConfiguration.create(
             LONG_OPTION, SHORT_OPTION,
             "Generates checksums for dependencies used in the project. Accepts a comma-separated list."
         )
@@ -439,7 +439,7 @@ class StartParameterBuildOptions : BuildOptionSet<StartParameterInternal?>() {
         }
     }
 
-    class DependencyVerificationModeOption : EnumBuildOption<DependencyVerificationMode?, StartParameterInternal?>(
+    class DependencyVerificationModeOption : EnumBuildOption<DependencyVerificationMode, StartParameterInternal>(
         LONG_OPTION,
         DependencyVerificationMode::class.java,
         DependencyVerificationMode.entries.toTypedArray(),
@@ -448,8 +448,8 @@ class StartParameterBuildOptions : BuildOptionSet<StartParameterInternal?>() {
             LONG_OPTION, SHORT_OPTION, "Configures the dependency verification mode. Supported values are 'strict', 'lenient', or 'off'."
         )
     ) {
-        override fun applyTo(value: DependencyVerificationMode?, settings: StartParameterInternal, origin: Origin?) {
-            settings.setDependencyVerificationMode(value!!)
+        override fun applyTo(value: DependencyVerificationMode, settings: StartParameterInternal, origin: Origin?) {
+            settings.dependencyVerificationMode = value
         }
 
         override fun getCategory(): OptionCategory {
@@ -463,11 +463,10 @@ class StartParameterBuildOptions : BuildOptionSet<StartParameterInternal?>() {
         }
     }
 
-    class DependencyLockingUpdateOption : ListBuildOption<StartParameterInternal?>(
-        null,
+    class DependencyLockingUpdateOption : ListBuildOption<StartParameterInternal>("",
         CommandLineOptionConfiguration.create("update-locks", "Performs a partial update of the dependency lock. Allows passed-in module notations to change version.").incubating()
     ) {
-        override fun applyTo(modulesToUpdate: MutableList<String?>, settings: StartParameterInternal, origin: Origin) {
+        override fun applyTo(modulesToUpdate: MutableList<String>, settings: StartParameterInternal, origin: Origin) {
             settings.setLockedDependenciesToUpdate(modulesToUpdate)
         }
 
@@ -476,7 +475,7 @@ class StartParameterBuildOptions : BuildOptionSet<StartParameterInternal?>() {
         }
     }
 
-    class RefreshKeysOption : EnabledOnlyBooleanBuildOption<StartParameterInternal?>(
+    class RefreshKeysOption : EnabledOnlyBooleanBuildOption<StartParameterInternal>(
         null,
         CommandLineOptionConfiguration.create(LONG_OPTION, "Refreshes the public keys used for dependency verification.")
     ) {
@@ -493,7 +492,7 @@ class StartParameterBuildOptions : BuildOptionSet<StartParameterInternal?>() {
         }
     }
 
-    class ExportKeysOption : EnabledOnlyBooleanBuildOption<StartParameterInternal?>(
+    class ExportKeysOption : EnabledOnlyBooleanBuildOption<StartParameterInternal>(
         null,
         CommandLineOptionConfiguration.create(LONG_OPTION, "Exports the public keys used for dependency verification.")
     ) {
@@ -510,7 +509,7 @@ class StartParameterBuildOptions : BuildOptionSet<StartParameterInternal?>() {
         }
     }
 
-    class ConfigurationCacheOption : BooleanBuildOption<StartParameterInternal?>(
+    class ConfigurationCacheOption : BooleanBuildOption<StartParameterInternal>(
         PROPERTY_NAME,
         DEPRECATED_PROPERTY_NAME,
         BooleanCommandLineOptionConfiguration.create(
@@ -534,7 +533,7 @@ class StartParameterBuildOptions : BuildOptionSet<StartParameterInternal?>() {
         }
     }
 
-    class IsolatedProjectsOption : BooleanBuildOption<StartParameterInternal?>(
+    class IsolatedProjectsOption : BooleanBuildOption<StartParameterInternal>(
         PROPERTY_NAME,
         DEPRECATED_PROPERTY_NAME,
         BooleanCommandLineOptionConfiguration.create(
@@ -558,7 +557,7 @@ class StartParameterBuildOptions : BuildOptionSet<StartParameterInternal?>() {
         }
     }
 
-    class IsolatedProjectsDiagnosticsOption : BooleanBuildOption<StartParameterInternal?>(PROPERTY_NAME, DEPRECATED_PROPERTY_NAME) {
+    class IsolatedProjectsDiagnosticsOption : BooleanBuildOption<StartParameterInternal>(PROPERTY_NAME, DEPRECATED_PROPERTY_NAME) {
         override fun applyTo(value: Boolean, settings: StartParameterInternal, origin: Origin?) {
             settings.setIsolatedProjectsDiagnostics(value)
         }
@@ -569,7 +568,7 @@ class StartParameterBuildOptions : BuildOptionSet<StartParameterInternal?>() {
         }
     }
 
-    class IsolatedProjectsDangerouslyIgnoreProblemsOption : BooleanBuildOption<StartParameterInternal?>(PROPERTY_NAME, DEPRECATED_PROPERTY_NAME) {
+    class IsolatedProjectsDangerouslyIgnoreProblemsOption : BooleanBuildOption<StartParameterInternal>(PROPERTY_NAME, DEPRECATED_PROPERTY_NAME) {
         override fun applyTo(value: Boolean, settings: StartParameterInternal, origin: Origin?) {
             settings.setIsolatedProjectsDangerouslyIgnoreProblems(value)
         }
@@ -580,7 +579,7 @@ class StartParameterBuildOptions : BuildOptionSet<StartParameterInternal?>() {
         }
     }
 
-    class ConfigurationCacheProblemsOption : EnumBuildOption<ConfigurationCacheProblemsOption.Value?, StartParameterInternal?>(
+    class ConfigurationCacheProblemsOption : EnumBuildOption<ConfigurationCacheProblemsOption.Value, StartParameterInternal>(
         LONG_OPTION,
         Value::class.java,
         Value.entries.toTypedArray(),
@@ -595,7 +594,7 @@ class StartParameterBuildOptions : BuildOptionSet<StartParameterInternal?>() {
             FAIL, WARN
         }
 
-        override fun applyTo(value: Value?, settings: StartParameterInternal, origin: Origin?) {
+        override fun applyTo(value: Value, settings: StartParameterInternal, origin: Origin?) {
             settings.setConfigurationCacheProblems(value)
         }
 
@@ -610,9 +609,9 @@ class StartParameterBuildOptions : BuildOptionSet<StartParameterInternal?>() {
         }
     }
 
-    class ConfigurationCacheIgnoreInputsDuringStore : BooleanBuildOption<StartParameterInternal?>(PROPERTY_NAME) {
+    class ConfigurationCacheIgnoreInputsDuringStore : BooleanBuildOption<StartParameterInternal>(PROPERTY_NAME) {
         override fun applyTo(value: Boolean, settings: StartParameterInternal, origin: Origin?) {
-            settings.setConfigurationCacheIgnoreInputsDuringStore(value)
+            settings.isConfigurationCacheIgnoreInputsDuringStore = value
         }
 
         companion object {
@@ -625,7 +624,7 @@ class StartParameterBuildOptions : BuildOptionSet<StartParameterInternal?>() {
      *
      * @since 9.0.0
      */
-    class ConfigurationCacheIgnoreUnsupportedBuildEventsListeners : BooleanBuildOption<StartParameterInternal?>(PROPERTY_NAME) {
+    class ConfigurationCacheIgnoreUnsupportedBuildEventsListeners : BooleanBuildOption<StartParameterInternal>(PROPERTY_NAME) {
         override fun applyTo(value: Boolean, settings: StartParameterInternal, origin: Origin?) {
             settings.setConfigurationCacheIgnoreUnsupportedBuildEventsListeners(value)
         }
@@ -635,7 +634,7 @@ class StartParameterBuildOptions : BuildOptionSet<StartParameterInternal?>() {
         }
     }
 
-    class ConfigurationCacheMaxProblemsOption : IntegerBuildOption<StartParameterInternal?>(PROPERTY_NAME, DEPRECATED_PROPERTY_NAME) {
+    class ConfigurationCacheMaxProblemsOption : IntegerBuildOption<StartParameterInternal>(PROPERTY_NAME, DEPRECATED_PROPERTY_NAME) {
         override fun applyTo(value: Int, settings: StartParameterInternal, origin: Origin?) {
             settings.setConfigurationCacheMaxProblems(value)
         }
@@ -647,7 +646,7 @@ class StartParameterBuildOptions : BuildOptionSet<StartParameterInternal?>() {
         }
     }
 
-    class ConfigurationCacheIgnoredFileSystemCheckInputs : StringBuildOption<StartParameterInternal?>(PROPERTY_NAME) {
+    class ConfigurationCacheIgnoredFileSystemCheckInputs : StringBuildOption<StartParameterInternal>(PROPERTY_NAME) {
         override fun applyTo(value: String, settings: StartParameterInternal, origin: Origin) {
             settings.setConfigurationCacheIgnoredFileSystemCheckInputs(value)
         }
@@ -657,7 +656,7 @@ class StartParameterBuildOptions : BuildOptionSet<StartParameterInternal?>() {
         }
     }
 
-    class ConfigurationCacheDebugOption : BooleanBuildOption<StartParameterInternal?>(PROPERTY_NAME, DEPRECATED_PROPERTY_NAME) {
+    class ConfigurationCacheDebugOption : BooleanBuildOption<StartParameterInternal>(PROPERTY_NAME, DEPRECATED_PROPERTY_NAME) {
         override fun applyTo(value: Boolean, settings: StartParameterInternal, origin: Origin?) {
             settings.setConfigurationCacheDebug(value)
         }
@@ -668,7 +667,7 @@ class StartParameterBuildOptions : BuildOptionSet<StartParameterInternal?>() {
         }
     }
 
-    class ConfigurationCacheParallelOption : BooleanBuildOption<StartParameterInternal?>(PROPERTY_NAME) {
+    class ConfigurationCacheParallelOption : BooleanBuildOption<StartParameterInternal>(PROPERTY_NAME) {
         override fun applyTo(value: Boolean, settings: StartParameterInternal, origin: Origin?) {
             settings.setConfigurationCacheParallel(value)
         }
@@ -678,7 +677,7 @@ class StartParameterBuildOptions : BuildOptionSet<StartParameterInternal?>() {
         }
     }
 
-    class ConfigurationCacheReadOnlyOption : BooleanBuildOption<StartParameterInternal?>(PROPERTY_NAME) {
+    class ConfigurationCacheReadOnlyOption : BooleanBuildOption<StartParameterInternal>(PROPERTY_NAME) {
         override fun applyTo(value: Boolean, settings: StartParameterInternal, origin: Origin?) {
             settings.setConfigurationCacheReadOnly(value)
         }
@@ -688,7 +687,7 @@ class StartParameterBuildOptions : BuildOptionSet<StartParameterInternal?>() {
         }
     }
 
-    class ConfigurationCacheEntriesPerKeyOption : IntegerBuildOption<StartParameterInternal?>(PROPERTY_NAME) {
+    class ConfigurationCacheEntriesPerKeyOption : IntegerBuildOption<StartParameterInternal>(PROPERTY_NAME) {
         override fun applyTo(value: Int, settings: StartParameterInternal, origin: Origin?) {
             settings.setConfigurationCacheEntriesPerKey(value)
         }
@@ -698,7 +697,7 @@ class StartParameterBuildOptions : BuildOptionSet<StartParameterInternal?>() {
         }
     }
 
-    class ConfigurationCacheRecreateOption : BooleanBuildOption<StartParameterInternal?>(PROPERTY_NAME, DEPRECATED_PROPERTY_NAME) {
+    class ConfigurationCacheRecreateOption : BooleanBuildOption<StartParameterInternal>(PROPERTY_NAME, DEPRECATED_PROPERTY_NAME) {
         override fun applyTo(value: Boolean, settings: StartParameterInternal, origin: Origin?) {
             settings.setConfigurationCacheRecreateCache(value)
         }
@@ -709,7 +708,7 @@ class StartParameterBuildOptions : BuildOptionSet<StartParameterInternal?>() {
         }
     }
 
-    class ConfigurationCacheQuietOption : BooleanBuildOption<StartParameterInternal?>(PROPERTY_NAME, DEPRECATED_PROPERTY_NAME) {
+    class ConfigurationCacheQuietOption : BooleanBuildOption<StartParameterInternal>(PROPERTY_NAME, DEPRECATED_PROPERTY_NAME) {
         override fun applyTo(value: Boolean, settings: StartParameterInternal, origin: Origin?) {
             settings.setConfigurationCacheQuiet(value)
         }
@@ -724,7 +723,7 @@ class StartParameterBuildOptions : BuildOptionSet<StartParameterInternal?>() {
      * Enables stricter integrity checks of the stored configuration cache entries, at the cost of potential performance penalty and significantly inflated entry size.
      * Can be useful when debugging store failures.
      */
-    class ConfigurationCacheIntegrityCheckOption : BooleanBuildOption<StartParameterInternal?>(PROPERTY_NAME) {
+    class ConfigurationCacheIntegrityCheckOption : BooleanBuildOption<StartParameterInternal>(PROPERTY_NAME) {
         override fun applyTo(value: Boolean, settings: StartParameterInternal, origin: Origin?) {
             settings.setConfigurationCacheIntegrityCheckEnabled(value)
         }
@@ -738,7 +737,7 @@ class StartParameterBuildOptions : BuildOptionSet<StartParameterInternal?>() {
      * When set, tells Gradle to emit heap dumps in the given directory after loading the work graph on a Configuration Cache hit,
      * after storing and loading the work graph on a Configuration Cache miss.
      */
-    class ConfigurationCacheHeapDumpDir : StringBuildOption<StartParameterInternal?>(PROPERTY_NAME) {
+    class ConfigurationCacheHeapDumpDir : StringBuildOption<StartParameterInternal>(PROPERTY_NAME) {
         override fun applyTo(value: String, settings: StartParameterInternal, origin: Origin) {
             settings.setConfigurationCacheHeapDumpDir(value)
         }
@@ -758,7 +757,7 @@ class StartParameterBuildOptions : BuildOptionSet<StartParameterInternal?>() {
      *
      * The default is `true`.
      */
-    class ConfigurationCacheFineGrainedPropertyTracking : BooleanBuildOption<StartParameterInternal?>(PROPERTY_NAME) {
+    class ConfigurationCacheFineGrainedPropertyTracking : BooleanBuildOption<StartParameterInternal>(PROPERTY_NAME) {
         override fun applyTo(value: Boolean, settings: StartParameterInternal, origin: Origin?) {
             settings.setConfigurationCacheFineGrainedPropertyTracking(value)
         }
@@ -769,9 +768,9 @@ class StartParameterBuildOptions : BuildOptionSet<StartParameterInternal?>() {
     }
 
     class PropertyUpgradeReportOption :
-        EnabledOnlyBooleanBuildOption<StartParameterInternal?>(null, CommandLineOptionConfiguration.create(LONG_OPTION, "Runs the build with the experimental property upgrade report.").incubating()) {
+        EnabledOnlyBooleanBuildOption<StartParameterInternal>(null, CommandLineOptionConfiguration.create(LONG_OPTION, "Runs the build with the experimental property upgrade report.").incubating()) {
         override fun applyTo(settings: StartParameterInternal, origin: Origin) {
-            settings.setPropertyUpgradeReportEnabled(true)
+            settings.isPropertyUpgradeReportEnabled = true
         }
 
         override fun getCategory(): OptionCategory {
@@ -783,7 +782,7 @@ class StartParameterBuildOptions : BuildOptionSet<StartParameterInternal?>() {
         }
     }
 
-    class ProblemReportGenerationOption : BooleanBuildOption<StartParameterInternal?>(
+    class ProblemReportGenerationOption : BooleanBuildOption<StartParameterInternal>(
         GRADLE_PROPERTY,
         BooleanCommandLineOptionConfiguration.create(LONG_OPTION, "Enables the HTML problems report.", "Disables the HTML problems report.").incubating()
     ) {
@@ -801,7 +800,7 @@ class StartParameterBuildOptions : BuildOptionSet<StartParameterInternal?>() {
         }
     }
 
-    class TaskGraphOption : EnabledOnlyBooleanBuildOption<StartParameterInternal?>(null, CommandLineOptionConfiguration.create(LONG_OPTION, "Prints the task graph instead of executing tasks.")) {
+    class TaskGraphOption : EnabledOnlyBooleanBuildOption<StartParameterInternal>(null, CommandLineOptionConfiguration.create(LONG_OPTION, "Prints the task graph instead of executing tasks.")) {
         override fun applyTo(settings: StartParameterInternal, origin: Origin) {
             settings.setTaskGraph(true)
         }
@@ -815,7 +814,7 @@ class StartParameterBuildOptions : BuildOptionSet<StartParameterInternal?>() {
         }
     }
 
-    class ParallelToolingModelBuildingOption : BooleanBuildOption<StartParameterInternal?>(PROPERTY_NAME) {
+    class ParallelToolingModelBuildingOption : BooleanBuildOption<StartParameterInternal>(PROPERTY_NAME) {
         override fun applyTo(value: Boolean, settings: StartParameterInternal, origin: Origin?) {
             settings.setParallelToolingModelBuilding(Option.Value.value<Boolean?>(value))
         }
@@ -826,7 +825,7 @@ class StartParameterBuildOptions : BuildOptionSet<StartParameterInternal?>() {
     }
 
     companion object {
-        private val OPTIONS: MutableList<BuildOption<StartParameterInternal?>?> = Arrays.asList<BuildOption<StartParameterInternal?>?>(
+        private val OPTIONS: MutableList<BuildOption<StartParameterInternal>> = Arrays.asList<BuildOption<StartParameterInternal>>(
             ProjectCacheDirOption(),
             RerunTasksOption(),
             ProfileOption(),

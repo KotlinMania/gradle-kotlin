@@ -15,6 +15,9 @@
  */
 package org.gradle.tooling.internal.protocol.events
 
+import java.io.File
+import java.net.URI
+
 /**
  * DO NOT CHANGE THIS INTERFACE. It is part of the cross-version protocol.
  *

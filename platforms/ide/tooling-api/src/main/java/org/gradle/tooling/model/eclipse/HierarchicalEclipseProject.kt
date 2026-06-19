@@ -15,6 +15,7 @@
  */
 package org.gradle.tooling.model.eclipse
 
+import java.io.File
 import org.gradle.tooling.model.DomainObjectSet
 import org.gradle.tooling.model.HasGradleProject
 import org.gradle.tooling.model.HierarchicalElement
@@ -29,12 +30,12 @@ interface HierarchicalEclipseProject : HierarchicalElement, HasGradleProject {
     /**
      * {@inheritDoc}
      */
-    override fun getParent(): HierarchicalEclipseProject?
+    override val parent: HierarchicalEclipseProject?
 
     /**
      * {@inheritDoc}
      */
-    override fun getChildren(): DomainObjectSet<out HierarchicalEclipseProject?>?
+    override val children: DomainObjectSet<out HierarchicalEclipseProject?>?
 
     /**
      * Returns the project dependencies for this project.

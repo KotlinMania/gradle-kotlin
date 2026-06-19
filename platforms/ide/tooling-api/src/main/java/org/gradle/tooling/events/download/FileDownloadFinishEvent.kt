@@ -15,6 +15,7 @@
  */
 package org.gradle.tooling.events.download
 
+import java.io.File
 import org.gradle.tooling.events.FinishEvent
 
 /**
@@ -23,5 +24,5 @@ import org.gradle.tooling.events.FinishEvent
  * @since 7.3
  */
 interface FileDownloadFinishEvent : FileDownloadProgressEvent, FinishEvent {
-    override fun getResult(): FileDownloadResult?
+    override val result: FileDownloadResult?
 }

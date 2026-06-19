@@ -17,8 +17,6 @@ package org.gradle.tooling.events.problems.internal
 
 import org.gradle.tooling.events.problems.TaskPathLocation
 
-class DefaultTaskPathLocation(private val buildTreePath: String) : TaskPathLocation {
-    override fun getBuildTreePath(): String {
-        return buildTreePath
-    }
+class DefaultTaskPathLocation(override val buildTreePath: String) : TaskPathLocation {
+
 }

@@ -66,7 +66,7 @@ class WrapperExecutor internal constructor(propertiesFile: File, private val pro
         get() = configuration.distribution
 
     @Throws(Exception::class)
-    fun execute(args: Array<String?>?, install: Install, bootstrapMainStarter: BootstrapMainStarter) {
+    fun execute(args: Array<String>, install: Install, bootstrapMainStarter: BootstrapMainStarter) {
         val gradleHome = install.createDist(this.configuration)
         bootstrapMainStarter.start(args, gradleHome)
     }

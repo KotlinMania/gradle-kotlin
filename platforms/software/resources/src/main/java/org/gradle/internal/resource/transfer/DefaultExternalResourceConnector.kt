@@ -28,24 +28,24 @@ import java.util.concurrent.atomic.AtomicInteger
 class DefaultExternalResourceConnector(private val accessor: ExternalResourceAccessor, private val lister: ExternalResourceLister, private val uploader: ExternalResourceUploader) :
     ExternalResourceConnector {
     @Throws(ResourceException::class)
-    override fun <T> withContent(location: ExternalResourceName, revalidate: Boolean, action: ExternalResource.ContentAndMetadataAction<T?>?): T? {
-        statistics.resource(location.getUri())
+    override fun <T> withContent(location: ExternalResourceName, revalidate: Boolean, action: ExternalResource.ContentAndMetadataAction<T?>): T? {
+        statistics.resource(location.uri)
         return accessor.withContent<T?>(location, revalidate, action)
     }
 
     override fun getMetaData(location: ExternalResourceName, revalidate: Boolean): ExternalResourceMetaData? {
-        statistics.metadata(location.getUri())
+        statistics.metadata(location.uri)
         return accessor.getMetaData(location, revalidate)
     }
 
     override fun list(parent: ExternalResourceName): MutableList<String?>? {
-        statistics.list(parent.getUri())
+        statistics.list(parent.uri)
         return lister.list(parent)
     }
 
     @Throws(IOException::class)
-    override fun upload(resource: ReadableContent?, destination: ExternalResourceName) {
-        statistics.upload(destination.getUri())
+    override fun upload(resource: ReadableContent, destination: ExternalResourceName) {
+        statistics.upload(destination.uri)
         uploader.upload(resource, destination)
     }
 
@@ -200,7 +200,7 @@ class DefaultExternalResourceConnector(private val accessor: ExternalResourceAcc
                 return
             }
             val entries: MutableList<MutableMap.MutableEntry<URI?, Int?>> = ArrayList<MutableMap.MutableEntry<URI?, Int?>>(stats.entries)
-            Collections.sort<MutableMap.MutableEntry<URI?, Int?>?>(entries, object : Comparator<MutableMap.MutableEntry<URI?, Int?>?> {
+            Collections.sort(entries, object : Comparator<MutableMap.MutableEntry<URI?, Int?>> {
                 override fun compare(o1: MutableMap.MutableEntry<URI?, Int?>, o2: MutableMap.MutableEntry<URI?, Int?>): Int {
                     return o2.value!! - o1.value!!
                 }

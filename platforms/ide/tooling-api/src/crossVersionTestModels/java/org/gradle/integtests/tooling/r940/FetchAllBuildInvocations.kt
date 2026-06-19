@@ -15,6 +15,17 @@
  */
 package org.gradle.integtests.tooling.r940
 
+import org.gradle.tooling.*
+import org.gradle.tooling.model.*
+import org.gradle.tooling.model.build.*
+import org.gradle.tooling.model.eclipse.*
+import org.gradle.tooling.model.gradle.*
+import org.gradle.tooling.model.idea.*
+import org.gradle.tooling.model.kotlin.dsl.*
+import org.gradle.tooling.internal.adapter.ProtocolToModelAdapter
+import java.io.File
+import org.gradle.integtests.tooling.r48.*
+
 import org.gradle.tooling.BuildAction
 import java.io.Serializable
 import kotlin.collections.ArrayList
@@ -25,7 +36,7 @@ import kotlin.collections.MutableList
  * This simulates what IDEs typically do to gather task information across the entire composite build.
  */
 internal class FetchAllBuildInvocations : BuildAction<AllBuildInvocationsResult?>, Serializable {
-    public override fun execute(controller: BuildController): AllBuildInvocationsResult {
+    public override fun execute(controller: BuildController?): AllBuildInvocationsResult {
         val gradleBuild: GradleBuild = controller.getBuildModel()
 
         // Get BuildInvocations for root build

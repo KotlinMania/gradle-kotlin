@@ -88,7 +88,7 @@ interface StyledTextOutput : Appendable {
      * @param c The character
      * @return this
      */
-    override fun append(c: Char): StyledTextOutput?
+    override fun append(c: Char): StyledTextOutput
 
     /**
      * Appends a sequence of characters using the current style.
@@ -96,7 +96,7 @@ interface StyledTextOutput : Appendable {
      * @param csq The character sequence
      * @return this.
      */
-    override fun append(csq: CharSequence?): StyledTextOutput?
+    override fun append(csq: CharSequence?): StyledTextOutput
 
     /**
      * Appends a sequence of characters using the current style.
@@ -104,7 +104,7 @@ interface StyledTextOutput : Appendable {
      * @param csq The character sequence
      * @return this.
      */
-    override fun append(csq: CharSequence?, start: Int, end: Int): StyledTextOutput?
+    override fun append(csq: CharSequence?, start: Int, end: Int): StyledTextOutput
 
     /**
      * Switches to a new style. The default style is [Style.Normal].
@@ -112,7 +112,7 @@ interface StyledTextOutput : Appendable {
      * @param style The style.
      * @return this
      */
-    fun style(style: Style?): StyledTextOutput?
+    fun style(style: Style?): StyledTextOutput
 
     /**
      * Creates a copy of this output which uses the given style. This can be used to generate text in a different style
@@ -126,7 +126,7 @@ interface StyledTextOutput : Appendable {
      * @param style The temporary style
      * @return the copy
      */
-    fun withStyle(style: Style?): StyledTextOutput?
+    fun withStyle(style: Style?): StyledTextOutput
 
     /**
      * Appends text using the current style.
@@ -134,7 +134,7 @@ interface StyledTextOutput : Appendable {
      * @param text The text
      * @return this
      */
-    fun text(text: Any?): StyledTextOutput?
+    fun text(text: Any?): StyledTextOutput
 
     /**
      * Appends text using the current style and starts a new line.
@@ -142,7 +142,7 @@ interface StyledTextOutput : Appendable {
      * @param text The text
      * @return this
      */
-    fun println(text: Any?): StyledTextOutput?
+    fun println(text: Any?): StyledTextOutput
 
     /**
      * Appends a formatted string using the current style.
@@ -151,7 +151,7 @@ interface StyledTextOutput : Appendable {
      * @param args    The args for the pattern
      * @return this
      */
-    fun format(pattern: String?, vararg args: Any?): StyledTextOutput?
+    fun format(pattern: String, vararg args: Any?): StyledTextOutput
 
     /**
      * Appends a formatted string using the current style and starts a new line.
@@ -160,14 +160,14 @@ interface StyledTextOutput : Appendable {
      * @param args    The args for the pattern
      * @return this
      */
-    fun formatln(pattern: String?, vararg args: Any?): StyledTextOutput?
+    fun formatln(pattern: String, vararg args: Any?): StyledTextOutput
 
     /**
      * Starts a new line.
      *
      * @return this
      */
-    fun println(): StyledTextOutput?
+    fun println(): StyledTextOutput
 
     /**
      * Appends the stacktrace of the given exception using the current style.
@@ -175,5 +175,5 @@ interface StyledTextOutput : Appendable {
      * @param throwable The exception
      * @return this
      */
-    fun exception(throwable: Throwable?): StyledTextOutput?
+    fun exception(throwable: Throwable): StyledTextOutput
 }

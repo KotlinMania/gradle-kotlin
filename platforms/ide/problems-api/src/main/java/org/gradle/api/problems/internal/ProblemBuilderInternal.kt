@@ -36,7 +36,7 @@ interface ProblemBuilderInternal : ProblemSpecInternal {
 
     override fun taskLocation(buildTreePath: String): ProblemBuilderInternal?
 
-    override fun documentedAt(doc: DocLink): ProblemBuilderInternal?
+    override fun documentedAt(doc: DocLink?): ProblemBuilderInternal?
 
     override fun contextualLabel(contextualLabel: String): ProblemBuilderInternal?
 
@@ -59,7 +59,7 @@ interface ProblemBuilderInternal : ProblemSpecInternal {
     override fun <U : AdditionalDataSpec?> additionalDataInternal(specType: Class<out U>, config: Action<in U?>): ProblemBuilderInternal?
 
     // interface should be public <T> void additionalData(Class<T> type, Action<? super T> config)
-    override fun <T : AdditionalData?> additionalData(type: Class<T?>, config: Action<in T?>): ProblemBuilderInternal?
+    override fun <T : AdditionalData> additionalData(type: Class<T>, config: Action<in T>): ProblemBuilderInternal?
 
     override fun withException(t: Throwable): ProblemBuilderInternal?
 
@@ -67,7 +67,5 @@ interface ProblemBuilderInternal : ProblemSpecInternal {
     override fun severity(severity: Severity): ProblemBuilderInternal?
 
     fun internalSeverity(severity: Severity): ProblemBuilderInternal?
-
-    @JvmField
-    val infrastructure: ProblemsInfrastructure?
+    fun getInfrastructure(): ProblemsInfrastructure?
 }

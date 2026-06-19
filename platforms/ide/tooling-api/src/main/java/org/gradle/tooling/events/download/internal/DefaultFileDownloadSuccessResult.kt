@@ -15,11 +15,10 @@
  */
 package org.gradle.tooling.events.download.internal
 
+import java.io.File
 import org.gradle.tooling.events.download.FileDownloadResult
 import org.gradle.tooling.events.internal.DefaultOperationSuccessResult
 
-open class DefaultFileDownloadSuccessResult(startTime: Long, endTime: Long, private val bytesDownloaded: Long) : DefaultOperationSuccessResult(startTime, endTime), FileDownloadResult {
-    override fun getBytesDownloaded(): Long {
-        return bytesDownloaded
-    }
+open class DefaultFileDownloadSuccessResult(startTime: Long, endTime: Long, override val bytesDownloaded: Long) : DefaultOperationSuccessResult(startTime, endTime), FileDownloadResult {
+
 }

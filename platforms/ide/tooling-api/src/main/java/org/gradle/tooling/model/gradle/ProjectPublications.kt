@@ -15,6 +15,7 @@
  */
 package org.gradle.tooling.model.gradle
 
+import org.gradle.tooling.model.DomainObjectSet
 import org.gradle.tooling.model.Model
 import org.gradle.tooling.model.ProjectIdentifier
 import org.gradle.tooling.model.ProjectModel
@@ -30,7 +31,7 @@ interface ProjectPublications : Model, ProjectModel {
      *
      * @since 2.13
      */
-    override fun getProjectIdentifier(): ProjectIdentifier?
+    override val projectIdentifier: ProjectIdentifier?
 
     /**
      * Returns the publications for this project.

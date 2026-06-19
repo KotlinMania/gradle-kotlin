@@ -26,6 +26,7 @@ import org.apache.http.auth.AuthState
 import org.apache.http.auth.NTCredentials
 import org.apache.http.auth.UsernamePasswordCredentials
 import org.apache.http.client.CredentialsProvider
+import org.apache.http.client.RedirectStrategy
 import org.apache.http.client.config.AuthSchemes
 import org.apache.http.client.config.CookieSpecs
 import org.apache.http.client.config.RequestConfig
@@ -66,7 +67,6 @@ import org.gradle.internal.jvm.Jvm
 import org.gradle.internal.resource.UriTextResource
 import org.gradle.internal.resource.transport.http.ntlm.NTLMCredentials
 import org.gradle.internal.resource.transport.http.ntlm.NTLMSchemeFactory
-import org.gradle.util.internal.CollectionUtils
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.net.ProxySelector
@@ -80,7 +80,7 @@ class HttpClientConfigurer(private val httpSettings: HttpSettings) {
      *
      * @implNote To support the Gradle embedded test runner, this method's return value should not be cached in a static field.
      */
-    private fun determineHttpsProtocols(): Array<String?> {
+    private fun determineHttpsProtocols(): Array<String> {
         /*
          * System property retrieval is executed within the constructor to support the Gradle embedded test runner.
          */
@@ -98,7 +98,7 @@ class HttpClientConfigurer(private val httpSettings: HttpSettings) {
 
     private fun jdkSupportsTLSProtocol(protocol: String): Boolean {
         try {
-            for (supportedProtocol in httpSettings.sslContextFactory!!.createSslContext()!!.getSupportedSSLParameters().getProtocols()) {
+            for (supportedProtocol in httpSettings.sslContextFactory.createSslContext()!!.getSupportedSSLParameters().getProtocols()) {
                 if (protocol == supportedProtocol) {
                     return true
                 }
@@ -109,11 +109,11 @@ class HttpClientConfigurer(private val httpSettings: HttpSettings) {
         }
     }
 
-    fun supportedTlsVersions(): MutableCollection<String?> {
-        return Arrays.asList<String?>(*sslProtocols)
+    fun supportedTlsVersions(): MutableCollection<String> {
+        return Arrays.asList<String>(*sslProtocols)
     }
 
-    private val sslProtocols: Array<String?>
+    private val sslProtocols: Array<String>
 
     init {
         this.sslProtocols = determineHttpsProtocols()
@@ -121,7 +121,7 @@ class HttpClientConfigurer(private val httpSettings: HttpSettings) {
 
     fun configure(builder: HttpClientBuilder) {
         val credentialsProvider = SystemDefaultCredentialsProvider()
-        configureSslSocketConnectionFactory(builder, httpSettings.sslContextFactory!!, httpSettings.hostnameVerifier)
+        configureSslSocketConnectionFactory(builder, httpSettings.sslContextFactory, httpSettings.hostnameVerifier)
         configureAuthSchemeRegistry(builder)
         configureCredentials(builder, credentialsProvider, httpSettings.authenticationSettings)
         configureProxy(builder, credentialsProvider, httpSettings)
@@ -133,10 +133,10 @@ class HttpClientConfigurer(private val httpSettings: HttpSettings) {
         builder.setDefaultCredentialsProvider(credentialsProvider)
         builder.setMaxConnTotal(httpSettings.maxConnTotal)
         builder.setMaxConnPerRoute(httpSettings.maxConnPerRoute)
-        builder.setConnectionTimeToLive(httpSettings.timeoutSettings!!.idleConnectionTimeoutMs, TimeUnit.MILLISECONDS)
+        builder.setConnectionTimeToLive(httpSettings.timeoutSettings.idleConnectionTimeoutMs.toLong(), TimeUnit.MILLISECONDS)
     }
 
-    private fun configureSslSocketConnectionFactory(builder: HttpClientBuilder, sslContextFactory: SslContextFactory, hostnameVerifier: HostnameVerifier?) {
+    private fun configureSslSocketConnectionFactory(builder: HttpClientBuilder, sslContextFactory: SslContextFactory, hostnameVerifier: HostnameVerifier) {
         builder.setSSLSocketFactory(SSLConnectionSocketFactory(sslContextFactory.createSslContext(), sslProtocols, null, hostnameVerifier))
     }
 
@@ -182,7 +182,7 @@ class HttpClientConfigurer(private val httpSettings: HttpSettings) {
         if (httpsProxy != null && httpsProxy.credentials != null) {
             val authentication1 = AllSchemesAuthentication(httpsProxy.credentials)
             authentication1.addHost(httpsProxy.host, httpsProxy.port)
-            useCredentials(credentialsProvider, mutableSetOf<AllSchemesAuthentication?>(authentication1))
+            useCredentials(credentialsProvider, mutableSetOf<AllSchemesAuthentication>(authentication1))
         }
     }
 
@@ -204,7 +204,7 @@ class HttpClientConfigurer(private val httpSettings: HttpSettings) {
 
                 if (credentials is HttpHeaderCredentials) {
                     val httpHeaderCredentials = credentials
-                    val httpCredentials: org.apache.http.auth.Credentials = HttpClientHttpHeaderCredentials(httpHeaderCredentials.name, httpHeaderCredentials.value)
+                    val httpCredentials: org.apache.http.auth.Credentials = HttpClientHttpHeaderCredentials(httpHeaderCredentials.name!!, httpHeaderCredentials.value!!)
                     credentialsProvider.setCredentials(AuthScope(host, port, AuthScope.ANY_REALM, scheme), httpCredentials)
 
                     LOGGER.debug("Using {} for authenticating against '{}:{}' using {}", httpHeaderCredentials, host, port, scheme)
@@ -247,11 +247,11 @@ class HttpClientConfigurer(private val httpSettings: HttpSettings) {
     }
 
     private fun isPreemptiveEnabled(authentications: MutableCollection<Authentication>): Boolean {
-        return CollectionUtils.any<Authentication?>(authentications, org.gradle.api.specs.Spec { element: Authentication? -> element is BasicAuthentication || element is HttpHeaderAuthentication })
+        return authentications.any { element -> element is BasicAuthentication || element is HttpHeaderAuthentication }
     }
 
     fun configureUserAgent(builder: HttpClientBuilder) {
-        builder.setUserAgent(UriTextResource.getUserAgentString())
+        builder.setUserAgent(UriTextResource.userAgentString)
     }
 
     private fun configureCookieSpecRegistry(builder: HttpClientBuilder) {
@@ -286,7 +286,7 @@ class HttpClientConfigurer(private val httpSettings: HttpSettings) {
     }
 
     private fun configureRequestConfig(builder: HttpClientBuilder) {
-        val timeoutSettings: HttpTimeoutSettings = httpSettings.timeoutSettings!!
+        val timeoutSettings: HttpTimeoutSettings = httpSettings.timeoutSettings
         val config = RequestConfig.custom()
             .setConnectTimeout(timeoutSettings.connectionTimeoutMs)
             .setSocketTimeout(timeoutSettings.socketTimeoutMs)
@@ -297,7 +297,7 @@ class HttpClientConfigurer(private val httpSettings: HttpSettings) {
     }
 
     private fun configureSocketConfig(builder: HttpClientBuilder) {
-        val timeoutSettings: HttpTimeoutSettings = httpSettings.timeoutSettings!!
+        val timeoutSettings: HttpTimeoutSettings = httpSettings.timeoutSettings
         builder.setDefaultSocketConfig(SocketConfig.custom().setSoTimeout(timeoutSettings.socketTimeoutMs).setSoKeepAlive(true).build())
     }
 
@@ -312,9 +312,9 @@ class HttpClientConfigurer(private val httpSettings: HttpSettings) {
     private val baseRedirectStrategy: RedirectStrategy
         get() {
             when (httpSettings.redirectMethodHandlingStrategy) {
-                ALLOW_FOLLOW_FOR_MUTATIONS -> return AllowFollowForMutatingMethodRedirectStrategy()
-                ALWAYS_FOLLOW_AND_PRESERVE -> return AlwaysFollowAndPreserveMethodRedirectStrategy()
-                else -> throw IllegalArgumentException(httpSettings.redirectMethodHandlingStrategy.name())
+                HttpSettings.RedirectMethodHandlingStrategy.ALLOW_FOLLOW_FOR_MUTATIONS -> return AllowFollowForMutatingMethodRedirectStrategy()
+                HttpSettings.RedirectMethodHandlingStrategy.ALWAYS_FOLLOW_AND_PRESERVE -> return AlwaysFollowAndPreserveMethodRedirectStrategy()
+                else -> throw IllegalArgumentException(httpSettings.redirectMethodHandlingStrategy.name)
             }
         }
 

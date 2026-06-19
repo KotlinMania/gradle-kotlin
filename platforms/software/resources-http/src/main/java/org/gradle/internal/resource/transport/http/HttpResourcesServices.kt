@@ -30,12 +30,12 @@ import org.gradle.internal.service.ServiceRegistrationProvider
 import org.gradle.internal.service.scopes.AbstractGradleModuleServices
 
 class HttpResourcesServices : AbstractGradleModuleServices() {
-    public override fun registerGlobalServices(registration: ServiceRegistration) {
-        registration.addProvider(GlobalScopeServices())
+    public override fun registerGlobalServices(registration: ServiceRegistration?) {
+        registration!!.addProvider(GlobalScopeServices())
     }
 
-    public override fun registerBuildServices(registration: ServiceRegistration) {
-        registration.addProvider(AuthenticationSchemeAction())
+    public override fun registerBuildServices(registration: ServiceRegistration?) {
+        registration!!.addProvider(AuthenticationSchemeAction())
     }
 
     private class GlobalScopeServices : ServiceRegistrationProvider {
@@ -50,7 +50,7 @@ class HttpResourcesServices : AbstractGradleModuleServices() {
         }
 
         @Provides
-        fun createHttpConnectorFactory(sslContextFactory: SslContextFactory?, httpClientHelperFactory: HttpClientFactory?): ResourceConnectorFactory {
+        fun createHttpConnectorFactory(sslContextFactory: SslContextFactory, httpClientHelperFactory: HttpClientFactory): ResourceConnectorFactory {
             return HttpConnectorFactory(sslContextFactory, httpClientHelperFactory)
         }
     }
@@ -58,9 +58,9 @@ class HttpResourcesServices : AbstractGradleModuleServices() {
     private class AuthenticationSchemeAction : ServiceRegistrationProvider {
         @Provides
         fun configure(registration: ServiceRegistration?, authenticationSchemeRegistry: AuthenticationSchemeRegistry) {
-            authenticationSchemeRegistry.registerScheme<BasicAuthentication?>(BasicAuthentication::class.java, DefaultBasicAuthentication::class.java)
-            authenticationSchemeRegistry.registerScheme<DigestAuthentication?>(DigestAuthentication::class.java, DefaultDigestAuthentication::class.java)
-            authenticationSchemeRegistry.registerScheme<HttpHeaderAuthentication?>(HttpHeaderAuthentication::class.java, DefaultHttpHeaderAuthentication::class.java)
+            authenticationSchemeRegistry.registerScheme(BasicAuthentication::class.java, DefaultBasicAuthentication::class.java)
+            authenticationSchemeRegistry.registerScheme(DigestAuthentication::class.java, DefaultDigestAuthentication::class.java)
+            authenticationSchemeRegistry.registerScheme(HttpHeaderAuthentication::class.java, DefaultHttpHeaderAuthentication::class.java)
         }
     }
 }

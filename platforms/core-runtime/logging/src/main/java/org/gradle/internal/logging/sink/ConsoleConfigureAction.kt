@@ -37,10 +37,10 @@ import java.util.function.Supplier
 
 object ConsoleConfigureAction {
     fun execute(renderer: OutputEventRenderer, consoleOutput: ConsoleOutput?, consoleUnicodeSupport: ConsoleUnicodeSupport) {
-        ConsoleConfigureAction.execute(renderer, consoleOutput, getConsoleMetaData(consoleUnicodeSupport)!!, renderer.getOriginalStdOut(), renderer.getOriginalStdErr())
+        ConsoleConfigureAction.execute(renderer, consoleOutput, getConsoleMetaData(consoleUnicodeSupport)!!, renderer.originalStdOut!!, renderer.originalStdErr!!)
     }
 
-    fun execute(renderer: OutputEventRenderer, consoleOutput: ConsoleOutput?, consoleMetadata: ConsoleMetaData, stdout: OutputStream, stderr: OutputStream?) {
+    fun execute(renderer: OutputEventRenderer, consoleOutput: ConsoleOutput?, consoleMetadata: ConsoleMetaData, stdout: OutputStream, stderr: OutputStream) {
         if (consoleOutput == ConsoleOutput.Auto) {
             configureAutoConsole(renderer, consoleMetadata, stdout, stderr)
         } else if (consoleOutput == ConsoleOutput.Rich) {
@@ -62,7 +62,7 @@ object ConsoleConfigureAction {
         if (consoleOutput == ConsoleOutput.Plain) {
             return false
         }
-        return consoleOutput != ConsoleOutput.Auto || consoleMetadata.isStdOutATerminal
+        return consoleOutput != ConsoleOutput.Auto || consoleMetadata.isStdOutATerminal()
     }
 
     private fun registerTaskbarReset(consoleMetadata: ConsoleMetaData, stdout: OutputStream) {
@@ -95,35 +95,35 @@ object ConsoleConfigureAction {
     }
 
     private fun getConsoleMetaData(consoleUnicodeSupport: ConsoleUnicodeSupport): ConsoleMetaData? {
-        val consoleDetector = NativeServices.getInstance().get<ConsoleDetector>(ConsoleDetector::class.java)
-        val metaData = consoleDetector.console
+        val consoleDetector = NativeServices.getInstance().get(ConsoleDetector::class.java as Class<ConsoleDetector?>)!!
+        val metaData = consoleDetector.getConsole()
         return createProxyingConsoleMetaData(
             if (metaData != null) metaData else FallbackConsoleMetaData.NOT_ATTACHED,
             consoleUnicodeSupport
         )
     }
 
-    private fun configureAutoConsole(renderer: OutputEventRenderer, consoleMetaData: ConsoleMetaData, stdout: OutputStream?, stderr: OutputStream?) {
-        if (consoleMetaData.isStdOutATerminal && consoleMetaData.isStdErrATerminal) {
+    private fun configureAutoConsole(renderer: OutputEventRenderer, consoleMetaData: ConsoleMetaData, stdout: OutputStream, stderr: OutputStream) {
+        if (consoleMetaData.isStdOutATerminal() && consoleMetaData.isStdErrATerminal()) {
             // Redirect stderr to stdout when both stdout and stderr are attached to a console. Assume that they are attached to the same console
             // This avoids interleaving problems when stdout and stderr end up at the same location
-            val console = consoleForStdOut(stdout, consoleMetaData, renderer.getColourMap())
+            val console = consoleForStdOut(stdout, consoleMetaData, renderer.colourMap)
             renderer.addRichConsoleWithErrorOutputOnStdout(console, consoleMetaData, false)
-        } else if (consoleMetaData.isStdOutATerminal) {
+        } else if (consoleMetaData.isStdOutATerminal()) {
             // Write rich content to stdout and plain content to stderr
-            val stdoutConsole = consoleForStdOut(stdout, consoleMetaData, renderer.getColourMap())
+            val stdoutConsole = consoleForStdOut(stdout, consoleMetaData, renderer.colourMap)
             renderer.addRichConsole(stdoutConsole, stderr, consoleMetaData, false)
-        } else if (consoleMetaData.isStdErrATerminal) {
+        } else if (consoleMetaData.isStdErrATerminal()) {
             // Write plain content to stdout and rich content to stderr
-            val stderrConsole = consoleForStdErr(stderr, consoleMetaData, renderer.getColourMap())
+            val stderrConsole = consoleForStdErr(stderr, consoleMetaData, renderer.colourMap)
             renderer.addRichConsole(stdout, stderrConsole, true)
         } else {
             renderer.addPlainConsole(stdout, stderr)
         }
     }
 
-    private fun configurePlainConsole(renderer: OutputEventRenderer, consoleMetaData: ConsoleMetaData, stdout: OutputStream?, stderr: OutputStream?) {
-        if (consoleMetaData.isStdOutATerminal && consoleMetaData.isStdErrATerminal) {
+    private fun configurePlainConsole(renderer: OutputEventRenderer, consoleMetaData: ConsoleMetaData, stdout: OutputStream, stderr: OutputStream) {
+        if (consoleMetaData.isStdOutATerminal() && consoleMetaData.isStdErrATerminal()) {
             // Redirect stderr to stdout when both stdout and stderr are attached to a console. Assume that they are attached to the same console
             // This avoids interleaving problems when stdout and stderr end up at the same location
             renderer.addPlainConsoleWithErrorOutputOnStdout(stdout)
@@ -132,38 +132,38 @@ object ConsoleConfigureAction {
         }
     }
 
-    private fun configureColoredConsole(renderer: OutputEventRenderer, consoleMetaData: ConsoleMetaData, stdout: OutputStream?, stderr: OutputStream?) {
-        if (consoleMetaData.isStdOutATerminal && consoleMetaData.isStdErrATerminal) {
+    private fun configureColoredConsole(renderer: OutputEventRenderer, consoleMetaData: ConsoleMetaData, stdout: OutputStream, stderr: OutputStream) {
+        if (consoleMetaData.isStdOutATerminal() && consoleMetaData.isStdErrATerminal()) {
             // Redirect stderr to stdout when both stdout and stderr are attached to a console.
             // Assume that they are attached to the same console.
             // This avoids interleaving problems when stdout and stderr end up at the same location.
-            val console = consoleForStdOut(stdout, consoleMetaData, renderer.getColourMap())
+            val console = consoleForStdOut(stdout, consoleMetaData, renderer.colourMap)
             renderer.addColoredConsoleWithErrorOutputOnStdout(console)
         } else {
             // Write colored content to both stdout and stderr
-            val stdoutConsole = consoleForStdOut(stdout, consoleMetaData, renderer.getColourMap())
-            val stderrConsole = consoleForStdErr(stderr, consoleMetaData, renderer.getColourMap())
+            val stdoutConsole = consoleForStdOut(stdout, consoleMetaData, renderer.colourMap)
+            val stderrConsole = consoleForStdErr(stderr, consoleMetaData, renderer.colourMap)
             renderer.addColoredConsole(stdoutConsole, stderrConsole)
         }
     }
 
-    private fun configureRichConsole(renderer: OutputEventRenderer, consoleMetaData: ConsoleMetaData, stdout: OutputStream?, stderr: OutputStream?, verbose: Boolean) {
-        if (consoleMetaData.isStdOutATerminal && consoleMetaData.isStdErrATerminal) {
+    private fun configureRichConsole(renderer: OutputEventRenderer, consoleMetaData: ConsoleMetaData, stdout: OutputStream, stderr: OutputStream, verbose: Boolean) {
+        if (consoleMetaData.isStdOutATerminal() && consoleMetaData.isStdErrATerminal()) {
             // Redirect stderr to stdout when both stdout and stderr are attached to a console.
             // Assume that they are attached to the same console.
             // This avoids interleaving problems when stdout and stderr end up at the same location.
-            val console = consoleForStdOut(stdout, consoleMetaData, renderer.getColourMap())
+            val console = consoleForStdOut(stdout, consoleMetaData, renderer.colourMap)
             renderer.addRichConsoleWithErrorOutputOnStdout(console, consoleMetaData, verbose)
         } else {
             // Write rich content to both stdout and stderr
-            val stdoutConsole = consoleForStdOut(stdout, consoleMetaData, renderer.getColourMap())
-            val stderrConsole = consoleForStdErr(stderr, consoleMetaData, renderer.getColourMap())
+            val stdoutConsole = consoleForStdOut(stdout, consoleMetaData, renderer.colourMap)
+            val stderrConsole = consoleForStdErr(stderr, consoleMetaData, renderer.colourMap)
             renderer.addRichConsole(stdoutConsole, stderrConsole, consoleMetaData, verbose)
         }
     }
 
-    private fun consoleFor(stream: OutputStream?, jansiFallback: Supplier<OutputStream?>, consoleMetaData: ConsoleMetaData, colourMap: ColorMap): Console {
-        val force = !consoleMetaData.isWrapStreams
+    private fun consoleFor(stream: OutputStream, jansiFallback: Supplier<OutputStream?>, consoleMetaData: ConsoleMetaData, colourMap: ColorMap): Console {
+        val force = !consoleMetaData.isWrapStreams()
 
         // Use UTF-8 when terminal supports Unicode, otherwise use default charset
         val charset = if (consoleMetaData.supportsUnicode())
@@ -175,11 +175,11 @@ object ConsoleConfigureAction {
         return AnsiConsole(writer, writer, colourMap, consoleMetaData, force)
     }
 
-    private fun consoleForStdOut(stdout: OutputStream?, consoleMetaData: ConsoleMetaData, colourMap: ColorMap): Console {
+    private fun consoleForStdOut(stdout: OutputStream, consoleMetaData: ConsoleMetaData, colourMap: ColorMap): Console {
         return consoleFor(stdout, Supplier { installJansiStream(org.fusesource.jansi.AnsiConsole.out()) }, consoleMetaData, colourMap)
     }
 
-    private fun consoleForStdErr(stderr: OutputStream?, consoleMetaData: ConsoleMetaData, colourMap: ColorMap): Console {
+    private fun consoleForStdErr(stderr: OutputStream, consoleMetaData: ConsoleMetaData, colourMap: ColorMap): Console {
         return consoleFor(stderr, Supplier { installJansiStream(org.fusesource.jansi.AnsiConsole.err()) }, consoleMetaData, colourMap)
     }
 

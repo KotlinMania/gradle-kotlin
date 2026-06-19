@@ -89,7 +89,7 @@ public class ResilientBuildToolingModelController extends DefaultBuildToolingMod
         public ToolingModelBuilderResultInternal getModel(ToolingModelRequestContext modelName, @Nullable ToolingModelParameterCarrier parameter) {
             // If evaluation of settings fails, a project could not be created, and we should return the failure before locateBuilder is called
             if (!targetProject.isCreated()) {
-                checkArgument(!ownerBuildConfiguration.isSuccessful, "Project has not been created, but build configuration has succeeded, this is a bug, please report.");
+                checkArgument(!ownerBuildConfiguration.isSuccessful(), "Project has not been created, but build configuration has succeeded, this is a bug, please report.");
                 return ToolingModelBuilderResultInternal.of(getConfigurationFailure(failureFactory, ownerBuildConfiguration));
             }
             return super.getModel(modelName, parameter);
@@ -98,7 +98,7 @@ public class ResilientBuildToolingModelController extends DefaultBuildToolingMod
         @Override
         ToolingModelBuilderLookup.Builder locateBuilder() throws UnknownModelException {
             // Force configuration of the target project to ensure all builders have been registered
-            Try<Void> projectConfiguration = ownerBuildConfiguration.isSuccessful
+            Try<Void> projectConfiguration = ownerBuildConfiguration.isSuccessful()
                 ? tryRunConfiguration(targetProject::ensureConfigured)
                 : ownerBuildConfiguration;
 
@@ -118,7 +118,7 @@ public class ResilientBuildToolingModelController extends DefaultBuildToolingMod
     }
 
     private static List<Failure> getConfigurationFailure(FailureFactory failureFactory, Try<Void> configuration) {
-        Optional<Throwable> failure = configuration.failure;
+        Optional<Throwable> failure = configuration.getFailure();
         return failure.map(e -> ImmutableList.of(failureFactory.create(e))).orElseGet(ImmutableList::of);
     }
 
@@ -148,7 +148,7 @@ public class ResilientBuildToolingModelController extends DefaultBuildToolingMod
 
         @Override
         public Object build(@Nullable Object parameter) {
-            if (projectConfiguration.isSuccessful) {
+            if (projectConfiguration.isSuccessful()) {
                 return delegate.get().build(parameter);
             }
 

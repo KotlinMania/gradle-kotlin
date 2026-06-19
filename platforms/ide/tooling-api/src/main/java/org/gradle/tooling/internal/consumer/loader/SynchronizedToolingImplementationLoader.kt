@@ -31,7 +31,7 @@ class SynchronizedToolingImplementationLoader(private val delegate: ToolingImple
 
     override fun create(
         distribution: Distribution?,
-        progressLoggerFactory: ProgressLoggerFactory,
+        progressLoggerFactory: ProgressLoggerFactory?,
         progressListener: InternalBuildProgressListener?,
         connectionParameters: ConnectionParameters?,
         cancellationToken: BuildCancellationToken?
@@ -43,7 +43,7 @@ class SynchronizedToolingImplementationLoader(private val delegate: ToolingImple
                 lock.unlock()
             }
         }
-        val logger = progressLoggerFactory.newOperation(SynchronizedToolingImplementationLoader::class.java)
+        val logger = progressLoggerFactory!!.newOperation(SynchronizedToolingImplementationLoader::class.java)
         logger!!.setDescription("Wait for the other thread to finish acquiring the distribution")
         logger.started()
         lock.lock()

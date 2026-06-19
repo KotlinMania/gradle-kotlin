@@ -29,11 +29,12 @@ import org.gradle.internal.service.scopes.AbstractGradleModuleServices
 
 class FlowServices : AbstractGradleModuleServices() {
 
-    override fun registerBuildServices(registration: ServiceRegistration) {
-        registration.add(DefaultFlowProviders::class.java)
-        registration.add(FlowScheduler::class.java)
-        registration.add(FlowParametersInstantiator::class.java)
-        registration.addProvider(FlowServicesProvider)
+    override fun registerBuildServices(registration: ServiceRegistration?) {
+        val services = registration!!
+        services.add(DefaultFlowProviders::class.java)
+        services.add(FlowScheduler::class.java)
+        services.add(FlowParametersInstantiator::class.java)
+        services.addProvider(FlowServicesProvider)
     }
 
     internal

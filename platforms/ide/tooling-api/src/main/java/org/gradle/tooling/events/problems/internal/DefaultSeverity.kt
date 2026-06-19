@@ -19,14 +19,11 @@ import com.google.common.cache.CacheBuilder
 import com.google.common.cache.CacheLoader
 import org.gradle.tooling.events.problems.Severity
 
-class DefaultSeverity(private val severity: Int, private val known: Boolean) : Severity {
-    override fun getSeverity(): Int {
-        return severity
-    }
+class DefaultSeverity(override val severity: Int, private val known: Boolean) : Severity {
 
-    override fun isKnown(): Boolean {
-        return known
-    }
+
+    override val isKnown: Boolean
+        get() = known
 
     companion object {
         // Using the loading cache ensures that there's only one object in memory per severity level even when the level is unknown by the client

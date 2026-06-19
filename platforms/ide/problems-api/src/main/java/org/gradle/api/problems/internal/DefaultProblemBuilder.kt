@@ -43,7 +43,7 @@ class DefaultProblemBuilder(
     private var solutions: MutableList<String>
     var exception: Throwable? = null
         private set
-    private var additionalData: AdditionalData = null
+    private var additionalData: AdditionalData? = null
     private var collectStackLocation = false
     private var diagnostics: ProblemDiagnostics? = null
 
@@ -55,14 +55,14 @@ class DefaultProblemBuilder(
         problem: ProblemInternal,
         infrastructure: ProblemsInfrastructure
     ) : this(infrastructure) {
-        this.id = problem.getDefinition().getId()
+        this.id = problem.getDefinition()!!.getId()
         this.contextualLabel = problem.getContextualLabel()
-        this.solutions = ArrayList<String>(problem.getSolutions())
-        this.severity = problem.getDefinition().getSeverity()
-        this.originLocations.addAll(problem.getOriginLocations())
-        this.contextLocations.addAll(problem.getContextualLocations())
+        this.solutions = ArrayList<String>(problem.getSolutions()!!)
+        this.severity = problem.getDefinition()!!.getSeverity()
+        this.originLocations.addAll(problem.getOriginLocations()!!)
+        this.contextLocations.addAll(problem.getContextualLocations()!!)
         this.details = problem.getDetails()
-        this.docLink = problem.getDefinition().getDocumentationLink()
+        this.docLink = problem.getDefinition()!!.getDocumentationLink()
         this.exception = problem.getException()
         this.additionalData = problem.getAdditionalData()!!
     }
@@ -71,7 +71,7 @@ class DefaultProblemBuilder(
         // id is mandatory
         if (getId() == null) {
             return invalidProblem("missing-id", "Problem id must be specified", null)
-        } else if (getId().group == null) {
+        } else if (getId().getGroup() == null) {
             return invalidProblem("missing-parent", "Problem id must have a parent", null)
         }
 
@@ -79,7 +79,7 @@ class DefaultProblemBuilder(
             return invalidProblem(
                 "unsupported-additional-data", "Unsupported additional data type",
                 "Unsupported additional data type: " + (additionalData as UnsupportedAdditionalDataSpec).type.getName() +
-                        ". Supported types are: " + problemsInfrastructure.getAdditionalDataBuilderFactory().getSupportedTypes()
+                        ". Supported types are: " + problemsInfrastructure.additionalDataBuilderFactory!!.supportedTypes
             )
         }
 
@@ -105,7 +105,7 @@ class DefaultProblemBuilder(
         if (diagnostics != null) {
             return diagnostics
         }
-        val problemStream = problemsInfrastructure.getProblemStream()
+        val problemStream = problemsInfrastructure.problemStream
         if (problemStream == null || (!collectStackLocation && areLocationsProvided())) {
             return null
         }
@@ -116,18 +116,18 @@ class DefaultProblemBuilder(
         return !(contextLocations.isEmpty() && originLocations.isEmpty())
     }
 
-    private fun exceptionForStackLocation(overruleStacktraceLimit: Boolean): Throwable {
-        return (if (this.exception == null && overruleStacktraceLimit) java.lang.RuntimeException() else this.exception)!!
+    private fun exceptionForStackLocation(overruleStacktraceLimit: Boolean): Throwable? {
+        return if (this.exception == null && overruleStacktraceLimit) java.lang.RuntimeException() else this.exception
     }
 
     private fun addLocationsFromDiagnostics(locations: MutableList<ProblemLocation>, diagnostics: ProblemDiagnostics) {
-        val loc = diagnostics.location
+        val loc = diagnostics.getLocation()
         val fileLocation: FileLocation? = if (loc == null) null else getFileLocation(loc)
         if (fileLocation != null) {
             locations.remove(fileLocation)
         }
         if (collectStackLocation || fileLocation != null) {
-            locations.add(DefaultStackTraceLocation(fileLocation, diagnostics.stack))
+            locations.add(DefaultStackTraceLocation(fileLocation, diagnostics.getStack()!!))
         }
 
         val pluginIdLocation: PluginIdLocation? = getDefaultPluginIdLocation(diagnostics)
@@ -264,23 +264,23 @@ class DefaultProblemBuilder(
         return this
     }
 
-    override fun documentedAt(url: String?): ProblemBuilderInternal {
-        this.docLink = if (url == null) null else DefaultDocLink(url)
+    override fun documentedAt(url: String): ProblemBuilderInternal {
+        this.docLink = DefaultDocLink(url)
         return this
     }
 
 
-    override fun solution(solution: String?): ProblemBuilderInternal {
+    override fun solution(solution: String): ProblemBuilderInternal {
         if (this.solutions == null) {
             this.solutions = ArrayList<String>()
         }
-        this.solutions.add(solution!!)
+        this.solutions.add(solution)
         return this
     }
 
     override fun <U : AdditionalDataSpec?> additionalDataInternal(specType: Class<out U>, config: Action<in U?>): ProblemBuilderInternal {
-        if (problemsInfrastructure.getAdditionalDataBuilderFactory().hasProviderForSpec(specType)) {
-            val additionalDataBuilder = problemsInfrastructure.getAdditionalDataBuilderFactory().createAdditionalDataBuilder(specType, additionalData)
+        if (problemsInfrastructure.additionalDataBuilderFactory!!.hasProviderForSpec(specType)) {
+            val additionalDataBuilder = problemsInfrastructure.additionalDataBuilderFactory.createAdditionalDataBuilder(specType, additionalData)
             config.execute(additionalDataBuilder as U)
             additionalData = additionalDataBuilder.build()
         } else {
@@ -289,21 +289,21 @@ class DefaultProblemBuilder(
         return this
     }
 
-    override fun <T : AdditionalData?> additionalData(type: Class<T?>, config: Action<in T?>): ProblemBuilderInternal {
-        val additionalDataInstance = createAdditionalData<T?>(type, config)
-        val isolated = problemsInfrastructure.getIsolatableFactory().isolate<AdditionalData>(additionalDataInstance)
+    override fun <T : AdditionalData> additionalData(type: Class<T>, config: Action<in T>): ProblemBuilderInternal {
+        val additionalDataInstance = createAdditionalData(type, config)
+        val isolated = problemsInfrastructure.isolatableFactory!!.isolate<AdditionalData>(additionalDataInstance)
 
-        val serializedBaseClass = problemsInfrastructure.getPayloadSerializer().serialize(type)
-        val serialized = this.problemsInfrastructure.getIsolatableSerializer().serialize(isolated)
+        val serializedBaseClass = problemsInfrastructure.payloadSerializer!!.serialize(type)
+        val serialized = this.problemsInfrastructure.isolatableSerializer!!.serialize(isolated)!!
 
         this.additionalData = DefaultTypedAdditionalData(serializedBaseClass, serialized)
         return this
     }
 
-    private fun <T : AdditionalData?> createAdditionalData(type: Class<T?>, config: Action<in T?>): AdditionalData {
-        val additionalDataInstance = problemsInfrastructure.getInstantiator().newInstance<T?>(type)
+    private fun <T : AdditionalData> createAdditionalData(type: Class<T>, config: Action<in T>): AdditionalData {
+        val additionalDataInstance = problemsInfrastructure.instantiator!!.newInstance(type)
         config.execute(additionalDataInstance)
-        return additionalDataInstance!!
+        return additionalDataInstance
     }
 
     override fun withException(t: Throwable): ProblemBuilderInternal {
@@ -318,7 +318,7 @@ class DefaultProblemBuilder(
     private class UnsupportedAdditionalDataSpec(val type: Class<*>) : AdditionalData
     companion object {
         private fun getDefaultPluginIdLocation(problemDiagnostics: ProblemDiagnostics): PluginIdLocation? {
-            val source = problemDiagnostics.source
+            val source = problemDiagnostics.getSource()
             if (source == null) {
                 return null
             }
@@ -339,11 +339,11 @@ class DefaultProblemBuilder(
         }
 
         private fun cloneId(original: ProblemId): ProblemId {
-            return ProblemId.create(original.name, original.displayName, cloneGroup(original.group))
+            return ProblemId.create(original.getName()!!, original.getDisplayName()!!, cloneGroup(original.getGroup()!!))
         }
 
         private fun cloneGroup(original: ProblemGroup): ProblemGroup {
-            return ProblemGroup.create(original.name, original.displayName, if (original.parent == null) null else Companion.cloneGroup(original.parent!!))
+            return ProblemGroup.create(original.getName()!!, original.getDisplayName()!!, if (original.getParent() == null) null else Companion.cloneGroup(original.getParent()!!))
         }
     }
 }

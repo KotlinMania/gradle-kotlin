@@ -59,7 +59,7 @@ class TcpIncomingConnector(
         LOGGER.debug("Listening on {}.", address)
 
         val executor = executorFactory.create("Incoming " + (if (allowRemote) "remote" else "local") + " TCP Connector on port " + localPort)
-        executor.execute(TcpIncomingConnector.Receiver(serverSocket, action, allowRemote))
+        executor.execute(Receiver(serverSocket, action, allowRemote))
 
         return object : ConnectionAcceptor {
             override fun getAddress(): Address {

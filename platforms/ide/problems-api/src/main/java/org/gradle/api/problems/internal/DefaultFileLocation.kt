@@ -24,7 +24,7 @@ open class DefaultFileLocation protected constructor(private val path: String) :
         return path
     }
 
-    override fun equals(o: Any): Boolean {
+    override fun equals(o: Any?): Boolean {
         if (o !is DefaultFileLocation) {
             return false
         }

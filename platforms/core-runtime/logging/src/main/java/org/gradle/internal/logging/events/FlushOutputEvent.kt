@@ -21,7 +21,6 @@ import org.gradle.api.logging.LogLevel
  * Notifies output consumers that might be queueing messages to immediately flush their queues.
  */
 class FlushOutputEvent : OutputEvent(), InteractiveEvent {
-    override fun getLogLevel(): LogLevel? {
-        return null
-    }
+    override val logLevel: LogLevel?
+        get() = null
 }

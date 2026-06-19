@@ -15,16 +15,27 @@
  */
 package org.gradle.integtests.tooling.r930
 
+import org.gradle.tooling.*
+import org.gradle.tooling.model.*
+import org.gradle.tooling.model.build.*
+import org.gradle.tooling.model.eclipse.*
+import org.gradle.tooling.model.gradle.*
+import org.gradle.tooling.model.idea.*
+import org.gradle.tooling.model.kotlin.dsl.*
+import org.gradle.tooling.internal.adapter.ProtocolToModelAdapter
+import java.io.File
+import org.gradle.integtests.tooling.r48.*
+
 import org.gradle.tooling.BuildAction
 import java.util.stream.Collectors
 
 internal class FetchUnknownModelAction : BuildAction<MutableList<String?>?> {
-    public override fun execute(controller: BuildController): MutableList<String?> {
-        val result: FetchModelResult<UnknownModel?> = controller.fetch(null, UnknownModel::class.java, null, null)
+    public override fun execute(controller: BuildController?): MutableList<String?> {
+        val result: FetchModelResult<UnknownModel?> = controller.fetch(null, UnknownModel::class.java)
         assert(result.getModel() == null)
         return result.getFailures().stream()
             .flatMap({ f -> f.getCauses().stream() })
-            .map(Failure::getMessage)
+            .map { it.getMessage() }
             .collect(Collectors.toList())
     }
 }

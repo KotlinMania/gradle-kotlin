@@ -26,12 +26,12 @@ import java.io.IOException
 import java.lang.reflect.Method
 
 class MethodInvocationSerializer(private val classLoader: ClassLoader?, private val methodArgsSerializer: MethodArgsSerializer) : StatefulSerializer<MethodInvocation?> {
-    override fun newReader(decoder: Decoder): ObjectReader<MethodInvocation?> {
-        return MethodInvocationReader(decoder, classLoader, methodArgsSerializer)
+    override fun newReader(decoder: Decoder?): ObjectReader<MethodInvocation?> {
+        return MethodInvocationReader(decoder!!, classLoader, methodArgsSerializer)
     }
 
-    override fun newWriter(encoder: Encoder): ObjectWriter<MethodInvocation?> {
-        return MethodInvocationWriter(encoder, methodArgsSerializer)
+    override fun newWriter(encoder: Encoder?): ObjectWriter<MethodInvocation?> {
+        return MethodInvocationWriter(encoder!!, methodArgsSerializer)
     }
 
     private class MethodDetails(val methodId: Int, val method: Method, val argsSerializer: Serializer<Array<Any?>?>)
@@ -40,7 +40,8 @@ class MethodInvocationSerializer(private val classLoader: ClassLoader?, private 
         private val methods: MutableMap<Method?, MethodDetails?> = HashMap<Method?, MethodDetails?>()
 
         @Throws(Exception::class)
-        override fun write(value: MethodInvocation) {
+        override fun write(value: MethodInvocation?) {
+            value!!
             require(value.arguments.size == value.method.getParameterTypes().size) { String.format("Mismatched number of parameters to method %s.", value.method) }
             val methodDetails = writeMethod(value.method)
             writeArgs(methodDetails, value)
@@ -97,10 +98,7 @@ class MethodInvocationSerializer(private val classLoader: ClassLoader?, private 
                 val declaringClass = readType()
                 val methodName = decoder.readString()
                 val paramCount = decoder.readSmallInt()
-                val paramTypes = arrayOfNulls<Class<*>>(paramCount)
-                for (i in paramTypes.indices) {
-                    paramTypes[i] = readType()
-                }
+                val paramTypes = Array(paramCount) { readType() }
                 val method = declaringClass.getDeclaredMethod(methodName, *paramTypes)
                 methodDetails = MethodDetails(methodId, method, methodArgsSerializer.forTypes(method.getParameterTypes()))
                 methods.put(methodId, methodDetails)

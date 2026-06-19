@@ -85,7 +85,7 @@ object DeprecationLogger {
 
     @JvmStatic
     val deprecationFailure: Throwable?
-        get() = DEPRECATED_FEATURE_HANDLER.getDeprecationFailure()
+        get() = DEPRECATED_FEATURE_HANDLER.deprecationFailure
 
     /**
      * This is a rather generic deprecation entry point - consider using a more specific deprecation method and only resort to this one if there is no fit.
@@ -169,6 +169,7 @@ object DeprecationLogger {
      * Output: The ${method} method has been deprecated.
      */
     @CheckReturnValue
+    @JvmStatic
     fun deprecateMethod(methodClass: Class<*>, methodWithParams: String): DeprecationMessageBuilder.DeprecateMethod {
         return DeprecationMessageBuilder.DeprecateMethod(methodClass, methodWithParams)
     }
@@ -251,6 +252,7 @@ object DeprecationLogger {
         }
     }
 
+    @JvmStatic
     fun <T : Any?> whileDisabled(factory: Factory<T?>): T? {
         disable()
         try {
@@ -270,19 +272,19 @@ object DeprecationLogger {
         }
     }
 
-    fun <T, E : Exception?> whileDisabledThrowing(factory: ThrowingFactory<T?, E?>): T? {
+    fun <T, E : Exception> whileDisabledThrowing(factory: ThrowingFactory<T?, E>): T? {
         disable()
         try {
-            return toUncheckedThrowingFactory<T?, E?>(factory).create()
+            return toUncheckedThrowingFactory<T?, E>(factory).create()
         } finally {
             maybeEnable()
         }
     }
 
-    fun <E : Exception?> whileDisabledThrowing(runnable: ThrowingRunnable<E?>) {
+    fun <E : Exception> whileDisabledThrowing(runnable: ThrowingRunnable<E>) {
         disable()
         try {
-            toUncheckedThrowingRunnable<E?>(runnable).run()
+            toUncheckedThrowingRunnable<E>(runnable).run()
         } finally {
             maybeEnable()
         }
@@ -305,7 +307,7 @@ object DeprecationLogger {
      * The compiler is happy with the casting that allows to hide the checked exception.
      * The runtime is happy with the casting because the checked exception type information is captured in a generic type parameter which gets erased.
      */
-    private fun <T, E : Exception?> toUncheckedThrowingFactory(throwingFactory: ThrowingFactory<T?, E?>): Factory<T?> {
+    private fun <T, E : Exception> toUncheckedThrowingFactory(throwingFactory: ThrowingFactory<T?, E>): Factory<T?> {
         return object : Factory<T?> {
             override fun create(): T? {
                 val factory = throwingFactory as ThrowingFactory<T?, RuntimeException>
@@ -319,7 +321,7 @@ object DeprecationLogger {
      *
      * @see .toUncheckedThrowingFactory
      */
-    private fun <E : Exception?> toUncheckedThrowingRunnable(throwingRunnable: ThrowingRunnable<E?>): Runnable {
+    private fun <E : Exception> toUncheckedThrowingRunnable(throwingRunnable: ThrowingRunnable<E>): Runnable {
         return object : Runnable {
             override fun run() {
                 val runnable = throwingRunnable as ThrowingRunnable<RuntimeException>
@@ -333,13 +335,11 @@ object DeprecationLogger {
         DEPRECATED_FEATURE_HANDLER.featureUsed(usage)
     }
 
-    interface ThrowingFactory<T, E : Exception?> {
-        @Throws(E::class)
+    interface ThrowingFactory<T, E : Exception> {
         fun create(): T?
     }
 
-    interface ThrowingRunnable<E : Exception?> {
-        @Throws(E::class)
+    interface ThrowingRunnable<E : Exception> {
         fun run()
     }
 
@@ -349,7 +349,7 @@ object DeprecationLogger {
         }
 
         override fun build(): DeprecationMessage {
-            if (problemId == null) {
+            if (problemIdValue == null) {
                 setProblemId(DeprecationMessageBuilder.Companion.createDefaultDeprecationId(feature))
             }
             return super.build()

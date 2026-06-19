@@ -191,6 +191,16 @@ fun configureShadedSourcesJarVariant() {
     sourcesElements.attributes {
         attribute(Bundling.BUNDLING_ATTRIBUTE, objects.named(Bundling.SHADOWED))
     }
+    plugins.withId("org.jetbrains.kotlin.jvm") {
+        afterEvaluate {
+            val sourcesArtifacts = sourcesElements.outgoing.artifacts.filter { it.classifier == "sources" }
+            if (sourcesArtifacts.size > 1) {
+                sourcesArtifacts
+                    .filter { it.file.name.startsWith("${project.name}-") }
+                    .forEach { sourcesElements.outgoing.artifacts.remove(it) }
+            }
+        }
+    }
 }
 
 fun Configuration.artifactViewForType(artifactTypeName: String) = incoming.artifactView {

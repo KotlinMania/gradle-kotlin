@@ -17,8 +17,6 @@ package org.gradle.tooling.events.internal
 
 import org.gradle.tooling.events.PluginIdentifier
 
-internal abstract class AbstractPluginIdentifier(private val displayName: String?) : PluginIdentifier {
-    override fun getDisplayName(): String? {
-        return displayName
-    }
+abstract class AbstractPluginIdentifier(override val displayName: String?) : PluginIdentifier {
+
 }

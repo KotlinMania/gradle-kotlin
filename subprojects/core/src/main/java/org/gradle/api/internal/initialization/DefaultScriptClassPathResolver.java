@@ -176,7 +176,7 @@ public class DefaultScriptClassPathResolver implements ScriptClassPathResolver {
         CacheInstrumentationDataBuildService buildService,
         ArtifactCollection instrumentedProjectDependencies
     ) {
-        boolean composeWithThirdPartyAgent = agentStatus.isAgentInstrumentationEnabled && ThirdPartyAgentDetection.isThirdPartyAgentPresent();
+        boolean composeWithThirdPartyAgent = agentStatus.isAgentInstrumentationEnabled() && ThirdPartyAgentDetection.isThirdPartyAgentPresent();
         if (!composeWithThirdPartyAgent || !(classPath instanceof TransformedClassPath)) {
             return classPath;
         }

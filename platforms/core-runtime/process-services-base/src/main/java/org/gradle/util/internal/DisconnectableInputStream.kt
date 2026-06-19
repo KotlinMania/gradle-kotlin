@@ -121,7 +121,7 @@ class DisconnectableInputStream @JvmOverloads internal constructor(source: Input
     }
 
     @Throws(IOException::class)
-    override fun read(bytes: ByteArray, pos: Int, count: Int): Int {
+    override fun read(bytes: ByteArray?, pos: Int, count: Int): Int {
         lock.lock()
         try {
             while (!inputFinished && !closed && readPos == writePos) {
@@ -134,7 +134,7 @@ class DisconnectableInputStream @JvmOverloads internal constructor(source: Input
             // Drain the buffer before returning end-of-stream
             if (writePos > readPos) {
                 val nread = min(count, writePos - readPos)
-                System.arraycopy(buffer, readPos, bytes, pos, nread)
+                System.arraycopy(buffer, readPos, bytes!!, pos, nread)
                 readPos += nread
                 assert(writePos >= readPos)
                 condition.signalAll()

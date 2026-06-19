@@ -15,13 +15,11 @@
  */
 package org.gradle.internal.groovyloader
 
-import org.gradle.util.internal.CollectionUtils
-
 class CompositeGroovySystemLoader(vararg loaders: GroovySystemLoader) : GroovySystemLoader {
     private val loaders: MutableList<GroovySystemLoader>
 
     init {
-        this.loaders = CollectionUtils.toList<GroovySystemLoader>(loaders)
+        this.loaders = loaders.toMutableList()
     }
 
     override fun shutdown() {

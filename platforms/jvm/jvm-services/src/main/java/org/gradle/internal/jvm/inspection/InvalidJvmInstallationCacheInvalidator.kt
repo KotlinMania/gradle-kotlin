@@ -22,9 +22,9 @@ import java.io.IOException
 import java.util.function.Predicate
 
 @ServiceScope(Scope.Build::class)
-class InvalidJvmInstallationCacheInvalidator(private val cache: ConditionalInvalidation<JvmInstallationMetadata?>) : Closeable {
+class InvalidJvmInstallationCacheInvalidator(private val cache: ConditionalInvalidation<JvmInstallationMetadata>) : Closeable {
     @Throws(IOException::class)
     override fun close() {
-        cache.invalidateItemsMatching(Predicate { metadata: JvmInstallationMetadata? -> !metadata!!.isValidInstallation() })
+        cache.invalidateItemsMatching(Predicate { metadata: JvmInstallationMetadata -> !metadata.isValidInstallation })
     }
 }

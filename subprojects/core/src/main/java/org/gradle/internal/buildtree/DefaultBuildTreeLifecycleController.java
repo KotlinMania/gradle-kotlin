@@ -93,8 +93,8 @@ public class DefaultBuildTreeLifecycleController implements BuildTreeLifecycleCo
     @SuppressWarnings("DataFlowIssue")
     private <T> ExecutionResult<T> runFromBuildModel(BuildTreeModelAction<? extends T> action) {
         Try<T> model = Try.ofFailable(() -> modelCreator.fromBuildModel(action));
-        return model.failure.isPresent()
-            ? ExecutionResult.failed(BuildActionExecutionException.wrap(model.failure.get()))
+        return model.getFailure().isPresent()
+            ? ExecutionResult.failed(BuildActionExecutionException.wrap(model.getFailure().get()))
             : ExecutionResult.succeeded(model.get());
     }
 

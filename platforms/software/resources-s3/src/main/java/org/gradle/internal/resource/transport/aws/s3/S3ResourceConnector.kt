@@ -32,28 +32,28 @@ import java.io.IOException
 class S3ResourceConnector(private val s3Client: S3Client) : AbstractExternalResourceAccessor(), ExternalResourceConnector {
     override fun list(parent: ExternalResourceName): MutableList<String?>? {
         LOGGER.debug("Listing parent resources: {}", parent)
-        return s3Client.listDirectChildren(parent.getUri())
+        return s3Client.listDirectChildren(parent.uri)
     }
 
     public override fun openResource(location: ExternalResourceName, revalidate: Boolean): ExternalResourceReadResponse? {
         LOGGER.debug("Attempting to get resource: {}", location)
-        val s3Object = s3Client.getResource(location.getUri())
+        val s3Object = s3Client.getResource(location.uri)
         if (s3Object == null) {
             return null
         }
-        return S3Resource(s3Object, location.getUri())
+        return S3Resource(s3Object, location.uri)
     }
 
     override fun getMetaData(location: ExternalResourceName, revalidate: Boolean): ExternalResourceMetaData? {
         LOGGER.debug("Attempting to get resource metadata: {}", location)
-        val s3Object = s3Client.getMetaData(location.getUri())
+        val s3Object = s3Client.getMetaData(location.uri)
         if (s3Object == null) {
             return null
         }
         try {
             val objectMetadata = s3Object.getObjectMetadata()
             return DefaultExternalResourceMetaData(
-                location.getUri(),
+                location.uri,
                 objectMetadata.getLastModified().getTime(),
                 objectMetadata.getContentLength(),
                 objectMetadata.getContentType(),
@@ -70,7 +70,7 @@ class S3ResourceConnector(private val s3Client: S3Client) : AbstractExternalReso
         LOGGER.debug("Attempting to upload stream to : {}", destination)
         val inputStream = resource.open()
         try {
-            s3Client.put(inputStream, resource.getContentLength(), destination.getUri())
+            s3Client.put(inputStream, resource.getContentLength(), destination.uri)
         } finally {
             inputStream.close()
         }

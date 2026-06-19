@@ -46,7 +46,7 @@ public class ResolveTaskExecutionModeExecuter implements TaskExecuter {
         Timer clock = Time.startTimer();
         TaskExecutionMode taskExecutionMode = executionModeResolver.getExecutionMode(task, context.getTaskProperties());
         context.setTaskExecutionMode(taskExecutionMode);
-        LOGGER.debug("Putting task artifact state for {} into context took {}.", task, clock.elapsed);
+        LOGGER.debug("Putting task artifact state for {} into context took {}.", task, clock.getElapsed());
         try {
             return executer.execute(task, state, context);
         } finally {

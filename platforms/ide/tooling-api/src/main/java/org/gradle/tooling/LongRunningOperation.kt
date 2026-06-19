@@ -17,7 +17,6 @@ package org.gradle.tooling
 
 import org.gradle.api.Incubating
 import org.gradle.tooling.events.OperationType
-import org.gradle.tooling.events.ProgressListener
 import java.io.File
 import java.io.InputStream
 import java.io.OutputStream
@@ -50,7 +49,7 @@ interface LongRunningOperation {
      * @return this
      * @since 1.0-milestone-7
      */
-    fun setStandardOutput(outputStream: OutputStream?): LongRunningOperation?
+    fun setStandardOutput(outputStream: OutputStream): LongRunningOperation?
 
     /**
      * Sets the [OutputStream] which should receive standard error logging generated while running the operation.
@@ -60,7 +59,7 @@ interface LongRunningOperation {
      * @return this
      * @since 1.0-milestone-7
      */
-    fun setStandardError(outputStream: OutputStream?): LongRunningOperation?
+    fun setStandardError(outputStream: OutputStream): LongRunningOperation?
 
     /**
      * Specifies whether to generate colored (ANSI encoded) output for logging. The default is to not generate color output.
@@ -82,7 +81,7 @@ interface LongRunningOperation {
      * @return this
      * @since 1.0-milestone-8
      */
-    fun setStandardInput(inputStream: InputStream?): LongRunningOperation?
+    fun setStandardInput(inputStream: InputStream): LongRunningOperation?
 
     /**
      * Specifies the Java home directory to use for this operation.
@@ -100,7 +99,7 @@ interface LongRunningOperation {
      * @since 1.0-milestone-8
      */
     @Throws(IllegalArgumentException::class)
-    fun setJavaHome(javaHome: File?): LongRunningOperation?
+    fun setJavaHome(javaHome: File): LongRunningOperation?
 
     /**
      * Specifies the Java VM arguments to use for this operation.
@@ -158,7 +157,7 @@ interface LongRunningOperation {
      * @since 7.6
      */
     @Incubating
-    fun withSystemProperties(systemProperties: MutableMap<String?, String?>?): LongRunningOperation?
+    fun withSystemProperties(systemProperties: MutableMap<String, String>): LongRunningOperation?
 
     /**
      * Appends Java VM arguments to the existing list.
@@ -293,7 +292,7 @@ interface LongRunningOperation {
      * @return this
      * @since 3.5
      */
-    fun setEnvironmentVariables(envVariables: MutableMap<String?, String?>?): LongRunningOperation?
+    fun setEnvironmentVariables(envVariables: MutableMap<String, String>): LongRunningOperation?
 
     /**
      * Adds a progress listener which will receive progress events as the operation runs.
@@ -308,7 +307,7 @@ interface LongRunningOperation {
      * @return this
      * @since 1.0-milestone-7
      */
-    fun addProgressListener(listener: ProgressListener?): LongRunningOperation?
+    fun addProgressListener(listener: ProgressListener): LongRunningOperation?
 
     /**
      * Adds a progress listener which will receive progress events of all types as the operation runs.
@@ -325,7 +324,7 @@ interface LongRunningOperation {
      * @return this
      * @since 2.5
      */
-    fun addProgressListener(listener: ProgressListener?): LongRunningOperation?
+    fun addProgressListener(listener: org.gradle.tooling.events.ProgressListener): LongRunningOperation?
 
     /**
      * Adds a progress listener which will receive progress events as the operations of the requested type run.
@@ -343,7 +342,7 @@ interface LongRunningOperation {
      * @return this
      * @since 2.5
      */
-    fun addProgressListener(listener: ProgressListener?, operationTypes: MutableSet<OperationType?>?): LongRunningOperation?
+    fun addProgressListener(listener: org.gradle.tooling.events.ProgressListener?, operationTypes: MutableSet<OperationType>): LongRunningOperation?
 
     /**
      * Adds a progress listener which will receive progress events as the operations of the requested type run.
@@ -361,7 +360,7 @@ interface LongRunningOperation {
      * @return this
      * @since 2.6
      */
-    fun addProgressListener(listener: ProgressListener?, vararg operationTypes: OperationType?): LongRunningOperation?
+    fun addProgressListener(listener: org.gradle.tooling.events.ProgressListener?, vararg operationTypes: OperationType): LongRunningOperation?
 
     /**
      * Sets the cancellation token to use to cancel the operation if required.
@@ -371,7 +370,7 @@ interface LongRunningOperation {
      *
      * @since 2.1
      */
-    fun withCancellationToken(cancellationToken: CancellationToken?): LongRunningOperation?
+    fun withCancellationToken(cancellationToken: CancellationToken): LongRunningOperation?
 
     /**
      * Adds more detailed information about the build failure to the [GradleConnectionException] that provides insights into the reasons for the failure, making it easier to diagnose and fix issues.

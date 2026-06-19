@@ -33,7 +33,7 @@ class ExceptionTrackingFailureHandler(private val logger: Logger) : DispatchFail
     override fun stop() {
         if (failure != null) {
             try {
-                throw failure
+                throw failure!!
             } finally {
                 failure = null
             }

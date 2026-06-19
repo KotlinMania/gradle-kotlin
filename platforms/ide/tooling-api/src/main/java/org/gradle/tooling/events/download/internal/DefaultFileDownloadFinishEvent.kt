@@ -15,6 +15,7 @@
  */
 package org.gradle.tooling.events.download.internal
 
+import java.io.File
 import org.gradle.tooling.events.download.FileDownloadFinishEvent
 import org.gradle.tooling.events.download.FileDownloadOperationDescriptor
 import org.gradle.tooling.events.download.FileDownloadResult

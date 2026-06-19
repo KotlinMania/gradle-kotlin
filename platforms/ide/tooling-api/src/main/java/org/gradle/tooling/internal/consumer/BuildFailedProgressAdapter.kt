@@ -26,11 +26,11 @@ import org.jspecify.annotations.NullMarked
 class BuildFailedProgressAdapter : ProgressListener {
     var failures: MutableList<Failure> = ArrayList<Failure>()
 
-    override fun statusChanged(event: ProgressEvent) {
-        if (isBuildFinishedEvent(event)) {
+    override fun statusChanged(event: ProgressEvent?) {
+        if (event != null && isBuildFinishedEvent(event)) {
             val result = (event as FinishEvent).result
             if (result is FailureResult) {
-                this.failures = ArrayList<Failure>(result.failures)
+                this.failures = ArrayList<Failure>(result.failures!!.filterNotNull())
             } else {
                 this.failures = mutableListOf<Failure>()
             }

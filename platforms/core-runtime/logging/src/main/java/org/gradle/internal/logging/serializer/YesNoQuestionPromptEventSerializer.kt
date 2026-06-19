@@ -20,15 +20,15 @@ import org.gradle.internal.serialize.Decoder
 import org.gradle.internal.serialize.Encoder
 import org.gradle.internal.serialize.Serializer
 
-class YesNoQuestionPromptEventSerializer : Serializer<YesNoQuestionPromptEvent?> {
+class YesNoQuestionPromptEventSerializer : Serializer<YesNoQuestionPromptEvent> {
     @Throws(Exception::class)
     override fun write(encoder: Encoder, value: YesNoQuestionPromptEvent) {
         encoder.writeLong(value.timestamp)
-        encoder.writeString(value.question)
+        encoder.writeNullableString(value.question)
     }
 
     @Throws(Exception::class)
     override fun read(decoder: Decoder): YesNoQuestionPromptEvent {
-        return YesNoQuestionPromptEvent(decoder.readLong(), decoder.readString())
+        return YesNoQuestionPromptEvent(decoder.readLong(), decoder.readNullableString())
     }
 }

@@ -125,7 +125,7 @@ abstract class JvmVendorSpec {
         @JvmStatic
         @Incubating
         fun of(vendor: String): JvmVendorSpec {
-            val knownVendor: JvmVendor.KnownJvmVendor = JvmVendor.Companion.fromString(vendor).getKnownVendor()
+            val knownVendor: JvmVendor.KnownJvmVendor = JvmVendor.Companion.fromString(vendor).knownVendor
             if (knownVendor != JvmVendor.KnownJvmVendor.UNKNOWN) {
                 return matching(knownVendor)
             } else {

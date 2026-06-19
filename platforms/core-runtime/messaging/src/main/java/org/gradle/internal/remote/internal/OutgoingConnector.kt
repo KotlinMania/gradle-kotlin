@@ -27,5 +27,5 @@ interface OutgoingConnector {
      * @throws ConnectException when there is nothing listening on the remote address.
      */
     @Throws(ConnectException::class)
-    fun connect(destinationAddress: Address?): ConnectCompletion?
+    fun connect(destinationAddress: Address): ConnectCompletion
 }

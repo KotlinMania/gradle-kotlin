@@ -97,7 +97,7 @@ public abstract class BuildScriptCompilationAndInstrumentation implements Immuta
     @Override
     @OverridingMethodsMustInvokeSuper
     public void visitImmutableInputs(InputVisitor visitor) {
-        visitor.visitInputProperty("isProviderUpgradeReportEnabled", propertyUpgradeReportConfig::isEnabled);
+        visitor.visitInputProperty("isProviderUpgradeReportEnabled", () -> propertyUpgradeReportConfig.isEnabled);
     }
 
     /**

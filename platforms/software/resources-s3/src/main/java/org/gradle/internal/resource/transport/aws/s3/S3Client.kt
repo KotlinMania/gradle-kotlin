@@ -82,7 +82,7 @@ class S3Client {
 
     private fun setAmazonS3ConnectionEndpoint() {
         val clientOptionsBuilder = S3ClientOptions.builder()
-        val endpoint: Optional<URI?> = s3ConnectionProperties.getEndpoint()
+        val endpoint: Optional<URI> = s3ConnectionProperties.endpoint
         if (endpoint.isPresent()) {
             amazonS3Client.setEndpoint(endpoint.get().toString())
             clientOptionsBuilder.setPathStyleAccess(true).disableChunkedEncoding()
@@ -92,37 +92,37 @@ class S3Client {
 
     private fun createConnectionProperties(): ClientConfiguration {
         val clientConfiguration = ClientConfiguration()
-        val proxyOptional = s3ConnectionProperties.getProxy()
+        val proxyOptional = s3ConnectionProperties.proxy
         if (proxyOptional.isPresent()) {
-            val proxy = s3ConnectionProperties.getProxy().get()
+            val proxy = s3ConnectionProperties.proxy.get()
             clientConfiguration.setProxyHost(proxy.host)
             clientConfiguration.setProxyPort(proxy.port)
             val credentials = proxy.credentials
             if (credentials != null) {
-                clientConfiguration.setProxyUsername(credentials.getUsername())
-                clientConfiguration.setProxyPassword(credentials.getPassword())
+                clientConfiguration.setProxyUsername(credentials.username)
+                clientConfiguration.setProxyPassword(credentials.password)
             }
         }
-        val maxErrorRetryCount: Optional<Int?> = s3ConnectionProperties.getMaxErrorRetryCount()
+        val maxErrorRetryCount: Optional<Int> = s3ConnectionProperties.maxErrorRetryCount
         if (maxErrorRetryCount.isPresent()) {
-            clientConfiguration.setMaxErrorRetry(maxErrorRetryCount.get()!!)
+            clientConfiguration.setMaxErrorRetry(maxErrorRetryCount.get())
         }
         return clientConfiguration
     }
 
-    fun put(inputStream: InputStream?, contentLength: Long, destination: URI?) {
-        if (contentLength < s3ConnectionProperties.getMultipartThreshold()) {
+    fun put(inputStream: InputStream?, contentLength: Long, destination: URI) {
+        if (contentLength < s3ConnectionProperties.multipartThreshold) {
             putSingleObject(inputStream, contentLength, destination)
         } else {
             putMultiPartObject(inputStream, contentLength, destination)
         }
     }
 
-    private fun putSingleObject(inputStream: InputStream?, contentLength: Long, destination: URI?) {
+    private fun putSingleObject(inputStream: InputStream?, contentLength: Long, destination: URI) {
         try {
             val s3RegionalResource = S3RegionalResource(destination)
-            val bucketName = s3RegionalResource.getBucketName()
-            val s3BucketKey = s3RegionalResource.getKey()
+            val bucketName = s3RegionalResource.bucketName
+            val s3BucketKey = s3RegionalResource.key
             configureClient(s3RegionalResource)
 
             val objectMetadata = ObjectMetadata()
@@ -138,11 +138,11 @@ class S3Client {
         }
     }
 
-    private fun putMultiPartObject(inputStream: InputStream?, contentLength: Long, destination: URI?) {
+    private fun putMultiPartObject(inputStream: InputStream?, contentLength: Long, destination: URI) {
         try {
             val s3RegionalResource = S3RegionalResource(destination)
-            val bucketName = s3RegionalResource.getBucketName()
-            val s3BucketKey = s3RegionalResource.getKey()
+            val bucketName = s3RegionalResource.bucketName
+            val s3BucketKey = s3RegionalResource.key
             configureClient(s3RegionalResource)
             val partETags: MutableList<PartETag?> = ArrayList<PartETag?>()
             val initRequest = InitiateMultipartUploadRequest(bucketName, s3BucketKey)
@@ -150,7 +150,7 @@ class S3Client {
             val initResponse = amazonS3Client.initiateMultipartUpload(initRequest)
             try {
                 var filePosition: Long = 0
-                var partSize = s3ConnectionProperties.getPartSize()
+                var partSize = s3ConnectionProperties.partSize
 
                 LOGGER.debug("Attempting to put resource:[{}] into s3 bucket [{}]", s3BucketKey, bucketName)
 
@@ -193,10 +193,10 @@ class S3Client {
         return doGetS3Object(uri, false)
     }
 
-    fun listDirectChildren(parent: URI?): MutableList<String?> {
+    fun listDirectChildren(parent: URI): MutableList<String?> {
         val s3RegionalResource = S3RegionalResource(parent)
-        val bucketName = s3RegionalResource.getBucketName()
-        val s3BucketKey = s3RegionalResource.getKey()
+        val bucketName = s3RegionalResource.bucketName
+        val s3BucketKey = s3RegionalResource.key
         configureClient(s3RegionalResource)
 
         val listObjectsRequest = ListObjectsRequest()
@@ -205,20 +205,20 @@ class S3Client {
             .withMaxKeys(1000)
             .withDelimiter("/")
         var objectListing = amazonS3Client.listObjects(listObjectsRequest)
-        val builder = ImmutableList.builder<String?>()
+        val builder = ImmutableList.builder<String>()
         builder.addAll(resourceResolver.resolveResourceNames(objectListing))
 
         while (objectListing.isTruncated()) {
             objectListing = amazonS3Client.listNextBatchOfObjects(objectListing)
             builder.addAll(resourceResolver.resolveResourceNames(objectListing))
         }
-        return builder.build()
+        return ArrayList<String?>(builder.build())
     }
 
-    private fun doGetS3Object(uri: URI?, isLightWeight: Boolean): S3Object? {
+    private fun doGetS3Object(uri: URI, isLightWeight: Boolean): S3Object? {
         val s3RegionalResource = S3RegionalResource(uri)
-        val bucketName = s3RegionalResource.getBucketName()
-        val s3BucketKey = s3RegionalResource.getKey()
+        val bucketName = s3RegionalResource.bucketName
+        val s3BucketKey = s3RegionalResource.key
         configureClient(s3RegionalResource)
 
         val getObjectRequest = GetObjectRequest(bucketName, s3BucketKey)
@@ -239,11 +239,11 @@ class S3Client {
     }
 
     private fun configureClient(s3RegionalResource: S3RegionalResource) {
-        val endpoint: Optional<URI?> = s3ConnectionProperties.getEndpoint()
+        val endpoint: Optional<URI> = s3ConnectionProperties.endpoint
         if (endpoint.isPresent()) {
             amazonS3Client.setEndpoint(endpoint.get().toString())
         } else {
-            val region: Optional<Region?> = s3RegionalResource.getRegion()
+            val region: Optional<Region> = s3RegionalResource.region
             if (region.isPresent()) {
                 amazonS3Client.setRegion(region.get())
             }

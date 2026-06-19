@@ -41,17 +41,17 @@ class InternalBuildActionAdapter<T>(private val action: BuildAction<out T>, priv
     /**
      * This is used by providers 1.8-rc-1 to 4.3
      */
-    override fun execute(buildController: InternalBuildController): T? {
+    override fun execute(buildController: InternalBuildController?): T? {
         val protocolToModelAdapter = ProtocolToModelAdapter(ConsumerTargetTypeProvider())
-        val buildControllerAdapter: BuildController = BuildControllerWithoutParameterSupport(buildController, protocolToModelAdapter, ModelMapping(), rootDir, versionDetails)
+        val buildControllerAdapter: BuildController = BuildControllerWithoutParameterSupport(buildController!!, protocolToModelAdapter, ModelMapping(), rootDir, versionDetails)
         return action.execute(buildControllerAdapter)
     }
 
     /**
      * This is used by providers 4.4 and later
      */
-    override fun execute(buildController: InternalBuildControllerVersion2): T? {
-        val buildControllerAdapter = wrapBuildController(buildController)
+    override fun execute(buildController: InternalBuildControllerVersion2?): T? {
+        val buildControllerAdapter = wrapBuildController(buildController!!)
         return action.execute(buildControllerAdapter)
     }
 

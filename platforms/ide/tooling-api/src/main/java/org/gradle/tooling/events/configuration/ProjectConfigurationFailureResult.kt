@@ -15,6 +15,7 @@
  */
 package org.gradle.tooling.events.configuration
 
+import org.gradle.tooling.Failure
 import org.gradle.tooling.events.FailureResult
 
 /**

@@ -103,12 +103,12 @@ public class ZipHasher implements RegularFileSnapshotContextHasher, Configurable
     private void fingerprintZipEntries(String parentName, String rootParentName, List<FileSystemLocationFingerprint> fingerprints, ZipInput input) throws IOException {
         fingerprints.add(newZipMarker(parentName));
         for (ZipEntry zipEntry : input) {
-            if (zipEntry.isDirectory) {
+            if (zipEntry.isDirectory()) {
                 continue;
             }
-            String fullName = parentName.isEmpty() ? zipEntry.name : parentName + "/" + zipEntry.name;
+            String fullName = parentName.isEmpty() ? zipEntry.getName() : parentName + "/" + zipEntry.getName();
             ZipEntryContext zipEntryContext = new DefaultZipEntryContext(zipEntry, fullName, rootParentName);
-            if (isZipFile(zipEntry.name)) {
+            if (isZipFile(zipEntry.getName())) {
                 zipEntryContext.getEntry().withInputStream(inputStream -> {
                     fingerprintZipEntries(fullName, rootParentName, fingerprints, new StreamZipInput(inputStream));
                     return null;

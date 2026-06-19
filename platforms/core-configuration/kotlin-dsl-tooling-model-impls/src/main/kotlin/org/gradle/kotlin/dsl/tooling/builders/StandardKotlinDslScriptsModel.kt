@@ -23,7 +23,6 @@ import org.gradle.tooling.model.kotlin.dsl.KotlinDslScriptModel
 import org.gradle.tooling.model.kotlin.dsl.KotlinDslScriptsModel
 import java.io.File
 import java.io.Serializable
-import kotlin.collections.plus
 
 
 data class StandardKotlinDslScriptsModel(
@@ -31,14 +30,14 @@ data class StandardKotlinDslScriptsModel(
     private val dehydratedScriptModels: Map<File, KotlinDslScriptModel>
 ) : KotlinDslScriptsModel, Serializable {
 
-    override fun getScriptModels() =
-        dehydratedScriptModels.mapValues { (_, lightModel) ->
+    override val scriptModels: MutableMap<File, KotlinDslScriptModel> =
+        dehydratedScriptModels.mapValuesTo(LinkedHashMap()) { (_, lightModel) ->
             StandardKotlinDslScriptModel(
-                commonModel.classPath + lightModel.classPath,
-                commonModel.sourcePath + lightModel.sourcePath,
-                commonModel.implicitImports + lightModel.implicitImports,
-                lightModel.editorReports,
-                lightModel.exceptions
+                (commonModel.classPath + lightModel.classPath.orEmpty()).toMutableList(),
+                (commonModel.sourcePath + lightModel.sourcePath.orEmpty()).toMutableList(),
+                (commonModel.implicitImports + lightModel.implicitImports.orEmpty()).toMutableList(),
+                lightModel.editorReports.orEmpty().toMutableList(),
+                lightModel.exceptions.orEmpty().toMutableList()
             )
         }
 
@@ -53,45 +52,22 @@ data class CommonKotlinDslScriptModel(
 
 
 data class StandardKotlinDslScriptModel(
-    private val classPath: List<File>,
-    private val sourcePath: List<File>,
-    private val implicitImports: List<String>,
-    private val editorReports: List<EditorReport>,
-    private val exceptions: List<String>
-) : KotlinDslScriptModel, Serializable {
-
-    override fun getClassPath() = classPath
-
-    override fun getSourcePath() = sourcePath
-
-    override fun getImplicitImports() = implicitImports
-
-    override fun getEditorReports() = editorReports
-
-    override fun getExceptions() = exceptions
-}
+    override val classPath: MutableList<File>,
+    override val sourcePath: MutableList<File>,
+    override val implicitImports: MutableList<String>,
+    override val editorReports: MutableList<EditorReport>,
+    override val exceptions: MutableList<String>
+) : KotlinDslScriptModel, Serializable
 
 
 data class StandardEditorReport(
-    private val severity: EditorReportSeverity,
-    private val message: String,
-    private val position: EditorPosition? = null
-) : EditorReport, Serializable {
-
-    override fun getSeverity() = severity
-
-    override fun getMessage() = message
-
-    override fun getPosition() = position
-}
+    override val severity: EditorReportSeverity,
+    override val message: String,
+    override val position: EditorPosition? = null
+) : EditorReport, Serializable
 
 
 data class StandardEditorPosition(
-    private val line: Int,
-    private val column: Int = 0
-) : EditorPosition, Serializable {
-
-    override fun getLine() = line
-
-    override fun getColumn() = column
-}
+    override val line: Int,
+    override val column: Int = 0
+) : EditorPosition, Serializable

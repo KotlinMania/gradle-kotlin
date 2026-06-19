@@ -22,8 +22,5 @@ import org.gradle.tooling.events.test.TestStartEvent
 /**
  * Implementation of the `TestStartEvent` interface.
  */
-class DefaultTestStartEvent(eventTime: Long, displayName: String?, descriptor: TestOperationDescriptor?) : DefaultStartEvent(eventTime, displayName, descriptor), TestStartEvent {
-    override fun getDescriptor(): TestOperationDescriptor? {
-        return super.getDescriptor() as TestOperationDescriptor?
-    }
+class DefaultTestStartEvent(eventTime: Long, displayName: String?, descriptor: TestOperationDescriptor?) : DefaultStartEvent<TestOperationDescriptor?>(eventTime, displayName, descriptor), TestStartEvent {
 }

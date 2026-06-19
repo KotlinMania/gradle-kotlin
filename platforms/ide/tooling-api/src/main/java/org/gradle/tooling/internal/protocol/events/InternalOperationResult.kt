@@ -15,6 +15,8 @@
  */
 package org.gradle.tooling.internal.protocol.events
 
+import org.gradle.tooling.Failure
+import org.gradle.tooling.internal.protocol.InternalFailure
 import org.gradle.tooling.internal.protocol.InternalProtocolInterface
 
 /**

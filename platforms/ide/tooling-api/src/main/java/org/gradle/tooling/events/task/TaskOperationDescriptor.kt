@@ -16,6 +16,7 @@
 package org.gradle.tooling.events.task
 
 import org.gradle.tooling.events.OperationDescriptor
+import org.gradle.tooling.events.PluginIdentifier
 import org.gradle.tooling.model.UnsupportedMethodException
 
 /**

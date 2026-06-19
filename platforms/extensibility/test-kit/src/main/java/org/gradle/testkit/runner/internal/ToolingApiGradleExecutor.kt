@@ -50,15 +50,12 @@ import org.gradle.wrapper.GradleUserHomeLookup.gradleUserHome
 import java.io.File
 import java.io.IOException
 import java.io.OutputStream
-import java.lang.String
 import java.nio.charset.Charset
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
-import kotlin.Boolean
 import kotlin.Exception
 import kotlin.IllegalStateException
 import kotlin.Int
-import kotlin.checkNotNull
 import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
 import kotlin.collections.MutableList
@@ -70,7 +67,8 @@ import kotlin.text.isEmpty
 import kotlin.text.startsWith
 
 class ToolingApiGradleExecutor : GradleExecutor {
-    override fun run(parameters: GradleExecutionParameters): GradleExecutionResult {
+    override fun run(parameters: GradleExecutionParameters?): GradleExecutionResult {
+        parameters!!
         val outputBuffer = FileBackedOutputStream(OUTPUT_BUFFER_FILE_THRESHOLD_BYTES)
         val syncOutput: OutputStream = SynchronizedOutputStream(outputBuffer)
 
@@ -79,10 +77,10 @@ class ToolingApiGradleExecutor : GradleExecutor {
         maybeRegisterCleanup()
 
         val gradleConnector = buildConnector(
-            parameters.getGradleUserHome(),
-            parameters.getProjectDir(),
-            parameters.isEmbedded(),
-            parameters.getGradleProvider()
+            parameters.gradleUserHome,
+            parameters.projectDir,
+            parameters.isEmbedded,
+            parameters.gradleProvider!!
         )
 
         var connection: ProjectConnection? = null
@@ -90,8 +88,8 @@ class ToolingApiGradleExecutor : GradleExecutor {
 
         try {
             connection = gradleConnector.connect()
-            targetGradleVersion = determineTargetGradleVersion(connection)
-            if (targetGradleVersion.compareTo(TestKitFeature.RUN_BUILDS.since) < 0) {
+            targetGradleVersion = determineTargetGradleVersion(connection!!)
+            if (targetGradleVersion.compareTo(TestKitFeature.RUN_BUILDS.since!!) < 0) {
                 throw UnsupportedFeatureException(
                     String.format(
                         "The version of Gradle you are using (%s) is not supported by TestKit. TestKit supports all Gradle versions %s and later.",
@@ -103,46 +101,49 @@ class ToolingApiGradleExecutor : GradleExecutor {
             }
 
 
-            val launcher = connection.newBuild() as DefaultBuildLauncher
+            val launcher = connection!!.newBuild() as DefaultBuildLauncher
 
-            launcher.setStandardOutput(NoCloseOutputStream(teeOutput(syncOutput, parameters.getStandardOutput())!!))
-            launcher.setStandardError(NoCloseOutputStream(teeOutput(syncOutput, parameters.getStandardError())!!))
+            launcher.setStandardOutput(NoCloseOutputStream(teeOutput(syncOutput, parameters.standardOutput)!!))
+            launcher.setStandardError(NoCloseOutputStream(teeOutput(syncOutput, parameters.standardError)!!))
 
-            if (parameters.getStandardInput() != null) {
-                launcher.setStandardInput(parameters.getStandardInput())
+            if (parameters.standardInput != null) {
+                launcher.setStandardInput(parameters.standardInput)
             }
 
             launcher.addProgressListener(TaskExecutionProgressListener(tasks), OperationType.TASK)
 
-            launcher.withArguments(*parameters.getBuildArgs().toTypedArray<String?>())
-            launcher.setJvmArguments(*parameters.getJvmArgs().toTypedArray<String?>())
-            launcher.setEnvironmentVariables(parameters.getEnvironment())
+            launcher.withArguments(*parameters.buildArgs.orEmpty().toTypedArray())
+            launcher.setJvmArguments(*parameters.jvmArgs.orEmpty().toTypedArray())
+            parameters.environment?.let {
+                @Suppress("UNCHECKED_CAST")
+                launcher.setEnvironmentVariables(it as MutableMap<String, String>)
+            }
 
-            if (!parameters.getInjectedClassPath().isEmpty()) {
-                if (targetGradleVersion.compareTo(TestKitFeature.PLUGIN_CLASSPATH_INJECTION.since) < 0) {
-                    throw UnsupportedFeatureException("support plugin classpath injection", targetGradleVersion, TestKitFeature.PLUGIN_CLASSPATH_INJECTION.since)
+            if (!parameters.injectedClassPath!!.isEmpty) {
+                if (targetGradleVersion.compareTo(TestKitFeature.PLUGIN_CLASSPATH_INJECTION.since!!) < 0) {
+                    throw UnsupportedFeatureException("support plugin classpath injection", targetGradleVersion, TestKitFeature.PLUGIN_CLASSPATH_INJECTION.since!!)
                 } else {
                     warnIfUnsupportedVersion(targetGradleVersion)
                 }
-                launcher.withInjectedClassPath(parameters.getInjectedClassPath())
+                launcher.withInjectedClassPath(parameters.injectedClassPath)
             }
 
             launcher.run()
         } catch (e: UnsupportedVersionException) {
             throw InvalidRunnerConfigurationException("The build could not be executed due to a feature not being supported by the target Gradle version", e)
         } catch (t: BuildException) {
-            return GradleExecutionResult(BuildOperationParameters(targetGradleVersion, parameters.isEmbedded()), outputBuffer.asByteSource(), tasks, t)
+            return GradleExecutionResult(BuildOperationParameters(targetGradleVersion, parameters.isEmbedded), outputBuffer.asByteSource(), tasks, t)
         } catch (t: GradleConnectionException) {
             val message = StringBuilder("An error occurred executing build with ")
-            if (parameters.getBuildArgs().isEmpty()) {
+            if (parameters.buildArgs.orEmpty().isEmpty()) {
                 message.append("no args")
             } else {
                 message.append("args '")
-                message.append(join(" ", parameters.getBuildArgs()))
+                message.append(join(" ", parameters.buildArgs.orEmpty()))
                 message.append("'")
             }
 
-            message.append(" in directory '").append(parameters.getProjectDir().getAbsolutePath()).append("'")
+            message.append(" in directory '").append(parameters.projectDir!!.absolutePath).append("'")
 
             var capturedOutput: String?
             try {
@@ -151,7 +152,7 @@ class ToolingApiGradleExecutor : GradleExecutor {
             } catch (e: IOException) {
                 capturedOutput = "<Error fetching output: " + e.message + ">"
             }
-            if (!capturedOutput.isEmpty()) {
+            if (!capturedOutput.isNullOrEmpty()) {
                 message.append(". Output before error:")
                     .append(SystemProperties.getInstance().getLineSeparator())
                     .append(capturedOutput)
@@ -164,12 +165,13 @@ class ToolingApiGradleExecutor : GradleExecutor {
             }
         }
 
-        return GradleExecutionResult(BuildOperationParameters(targetGradleVersion, parameters.isEmbedded()), outputBuffer.asByteSource(), tasks)
+        return GradleExecutionResult(BuildOperationParameters(targetGradleVersion, parameters.isEmbedded), outputBuffer.asByteSource(), tasks)
     }
 
     private fun determineTargetGradleVersion(connection: ProjectConnection): GradleVersion {
-        val buildEnvironment = connection.getModel<BuildEnvironment>(BuildEnvironment::class.java)
-        return GradleVersion.version(buildEnvironment.getGradle().getGradleVersion())
+        @Suppress("UNCHECKED_CAST")
+        val buildEnvironment = connection.getModel(BuildEnvironment::class.java as Class<BuildEnvironment?>?)
+        return GradleVersion.version(buildEnvironment!!.gradle!!.gradleVersion)
     }
 
     private fun buildConnector(gradleUserHome: File?, projectDir: File?, embedded: Boolean, gradleProvider: GradleProvider): GradleConnector {
@@ -177,7 +179,7 @@ class ToolingApiGradleExecutor : GradleExecutor {
         gradleConnector.useDistributionBaseDir(gradleUserHome())
         gradleProvider.applyTo(gradleConnector)
         gradleConnector.useGradleUserHomeDir(gradleUserHome)
-        gradleConnector.daemonBaseDir(File(gradleUserHome, TEST_KIT_DAEMON_DIR_NAME))
+        gradleConnector.daemonBaseDir(File(gradleUserHome!!, TEST_KIT_DAEMON_DIR_NAME))
         gradleConnector.forProjectDirectory(projectDir)
         gradleConnector.daemonMaxIdleTime(120, TimeUnit.SECONDS)
         gradleConnector.embedded(embedded)
@@ -193,7 +195,7 @@ class ToolingApiGradleExecutor : GradleExecutor {
                 if (taskIsFromBuildSrc(taskStartEvent)) {
                     return
                 }
-                order.put(taskStartEvent.getDescriptor().taskPath, tasks.size)
+                order.put(taskStartEvent.descriptor!!.taskPath, tasks.size)
                 tasks.add(null)
             }
             if (event is TaskFinishEvent) {
@@ -201,10 +203,10 @@ class ToolingApiGradleExecutor : GradleExecutor {
                 if (taskIsFromBuildSrc(taskFinishEvent)) {
                     return
                 }
-                val taskPath = taskFinishEvent.getDescriptor().taskPath
-                val result = taskFinishEvent.getResult()
-                val index: Int = order.get(taskPath)!!
-                checkNotNull(index) { "Received task finish event for task " + taskPath + " without first receiving task start event" }
+                val taskPath = taskFinishEvent.descriptor!!.taskPath
+                val result = taskFinishEvent.result
+                val index: Int = order[taskPath]
+                    ?: error("Received task finish event for task $taskPath without first receiving task start event")
                 tasks.set(index, determineBuildTask(result, taskPath))
             }
         }
@@ -251,7 +253,7 @@ class ToolingApiGradleExecutor : GradleExecutor {
 
         companion object {
             private fun taskIsFromBuildSrc(event: TaskProgressEvent): Boolean {
-                return event.getDescriptor().taskPath.startsWith(":buildSrc")
+                return event.descriptor!!.taskPath?.startsWith(":buildSrc") == true
             }
         }
     }

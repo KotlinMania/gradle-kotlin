@@ -27,6 +27,6 @@ import org.gradle.tooling.internal.protocol.StoppableConnection
  */
 open class ShutdownAwareConsumerConnection(delegate: ConnectionVersion4, modelMapping: ModelMapping, adapter: ProtocolToModelAdapter) : CancellableConsumerConnection(delegate, modelMapping, adapter) {
     override fun stop() {
-        (getDelegate() as StoppableConnection).shutdown(object : ShutdownParameters {})
+        (delegate as StoppableConnection).shutdown(object : ShutdownParameters {})
     }
 }

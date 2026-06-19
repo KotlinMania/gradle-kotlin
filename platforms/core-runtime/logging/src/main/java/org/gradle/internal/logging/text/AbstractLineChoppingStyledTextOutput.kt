@@ -27,8 +27,8 @@ abstract class AbstractLineChoppingStyledTextOutput protected constructor(privat
     private var seenFromEol: SeenFromEol
     private var currentState: State = INITIAL_STATE
 
-    override fun doAppend(text: String) {
-        val context: StateContext = AbstractLineChoppingStyledTextOutput.StateContext(text)
+    override fun doAppend(text: String?) {
+        val context = StateContext(text ?: "null")
 
         while (context.hasChar()) {
             currentState.execute(context)
@@ -53,12 +53,12 @@ abstract class AbstractLineChoppingStyledTextOutput protected constructor(privat
      */
     protected abstract fun doEndLine(endOfLine: CharSequence?)
 
-    private interface State : Action<StateContext?>
+    private interface State : Action<StateContext>
 
     private inner class StateContext(private val text: String) {
-        private val seenFromEol: SeenFromEol = this@AbstractLineChoppingStyledTextOutput.seenFromEol.copy()
-        private val eolChars: CharArray = this@AbstractLineChoppingStyledTextOutput.eolChars
-        private val eol: String = this@AbstractLineChoppingStyledTextOutput.eol
+        val seenFromEol: SeenFromEol = this@AbstractLineChoppingStyledTextOutput.seenFromEol.copy()
+        val eolChars: CharArray = this@AbstractLineChoppingStyledTextOutput.eolChars
+        val eol: String = this@AbstractLineChoppingStyledTextOutput.eol
 
         private val max: Int
 

@@ -26,5 +26,5 @@ interface InternalTestFinishedProgressEvent : InternalTestProgressEvent, Interna
      *
      * @return The test result
      */
-    val result: InternalTestResult?
+    override val result: InternalTestResult?
 }

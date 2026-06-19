@@ -15,12 +15,23 @@
  */
 package org.gradle.plugins.ide.tooling.r33
 
+import org.gradle.tooling.*
+import org.gradle.tooling.model.*
+import org.gradle.tooling.model.build.*
+import org.gradle.tooling.model.eclipse.*
+import org.gradle.tooling.model.gradle.*
+import org.gradle.tooling.model.idea.*
+import org.gradle.tooling.model.kotlin.dsl.*
+import org.gradle.tooling.internal.adapter.ProtocolToModelAdapter
+import java.io.File
+import org.gradle.integtests.tooling.r48.*
+
 import org.gradle.tooling.BuildAction
 import kotlin.collections.ArrayList
 import kotlin.collections.MutableList
 
 class FetchEclipseProjects : BuildAction<MutableList<EclipseProject?>?> {
-    public override fun execute(controller: BuildController): MutableList<EclipseProject?> {
+    public override fun execute(controller: BuildController?): MutableList<EclipseProject?> {
         val eclipseProjects: MutableList<EclipseProject?> = ArrayList<EclipseProject?>()
         val build: GradleBuild = controller.getBuildModel()
         val all: ArrayList<GradleBuild?> = ArrayList<GradleBuild?>()
@@ -29,7 +40,7 @@ class FetchEclipseProjects : BuildAction<MutableList<EclipseProject?>?> {
         return eclipseProjects
     }
 
-    private fun collectEclipseProjects(build: GradleBuild, eclipseProjects: MutableList<EclipseProject?>, controller: BuildController, all: MutableList<GradleBuild?>) {
+    private fun collectEclipseProjects(build: GradleBuild, eclipseProjects: MutableList<EclipseProject?>, controller: BuildController?, all: MutableList<GradleBuild?>) {
         for (project in build.getProjects()) {
             eclipseProjects.add(controller.getModel(project, EclipseProject::class.java))
         }

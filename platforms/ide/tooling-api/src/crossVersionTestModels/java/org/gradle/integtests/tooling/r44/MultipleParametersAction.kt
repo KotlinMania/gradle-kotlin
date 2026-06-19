@@ -15,20 +15,31 @@
  */
 package org.gradle.integtests.tooling.r44
 
+import org.gradle.tooling.*
+import org.gradle.tooling.model.*
+import org.gradle.tooling.model.build.*
+import org.gradle.tooling.model.eclipse.*
+import org.gradle.tooling.model.gradle.*
+import org.gradle.tooling.model.idea.*
+import org.gradle.tooling.model.kotlin.dsl.*
+import org.gradle.tooling.internal.adapter.ProtocolToModelAdapter
+import java.io.File
+import org.gradle.integtests.tooling.r48.*
+
 import org.gradle.api.Action
 import java.util.LinkedList
 
 class MultipleParametersAction : BuildAction<MutableList<CustomModel?>?> {
-    public override fun execute(controller: BuildController): MutableList<CustomModel?> {
+    public override fun execute(controller: BuildController?): MutableList<CustomModel?> {
         val result: MutableList<CustomModel?> = LinkedList<CustomModel?>()
         val model0: CustomModel = controller.getModel(CustomModel::class.java)
-        val model1: CustomModel = controller.getModel(CustomModel::class.java, CustomParameter::class.java, object : Action<CustomParameter?>() {
-            public override fun execute(customParameter: CustomParameter) {
+        val model1: CustomModel = controller.getModel(CustomModel::class.java, CustomParameter::class.java, object : Action<CustomParameter?> {
+            public override fun execute(customParameter: CustomParameter?) {
                 customParameter.setValue(model0.getParameterValue() + ":parameter1")
             }
         })
-        val model2: CustomModel? = controller.getModel(CustomModel::class.java, CustomParameter::class.java, object : Action<CustomParameter?>() {
-            public override fun execute(customParameter: CustomParameter) {
+        val model2: CustomModel? = controller.getModel(CustomModel::class.java, CustomParameter::class.java, object : Action<CustomParameter?> {
+            public override fun execute(customParameter: CustomParameter?) {
                 customParameter.setValue(model1.getParameterValue() + ":parameter2")
             }
         })

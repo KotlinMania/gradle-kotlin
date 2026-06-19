@@ -40,21 +40,18 @@ import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
 import java.io.Writer
-import java.lang.Boolean
 import java.net.URI
 import java.nio.charset.Charset
 import java.util.Arrays
 import java.util.Collections
-import kotlin.Any
 import kotlin.Exception
-import kotlin.String
 import kotlin.Suppress
 import kotlin.requireNotNull
 
 class DefaultGradleRunner internal constructor(private val gradleExecutor: GradleExecutor, var testKitDirProvider: TestKitDirProvider) : GradleRunner() {
     private var gradleProvider: GradleProvider? = null
     private var projectDirectory: File? = null
-    private var arguments = mutableListOf<String?>()
+    private var buildArguments = mutableListOf<String?>()
     var jvmArguments: MutableList<String?> = mutableListOf<String?>()
         private set
     private var classpath: ClassPath = ClassPath.EMPTY
@@ -63,12 +60,12 @@ class DefaultGradleRunner internal constructor(private val gradleExecutor: Gradl
     private var standardError: OutputStream? = null
     private var standardInput: InputStream? = null
     private var forwardingSystemStreams = false
-    private var environment: MutableMap<String?, String?>? = null
+    private var environmentVariables: MutableMap<String?, String?>? = null
 
     constructor() : this(ToolingApiGradleExecutor(), calculateTestKitDirProvider(SystemProperties.getInstance()))
 
     init {
-        this.debug = Boolean.getBoolean(DEBUG_SYS_PROP)
+        this.debug = java.lang.Boolean.getBoolean(DEBUG_SYS_PROP)
     }
 
     override fun withGradleVersion(versionNumber: String?): GradleRunner {
@@ -86,7 +83,7 @@ class DefaultGradleRunner internal constructor(private val gradleExecutor: Gradl
         return this
     }
 
-    override fun withTestKitDir(testKitDir: File): DefaultGradleRunner {
+    override fun withTestKitDir(testKitDir: File?): DefaultGradleRunner {
         validateArgumentNotNull(testKitDir, "testKitDir")
         this.testKitDirProvider = ConstantTestKitDirProvider(testKitDir)
         return this
@@ -101,21 +98,20 @@ class DefaultGradleRunner internal constructor(private val gradleExecutor: Gradl
         return withJvmArguments(Arrays.asList<String?>(*jvmArguments))
     }
 
-    override fun getProjectDir(): File {
-        return projectDirectory!!
-    }
+    override val projectDir: File?
+        get() = projectDirectory
 
-    override fun withProjectDir(projectDir: File): DefaultGradleRunner {
+    override fun withProjectDir(projectDir: File?): DefaultGradleRunner {
         this.projectDirectory = projectDir
         return this
     }
 
-    override fun getArguments(): MutableList<String?> {
-        return arguments
-    }
+    override val arguments: MutableList<String?>?
+        get() = buildArguments
 
-    override fun withArguments(arguments: MutableList<String?>): DefaultGradleRunner {
-        this.arguments = Collections.unmodifiableList<String?>(ArrayList<String?>(arguments))
+    override fun withArguments(arguments: MutableList<String?>?): DefaultGradleRunner {
+        validateArgumentNotNull(arguments, "arguments")
+        this.buildArguments = Collections.unmodifiableList<String?>(ArrayList<String?>(arguments!!))
         return this
     }
 
@@ -123,22 +119,22 @@ class DefaultGradleRunner internal constructor(private val gradleExecutor: Gradl
         return withArguments(Arrays.asList<String?>(*arguments))
     }
 
-    override fun getPluginClasspath(): MutableList<out File?>? {
-        return classpath.getAsFiles()
-    }
+    override val pluginClasspath: MutableList<out File?>?
+        get() = classpath.getAsFiles()
 
     override fun withPluginClasspath(): GradleRunner {
-        this.classpath = DefaultClassPath.of(PluginUnderTestMetadataReading.readImplementationClasspath())
+        this.classpath = DefaultClassPath.of(PluginUnderTestMetadataReading.readImplementationClasspath().filterNotNull())
         return this
     }
 
-    override fun withPluginClasspath(classpath: Iterable<out File>): GradleRunner {
-        val f: MutableList<File?> = ArrayList<File?>()
-        for (file in classpath) {
+    override fun withPluginClasspath(classpath: Iterable<out File?>?): GradleRunner {
+        validateArgumentNotNull(classpath, "classpath")
+        val f: MutableList<File> = ArrayList<File>()
+        for (file in classpath!!) {
             // These objects are going across the wire.
             // 1. Convert any subclasses back to File in case the subclass isn't available in Gradle.
             // 2. Make them absolute here to deal with a different root at the server
-            f.add(File(file.getAbsolutePath()))
+            f.add(File(file!!.absolutePath))
         }
         if (!f.isEmpty()) {
             this.classpath = DefaultClassPath.of(f)
@@ -146,25 +142,23 @@ class DefaultGradleRunner internal constructor(private val gradleExecutor: Gradl
         return this
     }
 
-    override fun isDebug(): kotlin.Boolean {
-        return debug
-    }
+    override val isDebug: Boolean
+        get() = debug
 
-    override fun withDebug(flag: kotlin.Boolean): GradleRunner {
+    override fun withDebug(flag: Boolean): GradleRunner {
         this.debug = flag
         return this
     }
 
-    override fun getEnvironment(): MutableMap<String?, String?>? {
-        return environment
-    }
+    override val environment: MutableMap<String?, String?>?
+        get() = environmentVariables
 
     override fun withEnvironment(environment: MutableMap<String?, String?>?): GradleRunner {
-        this.environment = environment
+        this.environmentVariables = environment
         return this
     }
 
-    override fun forwardStdOutput(writer: Writer): GradleRunner {
+    override fun forwardStdOutput(writer: Writer?): GradleRunner {
         if (forwardingSystemStreams) {
             forwardingSystemStreams = false
             this.standardError = null
@@ -174,7 +168,7 @@ class DefaultGradleRunner internal constructor(private val gradleExecutor: Gradl
         return this
     }
 
-    override fun forwardStdError(writer: Writer): GradleRunner {
+    override fun forwardStdError(writer: Writer?): GradleRunner {
         if (forwardingSystemStreams) {
             forwardingSystemStreams = false
             this.standardOutput = null
@@ -197,13 +191,13 @@ class DefaultGradleRunner internal constructor(private val gradleExecutor: Gradl
         return this
     }
 
-    private fun validateArgumentNotNull(argument: Any, argumentName: String?) {
+    private fun validateArgumentNotNull(argument: Any?, argumentName: String?) {
         requireNotNull(argument) { String.format("%s argument cannot be null", argumentName) }
     }
 
     override fun build(): BuildResult {
         return run(Action { gradleExecutionResult: GradleExecutionResult? ->
-            if (!gradleExecutionResult!!.isSuccessful()) {
+            if (!gradleExecutionResult!!.isSuccessful) {
                 throw UnexpectedBuildFailure(createDiagnosticsMessage("Unexpected build execution failure", gradleExecutionResult), Companion.createBuildResult(gradleExecutionResult))
             }
         })
@@ -211,7 +205,7 @@ class DefaultGradleRunner internal constructor(private val gradleExecutor: Gradl
 
     override fun buildAndFail(): BuildResult {
         return run(Action { gradleExecutionResult: GradleExecutionResult? ->
-            if (gradleExecutionResult!!.isSuccessful()) {
+            if (gradleExecutionResult!!.isSuccessful) {
                 throw UnexpectedBuildSuccess(createDiagnosticsMessage("Unexpected build execution success", gradleExecutionResult), Companion.createBuildResult(gradleExecutionResult))
             }
         })
@@ -226,9 +220,9 @@ class DefaultGradleRunner internal constructor(private val gradleExecutor: Gradl
         val message = StringBuilder()
         message.append(trailingMessage)
         message.append(" in ")
-        message.append(getProjectDir().getAbsolutePath())
+        message.append(projectDir!!.absolutePath)
         message.append(" with arguments ")
-        message.append(getArguments())
+        message.append(arguments)
 
         var output: String?
         try {
@@ -253,7 +247,7 @@ class DefaultGradleRunner internal constructor(private val gradleExecutor: Gradl
             throw InvalidRunnerConfigurationException("Please specify a project directory before executing the build")
         }
 
-        if (environment != null && debug) {
+        if (environmentVariables != null && debug) {
             throw InvalidRunnerConfigurationException(
                 "Debug mode is not allowed when environment variables are specified. " +
                         "Debug mode runs 'in process' but we need to fork a separate process to pass environment variables. " +
@@ -280,9 +274,9 @@ class DefaultGradleRunner internal constructor(private val gradleExecutor: Gradl
             effectiveEnvironment!!.put("SystemRoot", System.getenv("SystemRoot"))
         }
 
-        effectiveArguments.addAll(arguments)
-        if (environment != null) {
-            effectiveEnvironment!!.putAll(environment!!)
+        effectiveArguments.addAll(buildArguments)
+        if (environmentVariables != null) {
+            effectiveEnvironment!!.putAll(environmentVariables!!)
         } else {
             // environment can be null, which means that all the existing defined environment variables are used instead
             effectiveEnvironment = null
@@ -302,25 +296,25 @@ class DefaultGradleRunner internal constructor(private val gradleExecutor: Gradl
                 standardInput,
                 effectiveEnvironment
             )
-        )
+        )!!
 
         resultVerification.execute(execResult)
         return createBuildResult(execResult)
     }
 
     private fun createTestKitDir(testKitDirProvider: TestKitDirProvider): File {
-        val dir = testKitDirProvider.dir
-        if (dir.isDirectory()) {
+        val dir = testKitDirProvider.dir!!
+        if (dir.isDirectory) {
             if (!dir.canWrite()) {
-                throw InvalidRunnerConfigurationException("Unable to write to test kit directory: " + dir.getAbsolutePath())
+                throw InvalidRunnerConfigurationException("Unable to write to test kit directory: " + dir.absolutePath)
             }
             return dir
-        } else if (dir.exists() && !dir.isDirectory()) {
-            throw InvalidRunnerConfigurationException("Unable to use non-directory as test kit directory: " + dir.getAbsolutePath())
-        } else if (dir.mkdirs() || dir.isDirectory()) {
+        } else if (dir.exists() && !dir.isDirectory) {
+            throw InvalidRunnerConfigurationException("Unable to use non-directory as test kit directory: " + dir.absolutePath)
+        } else if (dir.mkdirs() || dir.isDirectory) {
             return dir
         } else {
-            throw InvalidRunnerConfigurationException("Unable to create test kit directory: " + dir.getAbsolutePath())
+            throw InvalidRunnerConfigurationException("Unable to create test kit directory: " + dir.absolutePath)
         }
     }
 
@@ -329,21 +323,25 @@ class DefaultGradleRunner internal constructor(private val gradleExecutor: Gradl
         const val DEBUG_SYS_PROP: String = "org.gradle.testkit.debug"
 
         private fun calculateTestKitDirProvider(systemProperties: SystemProperties): TestKitDirProvider {
-            return systemProperties.withSystemProperties<TestKitDirProvider>(org.gradle.internal.Factory {
-                if (System.getProperties().containsKey(TEST_KIT_DIR_SYS_PROP)) {
-                    return@Factory ConstantTestKitDirProvider(File(System.getProperty(TEST_KIT_DIR_SYS_PROP)))
-                } else {
-                    val temporaryFileProvider: TemporaryFileProvider = DefaultTemporaryFileProvider(org.gradle.internal.Factory {
-                        var rootTmpDir = SystemProperties.getInstance().getWorkerTmpDir()
-                        if (rootTmpDir == null) {
-                            @Suppress("deprecation") val javaIoTmpDir = SystemProperties.getInstance().getJavaIoTmpDir()
-                            rootTmpDir = javaIoTmpDir
-                        }
-                        FileUtils.canonicalize(File(rootTmpDir))
-                    })
-                    return@Factory ConstantTestKitDirProvider(temporaryFileProvider.newTemporaryFile(".gradle-test-kit"))
+            return systemProperties.withSystemProperties(object : Factory<TestKitDirProvider> {
+                override fun create(): TestKitDirProvider {
+                    if (System.getProperties().containsKey(TEST_KIT_DIR_SYS_PROP)) {
+                        return ConstantTestKitDirProvider(File(System.getProperty(TEST_KIT_DIR_SYS_PROP)))
+                    } else {
+                        val temporaryFileProvider: TemporaryFileProvider = DefaultTemporaryFileProvider(object : Factory<File> {
+                            override fun create(): File {
+                                var rootTmpDir = SystemProperties.getInstance().getWorkerTmpDir()
+                                if (rootTmpDir == null) {
+                                    @Suppress("deprecation") val javaIoTmpDir = SystemProperties.getInstance().getJavaIoTmpDir()
+                                    rootTmpDir = javaIoTmpDir
+                                }
+                                return FileUtils.canonicalize(File(rootTmpDir!!))
+                            }
+                        })
+                        return ConstantTestKitDirProvider(temporaryFileProvider.newTemporaryFile(".gradle-test-kit"))
+                    }
                 }
-            } as Factory<TestKitDirProvider?>)
+            })
         }
 
         private fun toOutputStream(standardOutput: Writer?): OutputStream? {
@@ -356,9 +354,9 @@ class DefaultGradleRunner internal constructor(private val gradleExecutor: Gradl
 
         private fun createBuildResult(execResult: GradleExecutionResult): BuildResult {
             return FeatureCheckBuildResult(
-                execResult.buildOperationParameters,
+                execResult.buildOperationParameters!!,
                 execResult.outputSource,
-                execResult.tasks
+                execResult.tasks!!
             )
         }
 

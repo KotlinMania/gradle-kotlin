@@ -22,14 +22,14 @@ import org.gradle.tooling.internal.protocol.ProgressListenerVersion1
 import java.util.LinkedList
 
 internal class ProgressListenerAdapter(listeners: MutableList<ProgressListener>) : ProgressListenerVersion1 {
-    private val listeners = ListenerBroadcast<ProgressListener?>(ProgressListener::class.java)
+    private val listeners = ListenerBroadcast<ProgressListener>(ProgressListener::class.java as Class<ProgressListener?>)
     private val stack = LinkedList<String>()
 
     init {
         this.listeners.addAll(listeners)
     }
 
-    override fun onOperationStart(description: String) {
+    override fun onOperationStart(description: String?) {
         stack.addFirst(if (description == null) "" else description)
         fireChangeEvent()
     }
@@ -42,9 +42,8 @@ internal class ProgressListenerAdapter(listeners: MutableList<ProgressListener>)
     private fun fireChangeEvent() {
         val description = if (stack.isEmpty()) "" else stack.getFirst()
         listeners.getSource()!!.statusChanged(object : ProgressEvent {
-            override fun getDescription(): String {
-                return description
-            }
+            override val description: String
+                get() = description
         })
     }
 }

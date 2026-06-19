@@ -32,7 +32,7 @@ class DefaultLineInFileLocation private constructor(path: String, private val li
         return length
     }
 
-    override fun equals(o: Any): Boolean {
+    override fun equals(o: Any?): Boolean {
         if (o !is DefaultLineInFileLocation) {
             return false
         }

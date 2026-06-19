@@ -20,20 +20,18 @@ import java.util.stream.Collectors
 import javax.inject.Inject
 
 class LocationListInstallationSupplier @Inject constructor(private val buildOptions: ToolchainConfiguration, private val fileResolver: FileResolver) : InstallationSupplier {
-    override fun getSourceName(): String {
-        return "Gradle property '" + JAVA_INSTALLATIONS_PATHS_PROPERTY + "'"
-    }
+    override val sourceName: String = "Gradle property '" + JAVA_INSTALLATIONS_PATHS_PROPERTY + "'"
 
-    override fun get(): MutableSet<InstallationLocation?> {
-        val property = buildOptions.getInstallationsFromPaths()
+    override fun get(): MutableSet<InstallationLocation> {
+        val property = buildOptions.installationsFromPaths
         return property.stream()
-            .filter { path: String? -> !path!!.trim { it <= ' ' }.isEmpty() }
-            .map<InstallationLocation?> { candidate: String? -> this.asInstallations(candidate) }
+            .filter { path: String -> !path.trim { it <= ' ' }.isEmpty() }
+            .map<InstallationLocation> { candidate: String -> this.asInstallations(candidate) }
             .collect(Collectors.toSet())
     }
 
-    private fun asInstallations(candidate: String?): InstallationLocation {
-        return InstallationLocation.Companion.userDefined(fileResolver.resolve(candidate), getSourceName())
+    private fun asInstallations(candidate: String): InstallationLocation {
+        return InstallationLocation.Companion.userDefined(fileResolver.resolve(candidate), sourceName)
     }
 
     companion object {

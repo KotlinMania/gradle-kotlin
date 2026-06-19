@@ -16,6 +16,7 @@
 package org.gradle.tooling
 
 import org.gradle.api.Incubating
+import org.gradle.tooling.events.problems.Problem
 
 /**
  * Represents a failure. Failures are similar to exceptions but carry less information (only a message, a description and a cause) so

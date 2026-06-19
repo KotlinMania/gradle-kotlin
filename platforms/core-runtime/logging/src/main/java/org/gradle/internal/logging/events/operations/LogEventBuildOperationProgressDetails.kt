@@ -15,6 +15,7 @@
  */
 package org.gradle.internal.logging.events.operations
 
+import org.gradle.api.logging.LogLevel
 import org.gradle.internal.operations.logging.LogEventBuildOperationProgressDetails
 import org.gradle.internal.scan.UsedByScanPlugin
 

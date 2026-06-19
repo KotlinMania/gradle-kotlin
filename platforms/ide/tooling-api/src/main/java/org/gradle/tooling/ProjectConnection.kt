@@ -16,7 +16,9 @@
 package org.gradle.tooling
 
 import java.io.Closeable
+import java.io.File
 import java.nio.file.Path
+import org.gradle.tooling.model.gradle.GradleBuild
 
 /**
  *

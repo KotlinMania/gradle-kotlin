@@ -15,13 +15,14 @@
  */
 package org.gradle.tooling.internal.consumer.converters
 
+import java.io.Serializable
 import org.gradle.tooling.internal.gradle.DefaultBuildIdentifier
 import org.gradle.tooling.internal.gradle.DefaultProjectIdentifier
+import org.gradle.tooling.model.ProjectIdentifier
 import org.gradle.tooling.model.gradle.BasicGradleProject
-import java.io.Serializable
 
 class BasicGradleProjectIdentifierMixin(private val buildIdentifier: DefaultBuildIdentifier?) : Serializable {
     fun getProjectIdentifier(gradleProject: BasicGradleProject): DefaultProjectIdentifier {
-        return DefaultProjectIdentifier(buildIdentifier, gradleProject.getPath())
+        return DefaultProjectIdentifier(buildIdentifier!!, gradleProject.path!!)
     }
 }

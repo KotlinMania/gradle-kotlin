@@ -71,11 +71,11 @@ class MessageHub(private val displayName: String?, executorFactory: ExecutorFact
      *
      * The returned value is thread-safe.
      */
-    fun <T> getOutgoing(channelName: String, type: Class<T?>): Dispatch<T?> {
+    fun <T> getOutgoing(channelName: String, type: Class<T>): Dispatch<T?> {
         lock.lock()
         try {
             assertRunning("create outgoing dispatch")
-            return MessageHub.ChannelDispatch<T?>(type, ChannelIdentifier(channelName))
+            return ChannelDispatch(type, ChannelIdentifier(channelName))
         } finally {
             lock.unlock()
         }
@@ -112,15 +112,17 @@ class MessageHub(private val displayName: String?, executorFactory: ExecutorFact
             } else {
                 rejectedMessageListener = DISCARD
             }
-            val dispatch: Dispatch<Any?>?
+            val dispatch: Dispatch<Any?>
             if (handler is Dispatch<*>) {
-                dispatch = Cast.uncheckedNonnullCast<Dispatch<Any?>?>(handler)
+                @Suppress("UNCHECKED_CAST")
+                dispatch = handler as Dispatch<Any?>
             } else {
                 dispatch = DISCARD
             }
-            val boundedDispatch: BoundedDispatch<Any?>?
+            val boundedDispatch: BoundedDispatch<Any?>
             if (dispatch is BoundedDispatch<*>) {
-                boundedDispatch = Cast.uncheckedNonnullCast<BoundedDispatch<Any?>?>(dispatch)
+                @Suppress("UNCHECKED_CAST")
+                boundedDispatch = dispatch as BoundedDispatch<Any?>
             } else {
                 boundedDispatch = DISCARD
             }
@@ -132,7 +134,7 @@ class MessageHub(private val displayName: String?, executorFactory: ExecutorFact
             }
             val identifier = ChannelIdentifier(channelName)
             val queue = incomingQueue.getChannel(identifier).newEndpoint()
-            workers.execute(MessageHub.Handler(queue, dispatch, boundedDispatch, rejectedMessageListener, streamFailureHandler))
+            workers.execute(Handler(queue, dispatch, boundedDispatch, rejectedMessageListener, streamFailureHandler))
         } finally {
             lock.unlock()
         }
@@ -144,13 +146,13 @@ class MessageHub(private val displayName: String?, executorFactory: ExecutorFact
      *
      * Does not cleanup connections on stop or disconnect. It is the caller's responsibility to manage the connection lifecycle.
      */
-    fun addConnection(connection: RemoteConnection<InterHubMessage?>?) {
+    fun addConnection(connection: RemoteConnection<InterHubMessage?>) {
         lock.lock()
         try {
             assertRunning("add connection")
             val connectionState = connections.add(connection)
-            workers.execute(MessageHub.ConnectionDispatch(connectionState))
-            workers.execute(MessageHub.ConnectionReceive(connectionState))
+            workers.execute(ConnectionDispatch(connectionState))
+            workers.execute(ConnectionReceive(connectionState))
         } finally {
             lock.unlock()
         }
@@ -250,7 +252,7 @@ class MessageHub(private val displayName: String?, executorFactory: ExecutorFact
         private val connection: Connection<InterHubMessage?>
 
         init {
-            this.connection = connectionState.getConnection()
+            this.connection = connectionState.connection
         }
 
         override fun run() {
@@ -297,8 +299,8 @@ class MessageHub(private val displayName: String?, executorFactory: ExecutorFact
         private val queue: EndPointQueue
 
         init {
-            this.connection = connectionState.getConnection()
-            this.queue = connectionState.getDispatchQueue()
+            this.connection = connectionState.connection
+            this.queue = connectionState.dispatchQueue
         }
 
         override fun run() {
@@ -340,7 +342,7 @@ class MessageHub(private val displayName: String?, executorFactory: ExecutorFact
         }
     }
 
-    private inner class ChannelDispatch<T>(private val type: Class<T?>, private val channelIdentifier: ChannelIdentifier?) : Dispatch<T?> {
+    private inner class ChannelDispatch<T>(private val type: Class<T>, private val channelIdentifier: ChannelIdentifier?) : Dispatch<T?> {
         override fun toString(): String {
             return "Dispatch " + type.getSimpleName() + " to " + displayName + " channel " + channelIdentifier
         }

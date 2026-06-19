@@ -15,6 +15,7 @@
  */
 package org.gradle.tooling.events.test
 
+import java.io.File
 import org.gradle.api.Incubating
 import org.gradle.tooling.events.ProgressEvent
 import org.jspecify.annotations.NullMarked

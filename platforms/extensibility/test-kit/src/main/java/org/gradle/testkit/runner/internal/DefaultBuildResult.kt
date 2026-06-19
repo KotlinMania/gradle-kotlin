@@ -19,48 +19,46 @@ import com.google.common.io.ByteSource
 import org.gradle.testkit.runner.BuildResult
 import org.gradle.testkit.runner.BuildTask
 import org.gradle.testkit.runner.TaskOutcome
-import org.gradle.util.internal.CollectionUtils
-import org.gradle.util.internal.CollectionUtils.collect
 import java.io.BufferedReader
 import java.io.IOException
 import java.nio.charset.Charset
 import java.util.Collections
-import java.util.function.Function
 
-class DefaultBuildResult(private val outputSource: ByteSource, private val tasks: MutableList<BuildTask>) : BuildResult {
-    constructor(output: String, tasks: MutableList<BuildTask>) : this(ByteSource.wrap(output.toByteArray(Charset.defaultCharset())), tasks)
+class DefaultBuildResult(private val outputSource: ByteSource, private val taskList: List<BuildTask?>) : BuildResult {
+    constructor(output: String, tasks: List<BuildTask?>) : this(ByteSource.wrap(output.toByteArray(Charset.defaultCharset())), tasks)
 
-    override fun getOutput(): String {
-        try {
-            return outputSource.asCharSource(Charset.defaultCharset()).read()
-        } catch (e: IOException) {
-            throw RuntimeException(e)
+    override val output: String
+        get() {
+            try {
+                return outputSource.asCharSource(Charset.defaultCharset()).read()
+            } catch (e: IOException) {
+                throw RuntimeException(e)
+            }
         }
-    }
 
-    override fun getOutputReader(): BufferedReader {
-        try {
-            return outputSource.asCharSource(Charset.defaultCharset()).openBufferedStream()
-        } catch (e: IOException) {
-            throw RuntimeException(e)
+    override val outputReader: BufferedReader
+        get() {
+            try {
+                return outputSource.asCharSource(Charset.defaultCharset()).openBufferedStream()
+            } catch (e: IOException) {
+                throw RuntimeException(e)
+            }
         }
-    }
 
-    override fun getTasks(): MutableList<BuildTask?> {
-        return Collections.unmodifiableList<BuildTask?>(tasks)
-    }
+    override val tasks: MutableList<BuildTask?>
+        get() = Collections.unmodifiableList(taskList)
 
     override fun tasks(outcome: TaskOutcome?): MutableList<BuildTask?> {
-        return Collections.unmodifiableList<BuildTask?>(CollectionUtils.filter<BuildTask?>(tasks, org.gradle.api.specs.Spec { element: BuildTask? -> element!!.outcome == outcome }))
+        return Collections.unmodifiableList(taskList.filter { element -> element!!.outcome == outcome })
     }
 
     override fun taskPaths(outcome: TaskOutcome?): MutableList<String?> {
-        return Collections.unmodifiableList<String?>(collect<String?, BuildTask?>(tasks(outcome), Function { obj: BuildTask? -> obj!!.path }))
+        return Collections.unmodifiableList(tasks(outcome).map { task -> task!!.path })
     }
 
     override fun task(taskPath: String?): BuildTask? {
-        for (task in tasks) {
-            if (task.path == taskPath) {
+        for (task in taskList) {
+            if (task!!.path == taskPath) {
                 return task
             }
         }

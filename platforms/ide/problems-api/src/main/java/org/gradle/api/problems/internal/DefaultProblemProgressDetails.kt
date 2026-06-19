@@ -16,6 +16,9 @@
 package org.gradle.api.problems.internal
 
 import org.gradle.operations.problems.ProblemUsageProgressDetails
+import org.gradle.operations.problems.ProblemDefinition
+import org.gradle.operations.problems.ProblemLocation
+import org.gradle.operations.problems.ProblemSeverity
 
 class DefaultProblemProgressDetails(@JvmField val problem: ProblemInternal) : ProblemProgressDetails, ProblemUsageProgressDetails {
     private val buildOperationProblem: BuildOperationProblem
@@ -24,27 +27,27 @@ class DefaultProblemProgressDetails(@JvmField val problem: ProblemInternal) : Pr
         this.buildOperationProblem = BuildOperationProblem(problem)
     }
 
-    val definition: ProblemDefinition
+    override val definition: ProblemDefinition
         get() = buildOperationProblem.definition
 
-    val severity: ProblemSeverity
+    override val severity: ProblemSeverity
         get() = buildOperationProblem.severity
 
-    val contextualLabel: String?
+    override val contextualLabel: String?
         get() = buildOperationProblem.contextualLabel
 
-    val solutions: MutableList<String>
+    override val solutions: MutableList<String>
         get() = buildOperationProblem.solutions
 
-    val details: String?
+    override val details: String?
         get() = buildOperationProblem.details
 
-    val originLocations: MutableList<ProblemLocation>
+    override val originLocations: MutableList<ProblemLocation>
         get() = buildOperationProblem.originLocations
 
-    val contextualLocations: MutableList<ProblemLocation>
+    override val contextualLocations: MutableList<ProblemLocation>
         get() = buildOperationProblem.contextualLocations
 
-    val failure: Throwable?
+    override val failure: Throwable?
         get() = if (problem.getException() == null) null else problem.getException()
 }

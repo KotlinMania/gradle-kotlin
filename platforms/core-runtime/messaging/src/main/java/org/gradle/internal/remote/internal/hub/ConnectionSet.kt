@@ -26,7 +26,7 @@ internal class ConnectionSet(private val incomingQueue: IncomingQueue, private v
     /**
      * Adds a new incoming connection.
      */
-    fun add(connection: RemoteConnection<InterHubMessage?>?): ConnectionState {
+    fun add(connection: RemoteConnection<InterHubMessage?>): ConnectionState {
         val queue = outgoingQueue.newEndpoint()
         val state = ConnectionState(this, connection, queue)
         connections.add(state)

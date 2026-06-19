@@ -30,7 +30,7 @@ class DefaultUnavailableOsMemoryStatusAspect(name: String) : OsMemoryStatusAspec
         return name
     }
 
-    override fun equals(o: Any): Boolean {
+    override fun equals(o: Any?): Boolean {
         if (this === o) {
             return true
         }

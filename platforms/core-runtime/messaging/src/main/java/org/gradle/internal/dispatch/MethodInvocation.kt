@@ -60,7 +60,7 @@ class MethodInvocation(@JvmField val method: Method, args: Array<Any?>?) {
             method.setAccessible(true)
             method.invoke(target, *arguments)
         } catch (e: InvocationTargetException) {
-            throw UncheckedException.throwAsUncheckedException(e.cause)
+            throw UncheckedException.throwAsUncheckedException(e.cause!!)
         } catch (throwable: Throwable) {
             throw UncheckedException.throwAsUncheckedException(throwable)
         }
@@ -70,4 +70,3 @@ class MethodInvocation(@JvmField val method: Method, args: Array<Any?>?) {
         private val ZERO_ARGS = arrayOfNulls<Any>(0)
     }
 }
-

@@ -26,7 +26,7 @@ interface ActorFactory {
      * @param target The target object.
      * @return The actor.
      */
-    fun createActor(target: Any?): Actor?
+    fun createActor(target: Any): Actor
 
     /**
      * Creates a synchronous actor for the given target object.
@@ -34,5 +34,5 @@ interface ActorFactory {
      * @param target The target object.
      * @return The actor.
      */
-    fun createBlockingActor(target: Any?): Actor?
+    fun createBlockingActor(target: Any): Actor
 }

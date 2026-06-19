@@ -15,7 +15,9 @@
  */
 package org.gradle.tooling.model.eclipse
 
+import org.gradle.api.JavaVersion
 import org.gradle.tooling.model.UnsupportedMethodException
+import org.gradle.tooling.model.java.InstalledJdk
 
 /**
  * Describes Eclipse Java source settings for compiling and running some Java source code.

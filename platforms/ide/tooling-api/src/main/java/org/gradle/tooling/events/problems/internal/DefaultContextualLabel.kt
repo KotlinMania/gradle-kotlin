@@ -19,8 +19,7 @@ import org.gradle.tooling.events.problems.ContextualLabel
 import org.jspecify.annotations.NullMarked
 
 @NullMarked
-class DefaultContextualLabel(private val contextualLabel: String?) : ContextualLabel {
-    override fun getContextualLabel(): String {
-        return contextualLabel!!
-    }
+class DefaultContextualLabel(private val label: String?) : ContextualLabel {
+    override val contextualLabel: String
+        get() = label!!
 }

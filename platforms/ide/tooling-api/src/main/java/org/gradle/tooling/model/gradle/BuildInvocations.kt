@@ -15,9 +15,12 @@
  */
 package org.gradle.tooling.model.gradle
 
+import org.gradle.tooling.model.DomainObjectSet
 import org.gradle.tooling.model.Model
 import org.gradle.tooling.model.ProjectIdentifier
 import org.gradle.tooling.model.ProjectModel
+import org.gradle.tooling.model.Task
+import org.gradle.tooling.model.TaskSelector
 
 /**
  * A model providing access to [org.gradle.tooling.model.Launchable] instances that can be used
@@ -35,7 +38,7 @@ interface BuildInvocations : Model, ProjectModel {
      *
      * @since 2.13
      */
-    override fun getProjectIdentifier(): ProjectIdentifier?
+    override val projectIdentifier: ProjectIdentifier?
 
     /**
      * Returns tasks selectors that can be used to execute a build.

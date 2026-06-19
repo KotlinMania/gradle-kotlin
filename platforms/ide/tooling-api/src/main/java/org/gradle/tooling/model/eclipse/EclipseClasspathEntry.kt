@@ -15,6 +15,7 @@
  */
 package org.gradle.tooling.model.eclipse
 
+import org.gradle.tooling.model.DomainObjectSet
 import org.gradle.tooling.model.UnsupportedMethodException
 
 /**

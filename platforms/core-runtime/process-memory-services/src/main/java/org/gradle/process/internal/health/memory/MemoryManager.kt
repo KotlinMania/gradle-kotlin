@@ -20,27 +20,27 @@ import org.gradle.internal.service.scopes.ServiceScope
 
 @ServiceScope(Scope.Global::class)
 interface MemoryManager {
-    fun addListener(listener: JvmMemoryStatusListener?)
+    fun addListener(listener: JvmMemoryStatusListener)
 
-    fun addListener(listener: OsMemoryStatusListener?)
+    fun addListener(listener: OsMemoryStatusListener)
 
-    fun removeListener(listener: JvmMemoryStatusListener?)
+    fun removeListener(listener: JvmMemoryStatusListener)
 
-    fun removeListener(listener: OsMemoryStatusListener?)
+    fun removeListener(listener: OsMemoryStatusListener)
 
     /**
      * Register a memory resource holder.
      *
      * @param holder The memory resource holder to register
      */
-    fun addMemoryHolder(holder: MemoryHolder?)
+    fun addMemoryHolder(holder: MemoryHolder)
 
     /**
      * Unregister a memory resource holder.
      *
      * @param holder The memory resource holder to unregister
      */
-    fun removeMemoryHolder(holder: MemoryHolder?)
+    fun removeMemoryHolder(holder: MemoryHolder)
 
     /**
      * Request an amount of free system memory.

@@ -18,7 +18,7 @@ package org.gradle.internal.nativeintegration
 /**
  * Encapsulates what happened when we tried to modify the environment.
  */
-enum class EnvironmentModificationResult(reason: String) {
+enum class EnvironmentModificationResult(reason: String?) {
     SUCCESS(null),
     UNSUPPORTED_ENVIRONMENT("There is no native integration with this operating environment.");
 

@@ -30,9 +30,8 @@ abstract class AbstractConsumerConnection(val delegate: ConnectionVersion4, val 
     override fun stop() {
     }
 
-    override fun getDisplayName(): String {
-        return delegate.metaData.displayName
-    }
+    override val displayName: String?
+        get() = delegate.metaData?.displayName
 
     abstract fun configure(connectionParameters: ConnectionParameters)
 
@@ -49,11 +48,11 @@ abstract class AbstractConsumerConnection(val delegate: ConnectionVersion4, val 
     }
 
     override fun run(phasedBuildAction: PhasedBuildAction, operationParameters: ConsumerOperationParameters) {
-        throw Exceptions.unsupportedFeature(operationParameters.getEntryPointName(), this.versionDetails.getVersion(), "4.8")
+        throw Exceptions.unsupportedFeature(operationParameters.entryPointName, this.versionDetails.version!!, "4.8")
     }
 
     override fun runTests(testExecutionRequest: TestExecutionRequest, operationParameters: ConsumerOperationParameters) {
-        throw Exceptions.unsupportedFeature(operationParameters.getEntryPointName(), this.versionDetails.getVersion(), "2.6")
+        throw Exceptions.unsupportedFeature(operationParameters.entryPointName, this.versionDetails.version!!, "2.6")
     }
 
     override fun notifyDaemonsAboutChangedPaths(changedPaths: MutableList<String>, operationParameters: ConsumerOperationParameters) {

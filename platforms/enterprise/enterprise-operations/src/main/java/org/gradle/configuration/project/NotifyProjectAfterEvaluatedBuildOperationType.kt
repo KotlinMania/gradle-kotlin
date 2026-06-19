@@ -23,6 +23,7 @@ import org.gradle.internal.operations.BuildOperationType
  * @since 4.9
  */
 object NotifyProjectAfterEvaluatedBuildOperationType : BuildOperationType<NotifyProjectAfterEvaluatedBuildOperationType.Details, NotifyProjectAfterEvaluatedBuildOperationType.Result> {
+    @JvmField
     val RESULT: Result = object : Result {
     }
 

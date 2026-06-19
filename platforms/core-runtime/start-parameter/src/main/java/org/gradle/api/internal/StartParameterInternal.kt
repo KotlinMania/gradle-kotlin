@@ -122,9 +122,6 @@ open class StartParameterInternal : StartParameter {
          */
         get() = super.getProjectProperties()
 
-    @JvmField
-    var gradleHomeDir: File?
-
     fun doNotSearchUpwards() {
         this.isSearchUpwards = false
     }
@@ -167,10 +164,11 @@ open class StartParameterInternal : StartParameter {
     }
 
     @Suppress("deprecation")
-    override fun isConfigurationCacheRequested(): Boolean {
-        StartParameterDeprecations.nagOnIsConfigurationCacheRequested()
-        return configurationCache.get()!!
-    }
+    override val isConfigurationCacheRequested: Boolean
+        get() {
+            StartParameterDeprecations.nagOnIsConfigurationCacheRequested()
+            return configurationCache.get()!!
+        }
 
     fun setIsolatedProjects(isolatedProjects: Option.Value<Boolean?>?) {
         this.isolatedProjects = isolatedProjects
@@ -309,6 +307,6 @@ open class StartParameterInternal : StartParameter {
     }
 
     fun toBuildLayoutConfiguration(): BuildLayoutConfiguration {
-        return BuildLayoutConfiguration(getCurrentDir(), this.isSearchUpwards, this.isUseEmptySettings)
+        return BuildLayoutConfiguration(getCurrentDir()!!, this.isSearchUpwards, this.isUseEmptySettings)
     }
 }

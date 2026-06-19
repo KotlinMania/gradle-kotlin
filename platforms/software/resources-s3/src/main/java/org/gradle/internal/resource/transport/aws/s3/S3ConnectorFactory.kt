@@ -24,19 +24,19 @@ import org.gradle.internal.resource.connector.ResourceConnectorSpecification
 import org.gradle.internal.resource.transfer.ExternalResourceConnector
 
 class S3ConnectorFactory : ResourceConnectorFactory {
-    override fun getSupportedProtocols(): MutableSet<String?> {
-        return mutableSetOf<String?>("s3")
+    override fun getSupportedProtocols(): MutableSet<String> {
+        return mutableSetOf<String>("s3")
     }
 
-    override fun getSupportedAuthentication(): MutableSet<Class<out Authentication?>?> {
-        val supported: MutableSet<Class<out Authentication?>?> = HashSet<Class<out Authentication?>?>()
+    override fun getSupportedAuthentication(): MutableSet<Class<out Authentication>> {
+        val supported: MutableSet<Class<out Authentication>> = HashSet<Class<out Authentication>>()
         supported.add(AwsImAuthentication::class.java)
         supported.add(AllSchemesAuthentication::class.java)
         return supported
     }
 
     override fun createResourceConnector(connectionDetails: ResourceConnectorSpecification): ExternalResourceConnector {
-        val authentications = connectionDetails.getAuthentications()
+        val authentications = connectionDetails.authentications
         // Since s3 transport supports only one type of credentials at a time, let's use the first one found.
         for (authentication in authentications) {
             // We get only the first element here, nothing else. But Collection

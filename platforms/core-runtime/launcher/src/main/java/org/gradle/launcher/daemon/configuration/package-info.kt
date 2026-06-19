@@ -15,22 +15,6 @@
  */
 package org.gradle.launcher.daemon.configuration
 
-import org.gradle.cli.OptionCategory
-import org.gradle.internal.buildoption.BooleanBuildOption
-import org.gradle.internal.buildoption.BooleanCommandLineOptionConfiguration
-import org.gradle.internal.buildoption.BuildOption
-import org.gradle.internal.buildoption.BuildOptionSet
-import org.gradle.internal.buildoption.CommandLineOptionConfiguration
-import org.gradle.internal.buildoption.EnabledOnlyBooleanBuildOption
-import org.gradle.internal.buildoption.Origin
-import org.gradle.internal.buildoption.StringBuildOption
-import org.gradle.internal.jvm.JavaHomeException
-import org.gradle.internal.nativeintegration.services.NativeServices
-import org.gradle.launcher.daemon.toolchain.DaemonJvmCriteria
-import org.gradle.process.internal.JvmOptions
-import org.jspecify.annotations.NullMarked
-import java.io.File
-import java.util.Arrays
 
 class DaemonBuildOptions : BuildOptionSet<DaemonParameters>() {
     override fun getAllOptions(): MutableList<out BuildOption<in DaemonParameters>> {

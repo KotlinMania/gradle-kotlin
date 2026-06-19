@@ -37,6 +37,6 @@ interface UserInputReceiver {
          *
          * @return The normalized text to forward to the daemon.
          */
-        fun normalize(text: String?): String?
+        fun normalize(text: String): String?
     }
 }

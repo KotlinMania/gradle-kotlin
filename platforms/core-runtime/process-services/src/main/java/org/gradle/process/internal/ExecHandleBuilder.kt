@@ -33,24 +33,30 @@ import javax.inject.Inject
 
 class DefaultJavaExecSpec @Inject constructor(
     objectFactory: ObjectFactory,
-    resolver: PathToFileResolver?,
+    resolver: PathToFileResolver,
     private val fileCollectionFactory: FileCollectionFactory
-) : DefaultJavaForkOptions(objectFactory, resolver, fileCollectionFactory), JavaExecSpec, ProcessArgumentsSpec.HasExecutable {
+) : DefaultJavaForkOptions(objectFactory, resolver, fileCollectionFactory), JavaExecSpec {
     private var ignoreExitValue = false
     private val streamsSpec = ProcessStreamsSpec()
-    private val argumentsSpec = ProcessArgumentsSpec(this)
+    private val argumentsSpec = ProcessArgumentsSpec(object : ProcessArgumentsSpec.HasExecutable {
+        override var executable: String?
+            get() = this@DefaultJavaExecSpec.getExecutable()
+            set(value) {
+                this@DefaultJavaExecSpec.setExecutable(value)
+            }
+    })
 
-    private val mainClass: Property<String?>
-    private val mainModule: Property<String?>
+    private val mainClass: Property<String>
+    private val mainModule: Property<String>
     private val modularity: ModularitySpec
-    private val jvmArguments: ListProperty<String?>
+    private val jvmArguments: ListProperty<String>
 
     private var classpath: ConfigurableFileCollection
 
     init {
-        this.jvmArguments = objectFactory.listProperty<String?>(String::class.java)
-        this.mainClass = objectFactory.property<String?>(String::class.java)
-        this.mainModule = objectFactory.property<String?>(String::class.java)
+        this.jvmArguments = objectFactory.listProperty<String>(String::class.java)
+        this.mainClass = objectFactory.property<String>(String::class.java)
+        this.mainModule = objectFactory.property<String>(String::class.java)
         this.modularity = objectFactory.newInstance<DefaultModularitySpec>(DefaultModularitySpec::class.java)
         this.classpath = fileCollectionFactory.configurableFiles("classpath")
     }
@@ -58,7 +64,7 @@ class DefaultJavaExecSpec @Inject constructor(
     fun copyTo(targetSpec: JavaExecSpec) {
         // JavaExecSpec
         targetSpec.setArgs(getArgs())
-        targetSpec.getArgumentProviders().addAll(getArgumentProviders()!!)
+        targetSpec.getArgumentProviders().addAll(getArgumentProviders())
         targetSpec.getMainClass().set(getMainClass())
         targetSpec.getMainModule().set(getMainModule())
         targetSpec.getModularity().getInferModulePath().set(getModularity().getInferModulePath())
@@ -69,36 +75,36 @@ class DefaultJavaExecSpec @Inject constructor(
         super.copyTo(targetSpec)
     }
 
-    override fun getCommandLine(): MutableList<String?>? {
-        return argumentsSpec.getCommandLine()
+    override fun getCommandLine(): MutableList<String> {
+        return argumentsSpec.commandLine
     }
 
-    override fun args(vararg args: Any?): JavaExecSpec {
+    override fun args(vararg args: Any): JavaExecSpec {
         argumentsSpec.args(*args)
         return this
     }
 
-    override fun args(args: Iterable<*>?): JavaExecSpec {
+    override fun args(args: Iterable<*>): JavaExecSpec {
         argumentsSpec.args(args)
         return this
     }
 
-    override fun setArgs(arguments: MutableList<String?>?): JavaExecSpec {
+    override fun setArgs(arguments: MutableList<String>): JavaExecSpec {
         argumentsSpec.setArgs(arguments)
         return this
     }
 
-    override fun setArgs(arguments: Iterable<*>?): JavaExecSpec {
+    override fun setArgs(arguments: Iterable<*>): JavaExecSpec {
         argumentsSpec.setArgs(arguments)
         return this
     }
 
-    override fun getArgs(): MutableList<String?>? {
-        return argumentsSpec.getArgs()
+    override fun getArgs(): MutableList<String> {
+        return argumentsSpec.args
     }
 
-    override fun getArgumentProviders(): MutableList<CommandLineArgumentProvider?>? {
-        return argumentsSpec.getArgumentProviders()
+    override fun getArgumentProviders(): MutableList<CommandLineArgumentProvider> {
+        return argumentsSpec.argumentProviders
     }
 
     override fun classpath(vararg paths: Any?): JavaExecSpec {
@@ -125,41 +131,41 @@ class DefaultJavaExecSpec @Inject constructor(
         return this
     }
 
-    override fun getStandardInput(): InputStream? {
-        return streamsSpec.getStandardInput()
+    override fun getStandardInput(): InputStream {
+        return streamsSpec.standardInput!!
     }
 
-    override fun setStandardInput(standardInput: InputStream?): JavaExecSpec {
+    override fun setStandardInput(standardInput: InputStream): JavaExecSpec {
         streamsSpec.setStandardInput(standardInput)
         return this
     }
 
-    override fun getStandardOutput(): OutputStream? {
-        return streamsSpec.getStandardOutput()
+    override fun getStandardOutput(): OutputStream {
+        return streamsSpec.standardOutput!!
     }
 
-    override fun setStandardOutput(standardOutput: OutputStream?): JavaExecSpec {
+    override fun setStandardOutput(standardOutput: OutputStream): JavaExecSpec {
         streamsSpec.setStandardOutput(standardOutput)
         return this
     }
 
-    override fun getErrorOutput(): OutputStream? {
-        return streamsSpec.getErrorOutput()
+    override fun getErrorOutput(): OutputStream {
+        return streamsSpec.errorOutput!!
     }
 
-    override fun setErrorOutput(errorOutput: OutputStream?): JavaExecSpec {
+    override fun setErrorOutput(errorOutput: OutputStream): JavaExecSpec {
         streamsSpec.setErrorOutput(errorOutput)
         return this
     }
 
-    override fun getAllJvmArgs(): MutableList<String?> {
-        val allJvmArgs: MutableList<String?> = ArrayList<String?>(super.getAllJvmArgs())
+    override fun getAllJvmArgs(): MutableList<String> {
+        val allJvmArgs: MutableList<String> = ArrayList<String>(super.getAllJvmArgs())
         allJvmArgs.addAll(getJvmArguments().get())
-        return Collections.unmodifiableList<String?>(allJvmArgs)
+        return Collections.unmodifiableList<String>(allJvmArgs)
     }
 
     @Deprecated("")
-    override fun setAllJvmArgs(arguments: MutableList<String?>?) {
+    override fun setAllJvmArgs(arguments: MutableList<String>?) {
         getJvmArguments().empty()
         super.setAllJvmArgs(arguments)
     }
@@ -170,15 +176,15 @@ class DefaultJavaExecSpec @Inject constructor(
         super.setAllJvmArgs(arguments)
     }
 
-    override fun getJvmArguments(): ListProperty<String?> {
+    override fun getJvmArguments(): ListProperty<String> {
         return jvmArguments
     }
 
-    override fun getMainClass(): Property<String?> {
+    override fun getMainClass(): Property<String> {
         return mainClass
     }
 
-    override fun getMainModule(): Property<String?> {
+    override fun getMainModule(): Property<String> {
         return mainModule
     }
 

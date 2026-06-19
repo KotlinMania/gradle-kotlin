@@ -244,6 +244,7 @@ abstract class Try<T : Any?> private constructor() {
          * The returned object will either hold the result or the exception thrown during the operation.
          * If the callable returns null, then the returned Try instance will hold null as its value.
          */
+        @JvmStatic
         fun <U : Any?> ofFailable(failable: Callable<U?>): Try<U?> {
             try {
                 return successful<U?>(failable.call())
@@ -257,6 +258,7 @@ abstract class Try<T : Any?> private constructor() {
          * The returned object will hold the given result.
          * If the result is null, then the returned Try instance will hold null as its value.
          */
+        @JvmStatic
         fun <U : Any?> successful(result: U?): Try<U?> {
             return Success<U?>(result)
         }
@@ -266,8 +268,8 @@ abstract class Try<T : Any?> private constructor() {
          * The returned object will hold the given failure.
          */
         @JvmStatic
-        fun <U : Any?> failure(failure: Throwable): Try<U?> {
-            return Failure<U?>(failure)
+        fun <U : Any?> failure(failure: Throwable?): Try<U?> {
+            return Failure<U?>(Objects.requireNonNull<Throwable>(failure, "null failure is not allowed"))
         }
     }
 }

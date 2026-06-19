@@ -35,11 +35,11 @@ abstract class HelpAndVersionHandlingConsumerConnection(delegate: ConnectionVers
             return handleHelpOrVersion<T?>(type, operationParameters)
         }
         // For model requests, remove help/version args and continue
-        return getModelProducer().produceModel<T?>(type, removeHelpVersionArgs(operationParameters))
+        return modelProducer!!.produceModel<T?>(type, removeHelpVersionArgs(operationParameters))
     }
 
     override fun <T> run(action: BuildAction<T?>, operationParameters: ConsumerOperationParameters): T? {
-        return getActionRunner().run<T?>(action, removeHelpVersionArgs(operationParameters))
+        return actionRunner!!.run<T?>(action, removeHelpVersionArgs(operationParameters))
     }
 
     override fun run(phasedBuildAction: PhasedBuildAction, operationParameters: ConsumerOperationParameters) {
@@ -47,7 +47,7 @@ abstract class HelpAndVersionHandlingConsumerConnection(delegate: ConnectionVers
     }
 
     protected open fun doRun(phasedBuildAction: PhasedBuildAction, operationParameters: ConsumerOperationParameters) {
-        throw Exceptions.unsupportedFeature(operationParameters.getEntryPointName(), getVersionDetails().getVersion(), "4.8")
+        throw Exceptions.unsupportedFeature(operationParameters.entryPointName, versionDetails.version!!, "4.8")
     }
 
     override fun runTests(testExecutionRequest: TestExecutionRequest, operationParameters: ConsumerOperationParameters) {
@@ -55,7 +55,7 @@ abstract class HelpAndVersionHandlingConsumerConnection(delegate: ConnectionVers
     }
 
     protected open fun doRunTests(testExecutionRequest: TestExecutionRequest, operationParameters: ConsumerOperationParameters) {
-        throw Exceptions.unsupportedFeature(operationParameters.getEntryPointName(), getVersionDetails().getVersion(), "2.6")
+        throw Exceptions.unsupportedFeature(operationParameters.entryPointName, versionDetails.version!!, "2.6")
     }
 
     private fun <T> handleHelpOrVersion(type: Class<T?>, operationParameters: ConsumerOperationParameters): T? {
@@ -84,28 +84,28 @@ abstract class HelpAndVersionHandlingConsumerConnection(delegate: ConnectionVers
 
         // if version was requested via --show-version, proceed to produce the model
         if (containsShowVersionArg) {
-            return getModelProducer().produceModel<T?>(type, cleanParams)
+            return modelProducer!!.produceModel<T?>(type, cleanParams)
         }
 
         return null
     }
 
     private fun queryAndPrintHelp(operationParameters: ConsumerOperationParameters, modelParams: ConsumerOperationParameters) {
-        val standardOutput = operationParameters.getStandardOutput()
-        if (getVersionDetails().supportsHelpToolingModel()) {
-            val helpModel = getModelProducer().produceModel<Help>(Help::class.java, modelParams)
-            print(standardOutput, helpModel.getRenderedText())
+        val standardOutput = operationParameters.standardOutput
+        if (versionDetails.supportsHelpToolingModel()) {
+            val helpModel = modelProducer!!.produceModel<Help>(Help::class.java as Class<Help?>, modelParams)
+            print(standardOutput, helpModel!!.renderedText!!)
         } else {
-            val renderedText = HelpModelCompatibilityHelper.getRenderedText(getVersionDetails().getVersion())
+            val renderedText = HelpModelCompatibilityHelper.getRenderedText(versionDetails.version!!)
             print(standardOutput, renderedText)
         }
     }
 
     private fun queryAndPrintVersion(operationParameters: ConsumerOperationParameters, modelParams: ConsumerOperationParameters) {
-        val env = getModelProducer().produceModel<BuildEnvironment>(BuildEnvironment::class.java, modelParams)
-        val standardOutput = operationParameters.getStandardOutput()
-        val output = env.getVersionInfo()
-        print(standardOutput, output)
+        val env = modelProducer!!.produceModel<BuildEnvironment>(BuildEnvironment::class.java as Class<BuildEnvironment?>, modelParams)
+        val standardOutput = operationParameters.standardOutput
+        val output = env!!.versionInfo
+        print(standardOutput, output!!)
     }
 
     companion object {
@@ -123,7 +123,7 @@ abstract class HelpAndVersionHandlingConsumerConnection(delegate: ConnectionVers
             if (!parameters.containsHelpOrVersionArgs()) {
                 return parameters
             }
-            print(parameters.getStandardError(), "The Tooling API does not support --help, --version or --show-version arguments for this operation. These arguments have been ignored.")
+            print(parameters.standardError, "The Tooling API does not support --help, --version or --show-version arguments for this operation. These arguments have been ignored.")
             return parameters.withoutHelpOrVersionArgs()
         }
     }

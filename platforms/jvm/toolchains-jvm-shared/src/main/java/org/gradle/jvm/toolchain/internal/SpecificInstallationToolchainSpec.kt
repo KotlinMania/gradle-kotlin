@@ -59,13 +59,11 @@ class SpecificInstallationToolchainSpec @Inject constructor(propertyFactory: Pro
         return Key(javaHome)
     }
 
-    override fun isConfigured(): Boolean {
-        return true
-    }
+    override val isConfigured: Boolean
+        get() = true
 
-    override fun isValid(): Boolean {
-        return true
-    }
+    override val isValid: Boolean
+        get() = true
 
     override fun getDisplayName(): String {
         return MoreObjects.toStringHelper("SpecificToolchain ").add("javaHome", javaHome).toString()
@@ -89,7 +87,7 @@ class SpecificInstallationToolchainSpec @Inject constructor(propertyFactory: Pro
         }
 
         @JvmStatic
-        fun fromJavaExecutable(propertyFactory: PropertyFactory, executable: String?): SpecificInstallationToolchainSpec {
+        fun fromJavaExecutable(propertyFactory: PropertyFactory, executable: String): SpecificInstallationToolchainSpec {
             return SpecificInstallationToolchainSpec(propertyFactory, JavaExecutableUtils.resolveJavaHomeOfExecutable(executable))
         }
     }

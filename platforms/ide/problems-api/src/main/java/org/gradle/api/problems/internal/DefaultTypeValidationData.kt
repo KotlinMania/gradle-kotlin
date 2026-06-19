@@ -45,7 +45,7 @@ class DefaultTypeValidationData(
         return typeName
     }
 
-    override fun equals(o: Any): Boolean {
+    override fun equals(o: Any?): Boolean {
         if (o !is DefaultTypeValidationData) {
             return false
         }
@@ -61,7 +61,7 @@ class DefaultTypeValidationData(
         return Objects.hashCode(pluginId, propertyName, functionName, parentPropertyName, typeName)
     }
 
-    private class DefaultTypeValidationDataBuilder : TypeValidationDataSpec, AdditionalDataBuilder<TypeValidationData?> {
+    private class DefaultTypeValidationDataBuilder : TypeValidationDataSpec, AdditionalDataBuilder<TypeValidationData> {
         private var pluginId: String? = null
         private var propertyName: String? = null
         private var functionName: String? = null

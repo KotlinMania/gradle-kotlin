@@ -132,7 +132,7 @@ interface Encoder {
      * Writes a non-null string value.
      */
     @Throws(IOException::class)
-    fun writeString(value: CharSequence)
+    fun writeString(value: CharSequence?)
 
     /**
      * Writes a nullable string value.

@@ -15,12 +15,23 @@
  */
 package org.gradle.plugins.ide.tooling.r82
 
+import org.gradle.tooling.*
+import org.gradle.tooling.model.*
+import org.gradle.tooling.model.build.*
+import org.gradle.tooling.model.eclipse.*
+import org.gradle.tooling.model.gradle.*
+import org.gradle.tooling.model.idea.*
+import org.gradle.tooling.model.kotlin.dsl.*
+import org.gradle.tooling.internal.adapter.ProtocolToModelAdapter
+import java.io.File
+import org.gradle.integtests.tooling.r48.*
+
 import org.gradle.tooling.BuildAction
 import kotlin.collections.ArrayList
 import kotlin.collections.MutableList
 
 class FetchBuildInvocationsTasks : BuildAction<MutableList<Task?>?> {
-    public override fun execute(controller: BuildController): MutableList<Task?> {
+    public override fun execute(controller: BuildController?): MutableList<Task?> {
         val result: MutableList<Task?> = ArrayList<Task?>()
         for (build in controller.getBuildModel().getEditableBuilds()) {
             val invocations: BuildInvocations = controller.getModel(build.getRootProject(), BuildInvocations::class.java)

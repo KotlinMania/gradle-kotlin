@@ -15,6 +15,7 @@
  */
 package org.gradle.internal.logging.events
 
+import org.gradle.api.logging.LogLevel
 import org.gradle.internal.scan.UsedByScanPlugin
 
 /**
@@ -25,6 +26,5 @@ abstract class OutputEvent {
     /**
      * Returns the log level for this event.
      */
-    @JvmField
     abstract val logLevel: LogLevel?
 }

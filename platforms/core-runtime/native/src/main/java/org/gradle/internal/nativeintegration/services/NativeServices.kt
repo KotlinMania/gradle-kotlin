@@ -72,11 +72,12 @@ import java.util.EnumSet
  */
 class NativeServices private constructor(private val userHomeDir: File, requestedFeatures: EnumSet<NativeFeatures>, mode: NativeServicesMode) : ServiceRegistrationProvider {
     private val useNativeIntegrations: Boolean
+    private var nativeIntegration: Native? = null
 
     @get:Synchronized
     @get:VisibleForTesting
     protected val native: Native
-        get() = Preconditions.checkNotNull<NativeServices>(instance).field
+        get() = Preconditions.checkNotNull(nativeIntegration)
     private val enabledFeatures: EnumSet<NativeFeatures> = EnumSet.noneOf<NativeFeatures>(NativeFeatures::class.java)
 
     private val services: ServiceRegistry
@@ -88,8 +89,8 @@ class NativeServices private constructor(private val userHomeDir: File, requeste
                     return false
                 }
                 val operatingSystem = OperatingSystem.current()
-                if (operatingSystem.isMacOsX()) {
-                    val version = operatingSystem.getVersion()
+                if (operatingSystem.isMacOsX) {
+                    val version = operatingSystem.version
                     if (VersionNumber.parse(version).getMajor() < 12) {
                         LOGGER.info("Disabling file system watching on macOS {}, as it is only supported for macOS 12+", version)
                         return false
@@ -151,31 +152,25 @@ class NativeServices private constructor(private val userHomeDir: File, requeste
 
     enum class NativeServicesMode {
         ENABLED {
-            override fun isEnabled(): Boolean {
-                return true
-            }
+            override val isEnabled: Boolean
+                get() = true
 
-            override fun isPotentiallyEnabled(): Boolean {
-                return true
-            }
+            override val isPotentiallyEnabled: Boolean
+                get() = true
         },
         DISABLED {
-            override fun isEnabled(): Boolean {
-                return false
-            }
+            override val isEnabled: Boolean
+                get() = false
 
-            override fun isPotentiallyEnabled(): Boolean {
-                return false
-            }
+            override val isPotentiallyEnabled: Boolean
+                get() = false
         },
         NOT_SET {
-            override fun isEnabled(): Boolean {
-                throw UnsupportedOperationException("Cannot determine if native services are enabled or not for " + this + " mode.")
-            }
+            override val isEnabled: Boolean
+                get() = throw UnsupportedOperationException("Cannot determine if native services are enabled or not for " + this + " mode.")
 
-            override fun isPotentiallyEnabled(): Boolean {
-                return true
-            }
+            override val isPotentiallyEnabled: Boolean
+                get() = true
         };
 
         abstract val isEnabled: Boolean
@@ -192,7 +187,6 @@ class NativeServices private constructor(private val userHomeDir: File, requeste
          *
          * @return `true` if the native services might be enabled, `false` otherwise
          */
-        @JvmField
         abstract val isPotentiallyEnabled: Boolean
 
         companion object {
@@ -220,11 +214,11 @@ class NativeServices private constructor(private val userHomeDir: File, requeste
 
     init {
         var useNativeIntegrations = mode.isEnabled
-        var nativeIntegration: Native = null
+        var loadedNative: Native? = null
         val nativeBaseDir: File = getNativeServicesDir(userHomeDir).getAbsoluteFile()
         if (useNativeIntegrations) {
             try {
-                nativeIntegration = Native.init(nativeBaseDir)
+                loadedNative = Native.init(nativeBaseDir)
             } catch (ex: NativeIntegrationUnavailableException) {
                 LOGGER.debug("Native-platform is not available.", ex)
                 useNativeIntegrations = false
@@ -245,7 +239,7 @@ class NativeServices private constructor(private val userHomeDir: File, requeste
             LOGGER.info("Initialized native services in: {}", nativeBaseDir)
         }
         this.useNativeIntegrations = useNativeIntegrations
-        this.native = nativeIntegration
+        this.nativeIntegration = loadedNative
 
         val builder = ServiceRegistryBuilder.builder()
             .displayName("native services")
@@ -323,7 +317,7 @@ class NativeServices private constructor(private val userHomeDir: File, requeste
             }
 
             try {
-                if (operatingSystem.isWindows()) {
+                if (operatingSystem.isWindows) {
                     return WindowsConsoleDetector()
                 }
             } catch (e: LinkageError) {
@@ -337,10 +331,10 @@ class NativeServices private constructor(private val userHomeDir: File, requeste
 
     @Provides
     protected fun createWindowsRegistry(operatingSystem: OperatingSystem): WindowsRegistry {
-        if (useNativeIntegrations && operatingSystem.isWindows()) {
+        if (useNativeIntegrations && operatingSystem.isWindows) {
             return native.get<WindowsRegistry>(WindowsRegistry::class.java)
         }
-        return notAvailable<WindowsRegistry>(WindowsRegistry::class.java, operatingSystem)!!
+        return notAvailable<WindowsRegistry>(WindowsRegistry::class.java, operatingSystem)
     }
 
     @Provides
@@ -352,7 +346,7 @@ class NativeServices private constructor(private val userHomeDir: File, requeste
                 LOGGER.debug("Native-platform system info is not available. Continuing with fallback.")
             }
         }
-        return notAvailable<SystemInfo>(SystemInfo::class.java, operatingSystem)!!
+        return notAvailable<SystemInfo>(SystemInfo::class.java, operatingSystem)
     }
 
     @Provides
@@ -364,7 +358,7 @@ class NativeServices private constructor(private val userHomeDir: File, requeste
                 LOGGER.debug("Native-platform memory integration is not available. Continuing with fallback.")
             }
         }
-        return notAvailable<Memory>(Memory::class.java, operatingSystem)!!
+        return notAvailable<Memory>(Memory::class.java, operatingSystem)
     }
 
     @Provides
@@ -425,11 +419,11 @@ class NativeServices private constructor(private val userHomeDir: File, requeste
                 LOGGER.debug("Native-platform file systems information is not available. Continuing with fallback.")
             }
         }
-        return notAvailable<FileSystems>(FileSystems::class.java, operatingSystem)!!
+        return notAvailable<FileSystems>(FileSystems::class.java, operatingSystem)
     }
 
-    private fun <T> notAvailable(type: Class<T?>, operatingSystem: OperatingSystem): T? {
-        return Cast.uncheckedNonnullCast<T?>(Proxy.newProxyInstance(type.getClassLoader(), arrayOf<Class<*>>(type), BrokenService(type.getSimpleName(), useNativeIntegrations, operatingSystem)))
+    private fun <T : Any> notAvailable(type: Class<T>, operatingSystem: OperatingSystem): T {
+        return Cast.uncheckedNonnullCast(Proxy.newProxyInstance(type.getClassLoader(), arrayOf<Class<*>>(type), BrokenService(type.getSimpleName(), useNativeIntegrations, operatingSystem)))
     }
 
     private class BrokenService(private val type: String, private val useNativeIntegrations: Boolean, private val operatingSystem: OperatingSystem) : InvocationHandler {
@@ -445,7 +439,7 @@ class NativeServices private constructor(private val userHomeDir: File, requeste
         }
     }
 
-    private class FixedHostname(val hostname: String) : HostnameLookup
+    private class FixedHostname(override val hostname: String) : HostnameLookup
 
     interface FileEventFunctionsProvider {
         fun <T : NativeIntegration?> getFunctions(type: Class<T?>): T?

@@ -28,7 +28,7 @@ import java.nio.charset.Charset
 /**
  * A [TextResource] implementation backed by a [UriTextResource]. This helps hide the internal details about file caching.
  */
-class DownloadedUriTextResource(description: String?, sourceUri: URI, private val contentType: String?, private val downloadedResource: File, resolver: RelativeFilePathResolver?) :
+class DownloadedUriTextResource(description: String, sourceUri: URI, private val contentType: String?, private val downloadedResource: File, resolver: RelativeFilePathResolver) :
     UriTextResource(description, sourceUri, resolver) {
     @Throws(IOException::class)
     override fun openReader(): Reader {

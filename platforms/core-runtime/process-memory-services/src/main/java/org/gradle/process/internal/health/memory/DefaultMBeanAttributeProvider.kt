@@ -27,11 +27,12 @@ import javax.management.ReflectionException
 
 @NullMarked
 class DefaultMBeanAttributeProvider : MBeanAttributeProvider {
-    override fun <T> getMbeanAttribute(mbean: String, attribute: String, type: Class<T?>): T? {
+    override fun <T> getMbeanAttribute(mbean: String, attribute: String, type: Class<T>): T {
         val rootCause: Exception?
         try {
             val objectName = ObjectName(mbean)
-            return Cast.cast<T?, Any>(type, ManagementFactory.getPlatformMBeanServer().getAttribute(objectName, attribute))
+            @Suppress("UNCHECKED_CAST")
+            return Cast.cast<T?, Any>(type as Class<T?>, ManagementFactory.getPlatformMBeanServer().getAttribute(objectName, attribute))!!
         } catch (e: InstanceNotFoundException) {
             rootCause = e
         } catch (e: ReflectionException) {

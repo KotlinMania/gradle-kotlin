@@ -23,8 +23,8 @@ import java.io.IOException
 class HttpResourceUploader(private val http: HttpClient) : ExternalResourceUploader {
     @Throws(IOException::class)
     override fun upload(resource: ReadableContent, destination: ExternalResourceName) {
-        http.performRawPut(destination.getUri(), resource).use { response ->
-            if (!response.isSuccessful()) {
+        http.performRawPut(destination.uri, resource).use { response ->
+            if (!response.isSuccessful) {
                 val effectiveUri = response.effectiveUri
                 throw HttpErrorStatusCodeException(response.method, effectiveUri.toString(), response.statusCode, response.statusReason)
             }

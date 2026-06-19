@@ -20,16 +20,14 @@ import java.util.function.BiFunction
 import javax.inject.Inject
 
 class SdkmanInstallationSupplier @Inject constructor(private val toolchainConfiguration: ToolchainConfiguration) : InstallationSupplier {
-    override fun getSourceName(): String {
-        return "SDKMAN!"
+    override val sourceName: String = "SDKMAN!"
+
+    override fun get(): MutableSet<InstallationLocation> {
+        return findJavaCandidates(toolchainConfiguration.sdkmanCandidatesDirectory)
     }
 
-    override fun get(): MutableSet<InstallationLocation?>? {
-        return findJavaCandidates(toolchainConfiguration.getSdkmanCandidatesDirectory())
-    }
-
-    private fun findJavaCandidates(candidatesDir: File?): MutableSet<InstallationLocation?>? {
+    private fun findJavaCandidates(candidatesDir: File): MutableSet<InstallationLocation> {
         val root = File(candidatesDir, "java")
-        return FileBasedInstallationFactory.fromDirectory(root, getSourceName(), BiFunction { location: File?, source: String? -> InstallationLocation.Companion.autoDetected(location, source) })
+        return FileBasedInstallationFactory.fromDirectory(root, sourceName, BiFunction { location: File, source: String -> InstallationLocation.Companion.autoDetected(location, source) })
     }
 }

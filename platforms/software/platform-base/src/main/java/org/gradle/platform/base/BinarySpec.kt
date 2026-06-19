@@ -17,8 +17,11 @@ package org.gradle.platform.base
 
 import org.gradle.api.BuildableComponentSpec
 import org.gradle.api.CheckableComponentSpec
+import org.gradle.api.DomainObjectSet
 import org.gradle.api.Incubating
 import org.gradle.internal.HasInternalProtocol
+import org.gradle.language.base.LanguageSourceSet
+import org.gradle.model.ModelMap
 
 /**
  * Represents a binary that is the result of building a component.
@@ -29,7 +32,6 @@ interface BinarySpec : BuildableComponentSpec, CheckableComponentSpec, Binary {
     /**
      * Can this binary be built in the current environment?
      */
-    @JvmField
     val isBuildable: Boolean
 
     /**
@@ -37,8 +39,7 @@ interface BinarySpec : BuildableComponentSpec, CheckableComponentSpec, Binary {
      *
      * @return the sources owned by the binary.
      */
-    @JvmField
-    val sources: ModelMap<LanguageSourceSet?>?
+    val sources: ModelMap<LanguageSourceSet>
 
     /**
      * Returns all inputs of the binary. This includes source sets owned by the binary,
@@ -46,12 +47,10 @@ interface BinarySpec : BuildableComponentSpec, CheckableComponentSpec, Binary {
      *
      * @return all inputs of the binary.
      */
-    @JvmField
-    val inputs: DomainObjectSet<LanguageSourceSet?>?
+    val inputs: DomainObjectSet<LanguageSourceSet>
 
     /**
      * The set of tasks associated with this binary.
      */
-    @JvmField
-    val tasks: BinaryTasksCollection?
+    val tasks: BinaryTasksCollection
 }

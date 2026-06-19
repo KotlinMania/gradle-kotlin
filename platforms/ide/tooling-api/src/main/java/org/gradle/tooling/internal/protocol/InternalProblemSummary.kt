@@ -15,8 +15,9 @@
  */
 package org.gradle.tooling.internal.protocol
 
-import org.jspecify.annotations.NullMarked
 import java.io.Serializable
+import org.gradle.tooling.events.problems.Problem
+import org.jspecify.annotations.NullMarked
 
 @NullMarked
 interface InternalProblemSummary : Serializable {

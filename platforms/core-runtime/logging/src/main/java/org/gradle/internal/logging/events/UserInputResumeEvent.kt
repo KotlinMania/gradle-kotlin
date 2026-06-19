@@ -20,16 +20,12 @@ import org.gradle.internal.logging.text.StyledTextOutput
 import org.gradle.internal.operations.OperationIdentifier
 
 class UserInputResumeEvent(timestamp: Long) : RenderableOutputEvent(timestamp, "prompt", LogLevel.QUIET, null), InteractiveEvent {
-    public override fun getLogLevel(): LogLevel {
-        return LogLevel.QUIET
-    }
-
     public override fun render(output: StyledTextOutput) {
         // Add a newline after a batch of questions
         output.println()
     }
 
-    public override fun withBuildOperationId(buildOperationId: OperationIdentifier?): RenderableOutputEvent? {
+    public override fun withBuildOperationId(buildOperationId: OperationIdentifier): RenderableOutputEvent {
         throw UnsupportedOperationException()
     }
 }

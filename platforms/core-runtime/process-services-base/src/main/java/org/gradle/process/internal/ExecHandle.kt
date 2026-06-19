@@ -17,26 +17,27 @@ package org.gradle.process.internal
 
 import org.gradle.api.Describable
 import org.gradle.process.ExecResult
+import java.io.File
 
 interface ExecHandle : Describable {
-    val directory: File?
+    fun getDirectory(): File
 
-    val command: String?
+    fun getCommand(): String
 
-    val arguments: MutableList<String?>?
+    fun getArguments(): MutableList<String>
 
-    val environment: MutableMap<String?, String?>?
+    fun getEnvironment(): MutableMap<String, String>
 
     /**
      * Starts this process, blocking until the process has started.
      *
      * @return this
      */
-    fun start(): ExecHandle?
+    fun start(): ExecHandle
 
     fun removeStartupContext()
 
-    val state: ExecHandleState?
+    fun getState(): ExecHandleState
 
     /**
      * Sends the given signal to the process.
@@ -56,14 +57,14 @@ interface ExecHandle : Describable {
      *
      * @return result
      */
-    fun waitForFinish(): ExecResult?
+    fun waitForFinish(): ExecResult
 
     /**
      * Returns the result of the process execution, if it has finished.  If the process has not finished, returns null.
      */
-    val execResult: ExecResult?
+    fun getExecResult(): ExecResult?
 
-    fun addListener(listener: ExecHandleListener?)
+    fun addListener(listener: ExecHandleListener)
 
-    fun removeListener(listener: ExecHandleListener?)
+    fun removeListener(listener: ExecHandleListener)
 }

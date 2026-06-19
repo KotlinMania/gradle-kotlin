@@ -30,6 +30,7 @@ object IdGenerator {
 
     private const val PART_SEPARATOR = "-"
 
+    @JvmStatic
     fun generateId(source: String): String {
         var result = source.lowercase()
 

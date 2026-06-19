@@ -20,9 +20,9 @@ import java.io.Serializable
 import java.util.UUID
 
 class ClassLoaderDetails(// TODO:ADAM - using a UUID means we create a ClassLoader hierarchy for each daemon process we talk to. Instead, use the spec to decide whether to reuse a ClassLoader
-    @JvmField val uuid: UUID?, @JvmField val spec: ClassLoaderSpec?
+    @JvmField val uuid: UUID, @JvmField val spec: ClassLoaderSpec
 ) : Serializable {
-    val parents: MutableList<ClassLoaderDetails?> = ArrayList<ClassLoaderDetails?>()
+    val parents: MutableList<ClassLoaderDetails> = ArrayList<ClassLoaderDetails>()
 
     override fun toString(): String {
         return "{" + javaClass.getSimpleName() + " uuid: " + uuid + " spec: " + spec + " parents: " + parents + "}"

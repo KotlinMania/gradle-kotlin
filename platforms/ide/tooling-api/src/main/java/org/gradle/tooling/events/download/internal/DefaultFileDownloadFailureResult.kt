@@ -15,13 +15,12 @@
  */
 package org.gradle.tooling.events.download.internal
 
+import java.io.File
 import org.gradle.tooling.Failure
 import org.gradle.tooling.events.download.FileDownloadResult
 import org.gradle.tooling.events.internal.DefaultOperationFailureResult
 
-class DefaultFileDownloadFailureResult(startTime: Long, endTime: Long, failures: MutableList<out Failure?>?, private val bytesDownloaded: Long) :
+class DefaultFileDownloadFailureResult(startTime: Long, endTime: Long, failures: MutableList<out Failure?>?, override val bytesDownloaded: Long) :
     DefaultOperationFailureResult(startTime, endTime, failures), FileDownloadResult {
-    override fun getBytesDownloaded(): Long {
-        return bytesDownloaded
-    }
+
 }

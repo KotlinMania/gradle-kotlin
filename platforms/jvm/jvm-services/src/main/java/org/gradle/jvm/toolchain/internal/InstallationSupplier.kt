@@ -20,6 +20,6 @@ import org.gradle.internal.service.scopes.ServiceScope
 import java.util.function.Supplier
 
 @ServiceScope(Scope.Build::class)
-interface InstallationSupplier : Supplier<MutableSet<InstallationLocation?>?> {
-    val sourceName: String?
+interface InstallationSupplier : Supplier<MutableSet<InstallationLocation>> {
+    val sourceName: String
 }

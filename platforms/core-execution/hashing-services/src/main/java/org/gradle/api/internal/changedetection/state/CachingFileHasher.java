@@ -78,7 +78,7 @@ public class CachingFileHasher implements FileHasher {
 
     private FileInfo snapshot(File file) {
         FileMetadata fileMetadata = fileSystem.stat(file);
-        return snapshot(file, fileMetadata.length, fileMetadata.lastModified);
+        return snapshot(file, fileMetadata.getLength(), fileMetadata.getLastModified());
     }
 
     private FileInfo snapshot(File file, long length, long timestamp) {

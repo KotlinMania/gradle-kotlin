@@ -29,12 +29,12 @@ import java.io.FileNotFoundException
 import java.io.FileOutputStream
 
 class MetadataProbe {
-    private val probeClass = Suppliers.memoize<ByteArray?>(Supplier { createProbeClass() })
+    private val probeClass = Suppliers.memoize<ByteArray>(Supplier { createProbeClass() })
 
-    fun writeClass(outputDirectory: File?): File {
+    fun writeClass(outputDirectory: File): File {
         val probeFile = File(outputDirectory, PROBE_CLASS_NAME + ".class")
         try {
-            IoActions.withResource<FileOutputStream?>(FileOutputStream(probeFile), object : ErroringAction<FileOutputStream?>() {
+            IoActions.withResource<FileOutputStream>(FileOutputStream(probeFile), object : ErroringAction<FileOutputStream>() {
                 @Throws(Exception::class)
                 override fun doExecute(thing: FileOutputStream) {
                     thing.write(probeClass.get())
@@ -50,7 +50,7 @@ class MetadataProbe {
         const val PROBE_CLASS_NAME: String = "JavaProbe"
         const val MARKER_PREFIX: String = "GRADLE_PROBE_VALUE:"
 
-        private fun createProbeClass(): ByteArray? {
+        private fun createProbeClass(): ByteArray {
             val cw = ClassWriter(0)
             createClassHeader(cw)
             createConstructor(cw)
@@ -70,7 +70,7 @@ class MetadataProbe {
             mv.visitLabel(l0)
             for (type in ProbedSystemProperty.entries) {
                 if (type != ProbedSystemProperty.Z_ERROR) {
-                    dumpProperty(mv, type.getSystemPropertyKey())
+                    dumpProperty(mv, type.systemPropertyKey)
                 }
             }
             mv.visitInsn(Opcodes.RETURN)

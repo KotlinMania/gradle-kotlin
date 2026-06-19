@@ -75,7 +75,7 @@ class DefaultExecActionFactory private constructor(
     }
 
     override fun newExecAction(): ExecAction {
-        return DefaultExecAction(execHandleFactory.newExecHandleBuilder())
+        return DefaultExecAction(execHandleFactory.newExecHandleBuilder()!!)
     }
 
     override fun newDecoratedJavaForkOptions(): JavaForkOptionsInternal {
@@ -125,8 +125,8 @@ class DefaultExecActionFactory private constructor(
             }
 
             return object : ExecHandleListener {
-                override fun beforeExecutionStarted(execHandle: ExecHandle) {
-                    val command = StringBuilder(execHandle.getCommand())
+                override fun beforeExecutionStarted(execHandle: ExecHandle?) {
+                    val command = StringBuilder(execHandle!!.getCommand())
                     for (argument in execHandle.getArguments()) {
                         command.append(' ').append(argument)
                     }
@@ -147,7 +147,7 @@ class DefaultExecActionFactory private constructor(
 
     @Suppress("deprecation")
     override fun newExec(): ExecHandleBuilder {
-        return DefaultExecHandleBuilder(execHandleFactory.newExecHandleBuilder())
+        return DefaultExecHandleBuilder(execHandleFactory.newExecHandleBuilder()!!)
     }
 
     override fun newJavaExec(): JavaExecHandleBuilder {
@@ -157,23 +157,23 @@ class DefaultExecActionFactory private constructor(
             temporaryFileProvider,
             javaModuleDetector,
             newJavaForkOptions(),
-            execHandleFactory.newExecHandleBuilder()
+            execHandleFactory.newExecHandleBuilder()!!
         )
     }
 
-    override fun javaexec(action: Action<in JavaExecSpec?>): ExecResult? {
+    override fun javaexec(action: Action<in JavaExecSpec>): ExecResult? {
         val execAction = newDecoratedJavaExecAction()
         action.execute(execAction)
         return execAction.execute()
     }
 
-    override fun exec(action: Action<in ExecSpec?>): ExecResult? {
+    override fun exec(action: Action<in ExecSpec>): ExecResult? {
         val execAction = newDecoratedExecAction()
         action.execute(execAction)
         return execAction.execute()
     }
 
-    override fun forContext(): ExecFactory.Builder? {
+    override fun forContext(): ExecFactory.Builder {
         return BuilderImpl(executor, temporaryFileProvider)
             .withInstantiator(instantiator)
             .withExternalProcessStartedListener(externalProcessStartedListener)
@@ -223,7 +223,7 @@ class DefaultExecActionFactory private constructor(
             return this
         }
 
-        override fun withBuildCancellationToken(buildCancellationToken: BuildCancellationToken): ExecFactory.Builder {
+        override fun withBuildCancellationToken(buildCancellationToken: BuildCancellationToken?): ExecFactory.Builder {
             this.buildCancellationToken = buildCancellationToken
             return this
         }

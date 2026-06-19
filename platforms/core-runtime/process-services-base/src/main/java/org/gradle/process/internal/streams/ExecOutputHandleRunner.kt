@@ -66,10 +66,11 @@ class ExecOutputHandleRunner internal constructor(
                 }
                 val startupRef = this.associatedBuildOperation
                 if (startupRef != null) {
-                    CurrentBuildOperationRef.instance().with<Any?, IOException?>(startupRef, CurrentBuildOperationRef.Callable {
+                    val action = CurrentBuildOperationRef.Callable<Unit, IOException> {
                         writeBuffer(buffer, nread)
-                        null
-                    })
+                        Unit
+                    }
+                    CurrentBuildOperationRef.instance().with(startupRef, action)
                 } else {
                     writeBuffer(buffer, nread)
                 }

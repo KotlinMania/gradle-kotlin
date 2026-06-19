@@ -33,7 +33,7 @@ class DefaultDocLink(url: String) : DocLinkInternal {
         return "For more information, please refer to " + url + "."
     }
 
-    override fun equals(o: Any): Boolean {
+    override fun equals(o: Any?): Boolean {
         if (o !is DefaultDocLink) {
             return false
         }

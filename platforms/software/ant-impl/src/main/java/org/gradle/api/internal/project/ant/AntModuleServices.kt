@@ -31,12 +31,12 @@ import org.jspecify.annotations.NullMarked
 
 @NullMarked
 class AntModuleServices : AbstractGradleModuleServices() {
-    public override fun registerBuildServices(registration: ServiceRegistration) {
-        registration.addProvider(AntBuildScopeServices())
+    public override fun registerBuildServices(registration: ServiceRegistration?) {
+        registration!!.addProvider(AntBuildScopeServices())
     }
 
-    public override fun registerProjectServices(registration: ServiceRegistration) {
-        registration.addProvider(AntProjectScopeServices())
+    public override fun registerProjectServices(registration: ServiceRegistration?) {
+        registration!!.addProvider(AntProjectScopeServices())
     }
 
     private class AntBuildScopeServices : ServiceRegistrationProvider {

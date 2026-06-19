@@ -15,6 +15,7 @@
  */
 package org.gradle.tooling.internal.protocol.events
 
+import java.io.File
 import org.jspecify.annotations.NullMarked
 
 /**

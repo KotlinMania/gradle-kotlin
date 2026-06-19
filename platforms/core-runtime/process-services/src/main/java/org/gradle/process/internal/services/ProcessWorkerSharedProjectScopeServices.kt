@@ -73,7 +73,7 @@ class JvmOptions @JvmOverloads constructor(private val fileCollectionFactory: Fi
             maxHeapSize = null
             extraJvmArgs.clear()
             this.enableAssertions = false
-            debugSpec.setEnabled(false)
+            debugSpec.isEnabled = false
             jvmArgs(arguments)
         }
 
@@ -124,7 +124,7 @@ class JvmOptions @JvmOverloads constructor(private val fileCollectionFactory: Fi
                 args.add("-ea")
             }
 
-            if (debugSpec.isEnabled()) {
+            if (debugSpec.isEnabled) {
                 args.add(this.debugArgument)
             }
             return args
@@ -151,9 +151,9 @@ class JvmOptions @JvmOverloads constructor(private val fileCollectionFactory: Fi
 
     fun checkDebugConfiguration(arguments: Iterable<*>) {
         val debugArgs: MutableList<String?> = collectDebugArgs(arguments)
-        if (!debugArgs.isEmpty() && debugSpec.isEnabled()) {
+        if (!debugArgs.isEmpty() && debugSpec.isEnabled) {
             LOGGER.warn("Debug configuration ignored in favor of the supplied JVM arguments: " + debugArgs)
-            debugSpec.setEnabled(false)
+            debugSpec.isEnabled = false
         }
     }
 
@@ -250,9 +250,9 @@ class JvmOptions @JvmOverloads constructor(private val fileCollectionFactory: Fi
         }
 
     var debug: Boolean
-        get() = debugSpec.isEnabled()
+        get() = debugSpec.isEnabled
         set(enabled) {
-            debugSpec.setEnabled(enabled)
+            debugSpec.isEnabled = enabled
         }
 
     fun copyTo(target: JavaForkOptions) {
@@ -268,7 +268,7 @@ class JvmOptions @JvmOverloads constructor(private val fileCollectionFactory: Fi
 
     fun createCopy(fileCollectionFactory: FileCollectionFactory): JvmOptions {
         val target = JvmOptions(fileCollectionFactory)
-        target.jvmArgs = extraJvmArgs
+        target.setExtraJvmArgs(extraJvmArgs)
         target.setSystemProperties(mutableSystemProperties)
         target.minHeapSize = minHeapSize
         target.maxHeapSize = maxHeapSize
@@ -319,10 +319,10 @@ class JvmOptions @JvmOverloads constructor(private val fileCollectionFactory: Fi
         private val DEFAULT_LOCALE: Locale = Locale.getDefault()
 
         fun getDebugArgument(options: JvmDebugSpec): String {
-            val server = options.isServer()
-            val suspend = options.isSuspend()
-            val port = options.getPort()
-            val host = if (options.getHost() == null) "" else options.getHost() + ":"
+            val server = options.isServer
+            val suspend = options.isSuspend
+            val port = options.port
+            val host = if (options.host == null) "" else options.host + ":"
             val address = host + port
             return getDebugArgument(server, suspend, address)
         }
@@ -354,14 +354,14 @@ class JvmOptions @JvmOverloads constructor(private val fileCollectionFactory: Fi
 
         private fun copyDebugOptions(from: JvmDebugSpec, to: JvmDebugSpec) {
             // This severs the connection between from this debugOptions to the other debugOptions
-            to.setEnabled(from.isEnabled())
-            to.setHost(from.getHost())
-            to.setPort(from.getPort())
-            to.setServer(from.isServer())
-            to.setSuspend(from.isSuspend())
+            to.isEnabled = from.isEnabled
+            to.host = from.host
+            to.port = from.port
+            to.isServer = from.isServer
+            to.isSuspend = from.isSuspend
         }
 
-        fun fromString(input: String): MutableList<String?> {
+        fun fromString(input: String): MutableList<String> {
             return ArgumentsSplitter.split(input)
         }
     }

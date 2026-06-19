@@ -20,7 +20,7 @@ import org.gradle.internal.hash.ChecksumService
 import org.gradle.internal.hash.HashCode
 import java.io.File
 
-class LazyLocallyAvailableResourceCandidates(private val filesFactory: Factory<MutableList<File>?>, private val checksumService: ChecksumService) : LocallyAvailableResourceCandidates {
+class LazyLocallyAvailableResourceCandidates(private val filesFactory: Factory<MutableList<File>>, private val checksumService: ChecksumService) : LocallyAvailableResourceCandidates {
     protected var files: MutableList<File>? = null
         get() {
             if (field == null) {
@@ -34,7 +34,7 @@ class LazyLocallyAvailableResourceCandidates(private val filesFactory: Factory<M
         return this.files!!.isEmpty()
     }
 
-    override fun findByHashValue(targetHash: HashCode?): LocallyAvailableResource? {
+    override fun findByHashValue(targetHash: HashCode): LocallyAvailableResource? {
         var thisHash: HashCode?
         for (file in this.files!!) {
             thisHash = checksumService.sha1(file)

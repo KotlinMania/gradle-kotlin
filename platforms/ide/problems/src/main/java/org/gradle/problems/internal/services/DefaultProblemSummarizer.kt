@@ -49,7 +49,7 @@ class DefaultProblemSummarizer(
     }
 
     override fun report(reportDir: File, validationFailures: ProblemReporter.ProblemConsumer) {
-        val cutOffProblems = summarizerStrategy.getCutOffProblems()
+        val cutOffProblems = summarizerStrategy.cutOffProblems
         problemReportCreator.createReportFile(reportDir, cutOffProblems)
         eventEmitter.emitNow(currentBuildOperationRef.getId(), DefaultProblemsSummaryProgressDetails(cutOffProblems))
     }
@@ -69,7 +69,7 @@ class DefaultProblemSummarizer(
         var problem = problem
         val taskIdentity = taskProvider.taskIdentityFor(id!!)
         if (taskIdentity != null) {
-            problem = problem.toBuilder(ProblemsInfrastructure(null, null, null, null, null, null)).taskLocation(taskIdentity.taskPath).build()
+            problem = problem.toBuilder(ProblemsInfrastructure(null, null, null, null, null, null))!!.taskLocation(taskIdentity.taskPath)!!.build()!!
         }
         return problem
     }

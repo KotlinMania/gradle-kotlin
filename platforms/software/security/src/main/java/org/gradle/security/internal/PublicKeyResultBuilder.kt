@@ -19,6 +19,6 @@ import org.bouncycastle.openpgp.PGPPublicKey
 import org.bouncycastle.openpgp.PGPPublicKeyRing
 
 interface PublicKeyResultBuilder {
-    fun keyRing(keyring: PGPPublicKeyRing?)
-    fun publicKey(publicKey: PGPPublicKey?)
+    fun keyRing(keyring: PGPPublicKeyRing)
+    fun publicKey(publicKey: PGPPublicKey)
 }

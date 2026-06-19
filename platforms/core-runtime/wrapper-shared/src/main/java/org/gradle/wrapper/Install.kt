@@ -365,6 +365,7 @@ class Install(private val logger: Logger, private val download: IDownload, priva
         private const val BROKEN_ZIP_RETRIES = 3
 
         @Throws(Exception::class)
+        @JvmStatic
         fun calculateSha256Sum(file: File): String {
             val md = MessageDigest.getInstance("SHA-256")
             Files.newInputStream(file.toPath()).use { fis ->

@@ -16,5 +16,5 @@
 package org.gradle.internal.resource.local
 
 interface FileStoreSearcher<S> {
-    fun search(key: S?): MutableSet<out LocallyAvailableResource?>?
+    fun search(key: S): MutableSet<out LocallyAvailableResource>
 }

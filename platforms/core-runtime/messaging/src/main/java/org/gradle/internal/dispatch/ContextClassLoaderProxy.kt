@@ -29,5 +29,5 @@ class ContextClassLoaderProxy<T>(type: Class<T?>, target: T?, contextClassLoader
     }
 
     val source: T?
-        get() = adapter.getSource()
+        get() = adapter.source
 }

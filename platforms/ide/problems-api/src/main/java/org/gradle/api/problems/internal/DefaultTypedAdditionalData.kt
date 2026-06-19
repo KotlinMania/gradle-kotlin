@@ -23,7 +23,7 @@ class DefaultTypedAdditionalData(private val type: SerializedPayload, private va
         return type
     }
 
-    override fun equals(o: Any): Boolean {
+    override fun equals(o: Any?): Boolean {
         if (o !is DefaultTypedAdditionalData) {
             return false
         }

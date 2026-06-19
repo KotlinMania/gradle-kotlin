@@ -16,12 +16,9 @@
 package org.gradle.internal.resource.transport.http
 
 interface HttpTimeoutSettings {
-    @JvmField
     val connectionTimeoutMs: Int
 
-    @JvmField
     val socketTimeoutMs: Int
 
-    @JvmField
     val idleConnectionTimeoutMs: Int
 }

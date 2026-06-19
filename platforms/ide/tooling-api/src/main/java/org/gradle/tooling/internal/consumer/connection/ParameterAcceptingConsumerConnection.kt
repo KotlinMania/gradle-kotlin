@@ -28,15 +28,14 @@ import org.gradle.tooling.internal.protocol.InternalParameterAcceptingConnection
  */
 open class ParameterAcceptingConsumerConnection(delegate: ConnectionVersion4, modelMapping: ModelMapping, adapter: ProtocolToModelAdapter) :
     TestExecutionConsumerConnection(delegate, modelMapping, adapter) {
-    private val actionRunner: ActionRunner
+    private val parameterizedActionRunner: ActionRunner
+
+    override val actionRunner: ActionRunner
+        get() = parameterizedActionRunner
 
     init {
         val connection = delegate as InternalParameterAcceptingConnection
-        val exceptionTransformer: CancellationExceptionTransformer = CancellationExceptionTransformer.Companion.transformerFor(getVersionDetails())
-        actionRunner = ParameterizedActionRunner(connection, exceptionTransformer, getVersionDetails())
-    }
-
-    override fun getActionRunner(): ActionRunner {
-        return actionRunner
+        val exceptionTransformer: CancellationExceptionTransformer = CancellationExceptionTransformer.Companion.transformerFor(versionDetails)
+        parameterizedActionRunner = ParameterizedActionRunner(connection, exceptionTransformer, versionDetails)
     }
 }

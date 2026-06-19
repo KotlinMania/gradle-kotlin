@@ -36,28 +36,28 @@ interface ExecFactory : ExecActionFactory, ExecHandleFactory, JavaExecHandleFact
      * Creates a new factory for the given context. Returns a [Builder] for further configuration of the created instance. You must provide an Instantiator when creating the child factory from
      * the root one.
      */
-    fun forContext(): Builder?
+    fun forContext(): Builder
 
     /**
      * Builder to configure an instance of the new factory.
      */
     interface Builder {
-        fun withFileResolver(fileResolver: FileResolver?): Builder?
+        fun withFileResolver(fileResolver: FileResolver): Builder
 
-        fun withFileCollectionFactory(fileCollectionFactory: FileCollectionFactory?): Builder?
+        fun withFileCollectionFactory(fileCollectionFactory: FileCollectionFactory): Builder
 
-        fun withInstantiator(instantiator: Instantiator?): Builder?
+        fun withInstantiator(instantiator: Instantiator): Builder
 
-        fun withObjectFactory(objectFactory: ObjectFactory?): Builder?
+        fun withObjectFactory(objectFactory: ObjectFactory): Builder
 
-        fun withJavaModuleDetector(javaModuleDetector: JavaModuleDetector?): Builder?
+        fun withJavaModuleDetector(javaModuleDetector: JavaModuleDetector?): Builder
 
-        fun withBuildCancellationToken(buildCancellationToken: BuildCancellationToken?): Builder?
+        fun withBuildCancellationToken(buildCancellationToken: BuildCancellationToken?): Builder
 
-        fun withExternalProcessStartedListener(externalProcessStartedListener: ExternalProcessStartedListener?): Builder?
+        fun withExternalProcessStartedListener(externalProcessStartedListener: ExternalProcessStartedListener?): Builder
 
-        fun withoutExternalProcessStartedListener(): Builder?
+        fun withoutExternalProcessStartedListener(): Builder
 
-        fun build(): ExecFactory?
+        fun build(): ExecFactory
     }
 }

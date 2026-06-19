@@ -33,14 +33,14 @@ class CacheVersionMapping private constructor(versions: NavigableMap<GradleVersi
     }
 
     val latestVersion: CacheVersion
-        get() = versions.get(versions.lastKey())
+        get() = versions[versions.lastKey()]!!
 
     fun getVersionUsedBy(gradleVersion: GradleVersion): Optional<CacheVersion> {
         val versionToFind = if (gradleVersion.isSnapshot()) gradleVersion.getBaseVersion() else gradleVersion
-        return Optional.ofNullable<MutableMap.MutableEntry<GradleVersion, CacheVersion>>(versions.floorEntry(versionToFind)).map<CacheVersion>(Function { Map.Entry.value })
+        return Optional.ofNullable<MutableMap.MutableEntry<GradleVersion, CacheVersion>>(versions.floorEntry(versionToFind)).map<CacheVersion>(Function { it.value })
     }
 
-    class Builder private constructor() {
+    class Builder {
         private val versions: NavigableMap<GradleVersion, Int> = TreeMap<GradleVersion, Int>()
 
         fun incrementedIn(minGradleVersion: String): Builder {

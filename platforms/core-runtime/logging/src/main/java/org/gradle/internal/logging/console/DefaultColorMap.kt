@@ -84,7 +84,7 @@ class DefaultColorMap(
         addDefault(style.name.lowercase(), colorSpec)
     }
 
-    val statusBarColor: ColorMap.Color
+    override val statusBarColor: ColorMap.Color
         get() = getColor(STATUS_BAR)
 
     override fun getColourFor(style: StyledTextOutput.Style): ColorMap.Color {

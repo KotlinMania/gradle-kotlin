@@ -15,13 +15,24 @@
  */
 package org.gradle.plugins.ide.tooling.r72
 
+import org.gradle.tooling.*
+import org.gradle.tooling.model.*
+import org.gradle.tooling.model.build.*
+import org.gradle.tooling.model.eclipse.*
+import org.gradle.tooling.model.gradle.*
+import org.gradle.tooling.model.idea.*
+import org.gradle.tooling.model.kotlin.dsl.*
+import org.gradle.tooling.internal.adapter.ProtocolToModelAdapter
+import java.io.File
+import org.gradle.integtests.tooling.r48.*
+
 import org.gradle.tooling.BuildAction
 
 class FetchBuildSrcProjectModelAction : BuildAction<GradleProject?> {
-    public override fun execute(controller: BuildController): GradleProject? {
+    public override fun execute(controller: BuildController?): GradleProject? {
         val buildModel: GradleBuild = controller.getModel(GradleBuild::class.java)
         for (build in buildModel.getEditableBuilds()) {
-            if (build.getBuildIdentifier().getRootDir().getName().equals("buildSrc")) {
+            if (build.getBuildIdentifier().getRootDir()?.name == "buildSrc") {
                 return controller.getModel(build.getRootProject(), GradleProject::class.java)
             }
         }

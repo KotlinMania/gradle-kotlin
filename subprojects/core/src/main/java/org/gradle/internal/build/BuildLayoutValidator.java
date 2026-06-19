@@ -60,7 +60,7 @@ public class BuildLayoutValidator {
         }
 
         for (BuiltInCommand command : builtInCommands) {
-            if (command.commandLineMatches(startParameter.getTaskNames())) {
+            if (command.commandLineMatches(com.google.common.collect.ImmutableList.copyOf(startParameter.getTaskNames()))) {
                 // Allow missing settings and build scripts when running a built-in command
                 return;
             }

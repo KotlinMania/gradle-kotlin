@@ -22,4 +22,4 @@ import org.gradle.internal.encryption.EncryptionService
 
 
 internal
-val logger: Logger = Logging.getLogger(EncryptionService::class.java)
+val logger: Logger = Logging.getLogger(EncryptionService::class.java)!!

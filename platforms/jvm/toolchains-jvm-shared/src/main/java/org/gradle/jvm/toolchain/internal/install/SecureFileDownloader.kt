@@ -37,7 +37,7 @@ import java.nio.file.AtomicMoveNotSupportedException
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 
-@ServiceScope([Scope.Build::class])
+@ServiceScope(Scope.Build::class)
 class SecureFileDownloader(private val externalResourceFactory: ExternalResourceFactory) {
     fun getResourceFor(source: URI, authentications: MutableCollection<Authentication>): ExternalResource {
         return createExternalResource(source, authentications)
@@ -57,11 +57,11 @@ class SecureFileDownloader(private val externalResourceFactory: ExternalResource
 
     private fun createExternalResource(source: URI, authentications: MutableCollection<Authentication>): ExternalResource {
         val resourceName: ExternalResourceName = object : ExternalResourceName(source) {
-            override fun getShortDisplayName(): String {
-                return source.toString()
-            }
+            override val shortDisplayName: String
+                get() = source.toString()
         }
-        return externalResourceFactory.createExternalResource(source, authentications).withProgressLogging().resource(resourceName)
+        @Suppress("UNCHECKED_CAST")
+        return externalResourceFactory.createExternalResource(source, authentications as MutableCollection<Authentication?>)!!.withProgressLogging().resource(resourceName)
     }
 
     private fun downloadResource(source: URI, targetFile: File, resource: ExternalResource) {

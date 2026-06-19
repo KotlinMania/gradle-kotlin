@@ -15,6 +15,9 @@
  */
 package org.gradle.tooling.internal.protocol
 
+import org.gradle.tooling.events.problems.Problem
+import org.gradle.tooling.internal.protocol.problem.InternalDocumentationLink
+import org.gradle.tooling.internal.protocol.problem.InternalSeverity
 import org.jspecify.annotations.NullMarked
 
 /**

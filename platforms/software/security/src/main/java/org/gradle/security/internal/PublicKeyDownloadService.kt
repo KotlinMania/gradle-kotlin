@@ -37,47 +37,49 @@ import java.util.Deque
 import java.util.concurrent.TimeUnit
 import java.util.function.Consumer
 
-class PublicKeyDownloadService(private val keyServers: MutableList<URI?>, private val client: ExternalResourceRepository) : PublicKeyService {
+class PublicKeyDownloadService(private val keyServers: MutableList<URI>, private val client: ExternalResourceRepository) : PublicKeyService {
     override fun findByLongId(keyId: Long, builder: PublicKeyResultBuilder) {
-        val servers: MutableList<URI?> = ArrayList<URI?>(keyServers)
+        val servers: MutableList<URI> = ArrayList(keyServers)
         Collections.shuffle(servers)
-        tryDownloadKeyFromServer(SecuritySupport.toLongIdHexString(keyId), servers, builder, Consumer { keyring: PGPPublicKeyRing? -> findMatchingKey(keyId, keyring!!, builder) })
+        tryDownloadKeyFromServer(SecuritySupport.toLongIdHexString(keyId), servers, builder, Consumer { keyring: PGPPublicKeyRing -> findMatchingKey(keyId, keyring, builder) })
     }
 
-    override fun findByFingerprint(fingerprint: ByteArray?, builder: PublicKeyResultBuilder) {
-        val servers: MutableList<URI?> = ArrayList<URI?>(keyServers)
+    override fun findByFingerprint(fingerprint: ByteArray, builder: PublicKeyResultBuilder) {
+        val servers: MutableList<URI> = ArrayList(keyServers)
         Collections.shuffle(servers)
-        tryDownloadKeyFromServer(Fingerprint.Companion.wrap(fingerprint).toString(), servers, builder, Consumer { keyring: PGPPublicKeyRing? -> findMatchingKey(fingerprint, keyring!!, builder) })
+        tryDownloadKeyFromServer(Fingerprint.wrap(fingerprint).toString(), servers, builder, Consumer { keyring: PGPPublicKeyRing -> findMatchingKey(fingerprint, keyring, builder) })
     }
 
-    private fun tryDownloadKeyFromServer(fingerprint: String?, baseUris: MutableList<URI?>, builder: PublicKeyResultBuilder, onKeyring: Consumer<in PGPPublicKeyRing?>) {
-        val serversLeft: Deque<URI?> = ArrayDeque<URI?>(baseUris)
+    private fun tryDownloadKeyFromServer(fingerprint: String, baseUris: MutableList<URI>, builder: PublicKeyResultBuilder, onKeyring: Consumer<in PGPPublicKeyRing>) {
+        val serversLeft: Deque<URI> = ArrayDeque(baseUris)
         try {
-            val backoff: ExponentialBackoff<ExponentialBackoff.Signal?> = of(5, TimeUnit.SECONDS, 50, TimeUnit.MILLISECONDS)
-            backoff.retryUntil<T?>(ExponentialBackoff.Query {
-                val baseUri = serversLeft.poll()
-                if (baseUri == null) {
-                    // no more servers left despite retries
-                    return@retryUntil ExponentialBackoff.Result.successful(false)
-                }
-                try {
-                    val query = toQuery(baseUri, fingerprint)
-                    val response = client.resource(query).withContentIfPresent<ExponentialBackoff.Result<Boolean?>?>(ExternalResource.ContentAction { inputStream: InputStream? ->
-                        extractKeyRing(inputStream!!, builder, onKeyring)
-                        ExponentialBackoff.Result.successful(true)
-                    })
-                    if (response != null) {
-                        return@retryUntil response.getResult()
-                    } else {
-                        logKeyDownloadAttempt(fingerprint, baseUri)
-                        // null means the resource is missing from this repo
+            val backoff: ExponentialBackoff<ExponentialBackoff.Signal> = of(5, TimeUnit.SECONDS, 50, TimeUnit.MILLISECONDS)
+            backoff.retryUntil(object : ExponentialBackoff.Query<Boolean?> {
+                override fun run(): ExponentialBackoff.Result<Boolean?> {
+                    val baseUri = serversLeft.poll()
+                    if (baseUri == null) {
+                        // no more servers left despite retries
+                        return ExponentialBackoff.Result.successful(false)
                     }
-                } catch (e: Exception) {
-                    logKeyDownloadAttempt(fingerprint, baseUri)
-                    // add for retry
-                    serversLeft.add(baseUri)
+                    try {
+                        val query = toQuery(baseUri, fingerprint)
+                        val response = client.resource(query).withContentIfPresent(ExternalResource.ContentAction { inputStream: InputStream ->
+                            extractKeyRing(inputStream, builder, onKeyring)
+                            ExponentialBackoff.Result.successful(true)
+                        })
+                        if (response != null) {
+                            return response.result!!
+                        } else {
+                            logKeyDownloadAttempt(fingerprint, baseUri)
+                            // null means the resource is missing from this repo
+                        }
+                    } catch (e: Exception) {
+                        logKeyDownloadAttempt(fingerprint, baseUri)
+                        // add for retry
+                        serversLeft.add(baseUri)
+                    }
+                    return ExponentialBackoff.Result.notSuccessful(false)
                 }
-                ExponentialBackoff.Result.notSuccessful(false)
             })
         } catch (e: InterruptedException) {
             throw throwAsUncheckedException(e)
@@ -103,7 +105,7 @@ class PublicKeyDownloadService(private val keyServers: MutableList<URI?>, privat
      * A response was sent from the server. This is a keyring, we need to find
      * within the keyring the matching key.
      */
-    private fun findMatchingKey(fingerprint: ByteArray?, keyRing: PGPPublicKeyRing, builder: PublicKeyResultBuilder) {
+    private fun findMatchingKey(fingerprint: ByteArray, keyRing: PGPPublicKeyRing, builder: PublicKeyResultBuilder) {
         for (publicKey in keyRing) {
             if (publicKey.getFingerprint().contentEquals(fingerprint)) {
                 builder.publicKey(publicKey)
@@ -113,7 +115,7 @@ class PublicKeyDownloadService(private val keyServers: MutableList<URI?>, privat
     }
 
     @Throws(IOException::class)
-    private fun extractKeyRing(stream: InputStream, builder: PublicKeyResultBuilder, onKeyring: Consumer<in PGPPublicKeyRing?>) {
+    private fun extractKeyRing(stream: InputStream, builder: PublicKeyResultBuilder, onKeyring: Consumer<in PGPPublicKeyRing>) {
         PGPUtil.getDecoderStream(stream).use { decoderStream ->
             val fingerprintCalculator: KeyFingerPrintCalculator = BcKeyFingerprintCalculator()
             val objectFactory = PGPObjectFactory(decoderStream, fingerprintCalculator)
@@ -127,7 +129,7 @@ class PublicKeyDownloadService(private val keyServers: MutableList<URI?>, privat
     }
 
     @Throws(URISyntaxException::class)
-    private fun toQuery(baseUri: URI, fingerprint: String?): ExternalResourceName {
+    private fun toQuery(baseUri: URI, fingerprint: String): ExternalResourceName {
         var scheme = baseUri.getScheme()
         var port = baseUri.getPort()
         if ("hkp" == scheme) {
@@ -143,7 +145,7 @@ class PublicKeyDownloadService(private val keyServers: MutableList<URI?>, privat
     companion object {
         private val LOGGER = getLogger(PublicKeyDownloadService::class.java)
 
-        private fun logKeyDownloadAttempt(fingerprint: String?, baseUri: URI) {
+        private fun logKeyDownloadAttempt(fingerprint: String, baseUri: URI) {
             LOGGER!!.debug("Cannot download public key " + fingerprint + " from " + baseUri.getHost())
         }
     }

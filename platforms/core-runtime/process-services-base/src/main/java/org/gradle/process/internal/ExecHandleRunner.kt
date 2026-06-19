@@ -34,14 +34,14 @@ import java.util.stream.Stream
 import kotlin.concurrent.Volatile
 
 class ExecHandleRunner(
-    execHandle: DefaultExecHandle, streamsHandler: StreamsHandler, processLauncher: ProcessLauncher, executor: Executor?,
+    execHandle: DefaultExecHandle, streamsHandler: StreamsHandler, processLauncher: ProcessLauncher, executor: Executor,
     associatedBuildOperation: BuildOperationRef?
 ) : Runnable {
     private val processBuilderFactory: ProcessBuilderFactory
     private val execHandle: DefaultExecHandle
     private val lock: Lock = ReentrantLock()
     private val processLauncher: ProcessLauncher
-    private val executor: Executor?
+    private val executor: Executor
 
     private var process: Process? = null
     private var aborted = false
@@ -61,7 +61,7 @@ class ExecHandleRunner(
     }
 
     fun sendSignal(signal: Int) {
-        if (OperatingSystem.current().isWindows()) {
+        if (OperatingSystem.current().isWindows) {
             throw UnsupportedOperationException("Sending signals is not supported on Windows")
         }
         lock.lock()
@@ -111,7 +111,7 @@ class ExecHandleRunner(
      * Falls back to only destroying the main process if the code runs on Java 8 or lower, which is the Gradle 8 or lower behavior.
      */
     private fun destroyProcessTree() {
-        if (JavaVersion.current().isJava9Compatible()) {
+        if (JavaVersion.current().isJava9Compatible) {
             destroyDescendants()
         }
         process!!.destroy()
@@ -147,7 +147,7 @@ class ExecHandleRunner(
                 streamsHandler.start()
             })
 
-            if (execHandle.isDaemon()) {
+            if (execHandle.isDaemon) {
                 CurrentBuildOperationRef.instance().with(this.associatedBuildOperation, Runnable {
                     streamsHandler.stop()
                     detached()

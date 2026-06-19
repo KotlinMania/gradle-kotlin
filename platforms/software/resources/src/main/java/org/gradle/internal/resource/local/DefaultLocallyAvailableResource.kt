@@ -20,17 +20,21 @@ import org.gradle.internal.hash.HashCode
 import java.io.File
 
 class DefaultLocallyAvailableResource : AbstractLocallyAvailableResource {
-    private val origin: File?
+    private val origin: File
 
-    constructor(origin: File, checksumService: ChecksumService) : super(org.gradle.internal.Factory { checksumService.sha1(origin) }) {
+    constructor(origin: File, checksumService: ChecksumService) : super(object : org.gradle.internal.Factory<HashCode?> {
+        override fun create(): HashCode? {
+            return checksumService.sha1(origin)
+        }
+    }) {
         this.origin = origin
     }
 
-    constructor(origin: File?, sha1: HashCode?) : super(sha1) {
+    constructor(origin: File, sha1: HashCode?) : super(sha1) {
         this.origin = origin
     }
 
-    override fun getFile(): File? {
+    override fun getFile(): File {
         return origin
     }
 }

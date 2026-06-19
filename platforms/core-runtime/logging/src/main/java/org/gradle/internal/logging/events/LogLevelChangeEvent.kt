@@ -21,11 +21,10 @@ import org.gradle.api.logging.LogLevel
  * Notifies output consumers that the log level has changed. Consumers will not receive any further events at a lesser log level.
  */
 class LogLevelChangeEvent(@JvmField val newLogLevel: LogLevel) : OutputEvent() {
+    override val logLevel: LogLevel?
+        get() = null
+
     override fun toString(): String {
         return LogLevelChangeEvent::class.java.getSimpleName() + " " + newLogLevel
-    }
-
-    override fun getLogLevel(): LogLevel {
-        return null
     }
 }

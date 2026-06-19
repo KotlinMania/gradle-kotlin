@@ -20,12 +20,12 @@ import org.gradle.api.problems.internal.ProblemInternal
 
 object ProblemUtils {
     fun isInGroup(problem: ProblemInternal, targetGroup: ProblemGroup): Boolean {
-        var group: ProblemGroup? = problem.definition.getId().getGroup()
+        var group: ProblemGroup? = problem.getDefinition()!!.getId()!!.getGroup()
         while (group != null) {
             if (group == targetGroup) {
                 return true
             }
-            group = group.parent
+            group = group.getParent()
         }
         return false
     }

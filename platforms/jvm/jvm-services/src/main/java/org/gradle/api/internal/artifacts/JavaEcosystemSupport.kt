@@ -113,42 +113,42 @@ object JavaEcosystemSupport {
     }
 
     private fun configureTargetPlatform(attributesSchema: AttributesSchema) {
-        val targetPlatformSchema = attributesSchema.attribute<Int?>(TargetJvmVersion.TARGET_JVM_VERSION_ATTRIBUTE)
-        targetPlatformSchema.getCompatibilityRules().ordered(Ordering.natural<Int?>())
-        targetPlatformSchema.getDisambiguationRules().pickLast(Ordering.natural<Int?>())
+        val targetPlatformSchema = attributesSchema.attribute<Int>(TargetJvmVersion.TARGET_JVM_VERSION_ATTRIBUTE)
+        targetPlatformSchema.getCompatibilityRules().ordered(Ordering.natural<Int>())
+        targetPlatformSchema.getDisambiguationRules().pickLast(Ordering.natural<Int>())
     }
 
     private fun configureTargetEnvironment(attributesSchema: AttributesSchema) {
-        val targetEnvironmentSchema = attributesSchema.attribute<TargetJvmEnvironment?>(TargetJvmEnvironment.Companion.TARGET_JVM_ENVIRONMENT_ATTRIBUTE)
+        val targetEnvironmentSchema = attributesSchema.attribute<TargetJvmEnvironment>(TargetJvmEnvironment.Companion.TARGET_JVM_ENVIRONMENT_ATTRIBUTE)
         targetEnvironmentSchema.getCompatibilityRules().add(TargetJvmEnvironmentCompatibilityRules::class.java)
         targetEnvironmentSchema.getDisambiguationRules().add(TargetJvmEnvironmentDisambiguationRules::class.java)
     }
 
     private fun configureBundling(attributesSchema: AttributesSchema) {
-        val bundlingSchema = attributesSchema.attribute<Bundling?>(Bundling.BUNDLING_ATTRIBUTE)
+        val bundlingSchema = attributesSchema.attribute<Bundling>(Bundling.BUNDLING_ATTRIBUTE)
         bundlingSchema.getCompatibilityRules().add(BundlingCompatibilityRules::class.java)
         bundlingSchema.getDisambiguationRules().add(BundlingDisambiguationRules::class.java)
     }
 
     private fun configureUsage(attributesSchema: AttributesSchema, objectFactory: ObjectFactory) {
-        val usageSchema = attributesSchema.attribute<Usage?>(Usage.USAGE_ATTRIBUTE)
+        val usageSchema = attributesSchema.attribute<Usage>(Usage.USAGE_ATTRIBUTE)
         usageSchema.getCompatibilityRules().add(UsageCompatibilityRules::class.java)
-        usageSchema.getDisambiguationRules().add(UsageDisambiguationRules::class.java, object : Action<ActionConfiguration?> {
+        usageSchema.getDisambiguationRules().add(UsageDisambiguationRules::class.java, object : Action<ActionConfiguration> {
             override fun execute(actionConfiguration: ActionConfiguration) {
-                actionConfiguration.params(objectFactory.named<Usage?>(Usage::class.java, Usage.JAVA_API))
-                actionConfiguration.params(objectFactory.named<Usage?>(Usage::class.java, DEPRECATED_JAVA_API_JARS))
-                actionConfiguration.params(objectFactory.named<Usage?>(Usage::class.java, Usage.JAVA_RUNTIME))
-                actionConfiguration.params(objectFactory.named<Usage?>(Usage::class.java, DEPRECATED_JAVA_RUNTIME_JARS))
+                actionConfiguration.params(objectFactory.named<Usage>(Usage::class.java, Usage.JAVA_API))
+                actionConfiguration.params(objectFactory.named<Usage>(Usage::class.java, DEPRECATED_JAVA_API_JARS))
+                actionConfiguration.params(objectFactory.named<Usage>(Usage::class.java, Usage.JAVA_RUNTIME))
+                actionConfiguration.params(objectFactory.named<Usage>(Usage::class.java, DEPRECATED_JAVA_RUNTIME_JARS))
             }
         })
     }
 
     private fun configureLibraryElements(attributesSchema: AttributesSchema, objectFactory: ObjectFactory) {
-        val libraryElementsSchema = attributesSchema.attribute<LibraryElements?>(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE)
+        val libraryElementsSchema = attributesSchema.attribute<LibraryElements>(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE)
         libraryElementsSchema.getCompatibilityRules().add(LibraryElementsCompatibilityRules::class.java)
-        libraryElementsSchema.getDisambiguationRules().add(LibraryElementsDisambiguationRules::class.java, Action { actionConfiguration: ActionConfiguration? ->
-            actionConfiguration!!.params(
-                objectFactory.named<LibraryElements?>(
+        libraryElementsSchema.getDisambiguationRules().add(LibraryElementsDisambiguationRules::class.java, Action { actionConfiguration: ActionConfiguration ->
+            actionConfiguration.params(
+                objectFactory.named<LibraryElements>(
                     LibraryElements::class.java, LibraryElements.JAR
                 )
             )
@@ -161,16 +161,16 @@ object JavaEcosystemSupport {
         val javaApiJars: Usage,
         val javaRuntime: Usage,
         val javaRuntimeJars: Usage
-    ) : AttributeDisambiguationRule<Usage?> {
-        val apiVariants: ImmutableSet<Usage?>
-        val runtimeVariants: ImmutableSet<Usage?>
+    ) : AttributeDisambiguationRule<Usage> {
+        val apiVariants: ImmutableSet<Usage>
+        val runtimeVariants: ImmutableSet<Usage>
 
         init {
-            this.apiVariants = ImmutableSet.of<Usage?>(javaApi, javaApiJars)
-            this.runtimeVariants = ImmutableSet.of<Usage?>(javaRuntime, javaRuntimeJars)
+            this.apiVariants = ImmutableSet.of<Usage>(javaApi, javaApiJars)
+            this.runtimeVariants = ImmutableSet.of<Usage>(javaRuntime, javaRuntimeJars)
         }
 
-        override fun execute(details: MultipleCandidatesDetails<Usage?>) {
+        override fun execute(details: MultipleCandidatesDetails<Usage>) {
             val candidateValues = details.getCandidateValues()
             val consumerValue = details.getConsumerValue()
             if (consumerValue == null) {
@@ -208,8 +208,8 @@ object JavaEcosystemSupport {
     }
 
     @VisibleForTesting
-    class UsageCompatibilityRules : AttributeCompatibilityRule<Usage?> {
-        override fun execute(details: CompatibilityCheckDetails<Usage?>) {
+    class UsageCompatibilityRules : AttributeCompatibilityRule<Usage> {
+        override fun execute(details: CompatibilityCheckDetails<Usage>) {
             val consumerValue = details.getConsumerValue()
             val producerValue = details.getProducerValue()
             if (consumerValue == null) {
@@ -230,7 +230,7 @@ object JavaEcosystemSupport {
         }
 
         companion object {
-            private val COMPATIBLE_WITH_JAVA_API: MutableSet<String?> = ImmutableSet.of<String?>(
+            private val COMPATIBLE_WITH_JAVA_API: MutableSet<String> = ImmutableSet.of<String>(
                 DEPRECATED_JAVA_API_JARS,
                 DEPRECATED_JAVA_RUNTIME_JARS,
                 Usage.JAVA_RUNTIME
@@ -239,8 +239,8 @@ object JavaEcosystemSupport {
     }
 
     @VisibleForTesting
-    internal class LibraryElementsDisambiguationRules @Inject constructor(val jar: LibraryElements) : AttributeDisambiguationRule<LibraryElements?> {
-        override fun execute(details: MultipleCandidatesDetails<LibraryElements?>) {
+    internal class LibraryElementsDisambiguationRules @Inject constructor(val jar: LibraryElements) : AttributeDisambiguationRule<LibraryElements> {
+        override fun execute(details: MultipleCandidatesDetails<LibraryElements>) {
             val candidateValues = details.getCandidateValues()
             val consumerValue = details.getConsumerValue()
             if (consumerValue == null) {
@@ -256,8 +256,8 @@ object JavaEcosystemSupport {
     }
 
     @VisibleForTesting
-    internal class LibraryElementsCompatibilityRules : AttributeCompatibilityRule<LibraryElements?> {
-        override fun execute(details: CompatibilityCheckDetails<LibraryElements?>) {
+    internal class LibraryElementsCompatibilityRules : AttributeCompatibilityRule<LibraryElements> {
+        override fun execute(details: CompatibilityCheckDetails<LibraryElements>) {
             val consumerValue = details.getConsumerValue()
             val producerValue = details.getProducerValue()
             if (consumerValue == null) {
@@ -278,28 +278,28 @@ object JavaEcosystemSupport {
     }
 
     private class TargetJvmEnvironmentCompatibilityRules  // public constructor to make reflective initialization happy.
-        : AttributeCompatibilityRule<TargetJvmEnvironment?> {
-        override fun execute(details: CompatibilityCheckDetails<TargetJvmEnvironment?>) {
+        : AttributeCompatibilityRule<TargetJvmEnvironment> {
+        override fun execute(details: CompatibilityCheckDetails<TargetJvmEnvironment>) {
             details.compatible()
         }
     }
 
     private class TargetJvmEnvironmentDisambiguationRules  // public constructor to make reflective initialization happy.
-        : AttributeDisambiguationRule<TargetJvmEnvironment?> {
-        override fun execute(details: MultipleCandidatesDetails<TargetJvmEnvironment?>) {
+        : AttributeDisambiguationRule<TargetJvmEnvironment> {
+        override fun execute(details: MultipleCandidatesDetails<TargetJvmEnvironment>) {
             val consumerValue = details.getConsumerValue()
             if (consumerValue != null && details.getCandidateValues().contains(consumerValue)) {
                 details.closestMatch(consumerValue) // exact match
             } else {
-                val standardJvm = details.getCandidateValues().stream().filter { c: TargetJvmEnvironment? -> TargetJvmEnvironment.Companion.STANDARD_JVM == c!!.getName() }.findFirst()
-                standardJvm.ifPresent(Consumer { candidate: TargetJvmEnvironment? -> details.closestMatch(candidate) })
+                val standardJvm = details.getCandidateValues().stream().filter { c: TargetJvmEnvironment -> TargetJvmEnvironment.Companion.STANDARD_JVM == c.getName() }.findFirst()
+                standardJvm.ifPresent(Consumer { candidate: TargetJvmEnvironment -> details.closestMatch(candidate) })
             }
         }
     }
 
     @VisibleForTesting
-    internal class BundlingCompatibilityRules : AttributeCompatibilityRule<Bundling?> {
-        override fun execute(details: CompatibilityCheckDetails<Bundling?>) {
+    internal class BundlingCompatibilityRules : AttributeCompatibilityRule<Bundling> {
+        override fun execute(details: CompatibilityCheckDetails<Bundling>) {
             val consumerValue = details.getConsumerValue()
             val producerValue = details.getProducerValue()
             if (consumerValue == null) {
@@ -322,8 +322,8 @@ object JavaEcosystemSupport {
         }
 
         companion object {
-            private val COMPATIBLE_WITH_EXTERNAL: MutableSet<String?> =
-                ImmutableSet.of<String?>( // if we ask for "external" dependencies, it's still fine to bring a fat jar if nothing else is available
+            private val COMPATIBLE_WITH_EXTERNAL: MutableSet<String> =
+                ImmutableSet.of<String>( // if we ask for "external" dependencies, it's still fine to bring a fat jar if nothing else is available
                     Bundling.EMBEDDED,
                     Bundling.SHADOWED
                 )
@@ -331,11 +331,11 @@ object JavaEcosystemSupport {
     }
 
     @VisibleForTesting
-    internal class BundlingDisambiguationRules : AttributeDisambiguationRule<Bundling?> {
-        override fun execute(details: MultipleCandidatesDetails<Bundling?>) {
+    internal class BundlingDisambiguationRules : AttributeDisambiguationRule<Bundling> {
+        override fun execute(details: MultipleCandidatesDetails<Bundling>) {
             val consumerValue = details.getConsumerValue()
             val candidateValues: MutableSet<Bundling> = details.getCandidateValues()
-            if (candidateValues.contains(consumerValue)) {
+            if (consumerValue != null && candidateValues.contains(consumerValue)) {
                 details.closestMatch(consumerValue)
                 return
             }

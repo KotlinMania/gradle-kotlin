@@ -19,6 +19,7 @@ package org.gradle.internal.work;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import org.gradle.api.specs.Spec;
+import org.gradle.internal.Cast;
 import org.gradle.internal.Factories;
 import org.gradle.internal.Factory;
 import org.gradle.internal.concurrent.Stoppable;
@@ -127,7 +128,7 @@ public class DefaultWorkerLeaseService implements WorkerLeaseService, ProjectPar
             // Already a worker
             return action.create();
         }
-        return withLocks(Collections.singletonList(newWorkerLease()), action);
+        return Cast.uncheckedNonnullCast(withLocks(Collections.singletonList(newWorkerLease()), action));
     }
 
     @Override
@@ -147,7 +148,7 @@ public class DefaultWorkerLeaseService implements WorkerLeaseService, ProjectPar
         if (!acquired) {
             return Optional.empty();
         }
-        return Optional.of(runAndReleaseLocks(Collections.singletonList(lease), action));
+        return Optional.of(Cast.uncheckedNonnullCast(runAndReleaseLocks(Collections.singletonList(lease), action)));
     }
 
     @Override
@@ -222,7 +223,8 @@ public class DefaultWorkerLeaseService implements WorkerLeaseService, ProjectPar
     }
 
     @Override
-    public <T extends @Nullable Object> T runAsIsolatedTask(Factory<T> factory) {
+    @SuppressWarnings("NullAway")
+    public <T extends @Nullable Object> @Nullable T runAsIsolatedTask(Factory<T> factory) {
         Registries registries = getRegistries();
         Collection<? extends ResourceLock> projectLocks = registries.getProjectLockRegistry().getResourceLocksByCurrentThread();
         Collection<? extends ResourceLock> taskLocks = registries.getTaskExecutionLockRegistry().getResourceLocksByCurrentThread();
@@ -238,7 +240,8 @@ public class DefaultWorkerLeaseService implements WorkerLeaseService, ProjectPar
     }
 
     @Override
-    public <T extends @Nullable Object> T blocking(Factory<T> action) {
+    @SuppressWarnings("NullAway")
+    public <T extends @Nullable Object> @Nullable T blocking(Factory<T> action) {
         Registries registries = getRegistries();
         if (registries.getProjectLockRegistry().mayAttemptToChangeLocks()) {
             final Collection<? extends ResourceLock> projectLocks = registries.getProjectLockRegistry().getResourceLocksByCurrentThread();
@@ -276,7 +279,7 @@ public class DefaultWorkerLeaseService implements WorkerLeaseService, ProjectPar
     }
 
     @Override
-    public <T extends @Nullable Object> T withLocks(Collection<? extends ResourceLock> locks, Factory<T> factory) {
+    public <T extends @Nullable Object> @Nullable T withLocks(Collection<? extends ResourceLock> locks, Factory<T> factory) {
         Collection<? extends ResourceLock> locksToAcquire = locksNotHeld(locks);
 
         if (locksToAcquire.isEmpty()) {
@@ -289,12 +292,13 @@ public class DefaultWorkerLeaseService implements WorkerLeaseService, ProjectPar
     /**
      * Perform the given action while holding the specified locks, blocking until the locks are acquired.
      */
-    private <T extends @Nullable Object> T withLocksAcquired(Collection<? extends ResourceLock> locksToAcquire, Factory<T> factory) {
+    private <T extends @Nullable Object> @Nullable T withLocksAcquired(Collection<? extends ResourceLock> locksToAcquire, Factory<T> factory) {
         acquireLocksWithoutWorkerLeaseWhileBlocked(locksToAcquire);
         return runAndReleaseLocks(locksToAcquire, factory);
     }
 
-    private <T> T runAndReleaseLocks(Collection<? extends ResourceLock> locksHeld, Factory<T> factory) {
+    @SuppressWarnings("NullAway")
+    private <T extends @Nullable Object> @Nullable T runAndReleaseLocks(Collection<? extends ResourceLock> locksHeld, Factory<T> factory) {
         return resourceLockStatistics.measure("Acquired", locksHeld, () -> {
             try {
                 return factory.create();
@@ -367,7 +371,8 @@ public class DefaultWorkerLeaseService implements WorkerLeaseService, ProjectPar
     }
 
     @Override
-    public <T extends @Nullable Object> T withoutLocks(Collection<? extends ResourceLock> locks, Factory<T> factory) {
+    @SuppressWarnings("NullAway")
+    public <T extends @Nullable Object> @Nullable T withoutLocks(Collection<? extends ResourceLock> locks, Factory<T> factory) {
         if (locks.isEmpty()) {
             return factory.create();
         }
@@ -383,7 +388,8 @@ public class DefaultWorkerLeaseService implements WorkerLeaseService, ProjectPar
         });
     }
 
-    private <T extends @Nullable Object> T withoutLocksBlocking(Collection<? extends ResourceLock> locks, Factory<T> factory) {
+    @SuppressWarnings("NullAway")
+    private <T extends @Nullable Object> @Nullable T withoutLocksBlocking(Collection<? extends ResourceLock> locks, Factory<T> factory) {
         if (locks.isEmpty()) {
             return factory.create();
         }
@@ -440,7 +446,8 @@ public class DefaultWorkerLeaseService implements WorkerLeaseService, ProjectPar
     }
 
     @Override
-    public <T extends @Nullable Object> T withReplacedLocks(Collection<? extends ResourceLock> currentLocks, ResourceLock newLock, Factory<T> factory) {
+    @SuppressWarnings("NullAway")
+    public <T extends @Nullable Object> @Nullable T withReplacedLocks(Collection<? extends ResourceLock> currentLocks, ResourceLock newLock, Factory<T> factory) {
         if (currentLocks.contains(newLock)) {
             // Already holds the lock
             return factory.create();
@@ -497,7 +504,7 @@ public class DefaultWorkerLeaseService implements WorkerLeaseService, ProjectPar
     }
 
     private boolean allLockedByCurrentThread(final Iterable<? extends ResourceLock> locks) {
-        return coordinationService.withStateLock(new Supplier<Boolean>() {
+        return Boolean.TRUE.equals(coordinationService.withStateLock(new Supplier<Boolean>() {
             @Override
             public Boolean get() {
                 return CollectionUtils.every(locks, new Spec<ResourceLock>() {
@@ -507,7 +514,7 @@ public class DefaultWorkerLeaseService implements WorkerLeaseService, ProjectPar
                     }
                 });
             }
-        });
+        }));
     }
 
     private static abstract class Registries {

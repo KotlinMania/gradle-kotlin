@@ -20,7 +20,7 @@ import org.gradle.internal.serialize.Decoder
 import org.gradle.internal.serialize.Encoder
 import org.gradle.internal.serialize.Serializer
 
-class BooleanQuestionPromptEventSerializer : Serializer<BooleanQuestionPromptEvent?> {
+class BooleanQuestionPromptEventSerializer : Serializer<BooleanQuestionPromptEvent> {
     @Throws(Exception::class)
     override fun write(encoder: Encoder, value: BooleanQuestionPromptEvent) {
         encoder.writeLong(value.timestamp)

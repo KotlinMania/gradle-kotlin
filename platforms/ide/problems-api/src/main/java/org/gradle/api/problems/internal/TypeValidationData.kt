@@ -21,14 +21,9 @@ import org.gradle.api.problems.AdditionalData
  * Additional data type that can be used to attach type validation information to a problem.
  */
 interface TypeValidationData : AdditionalData {
-    @JvmField
-    val pluginId: String?
-    @JvmField
-    val propertyName: String?
-    @JvmField
-    val functionName: String?
-    @JvmField
-    val parentPropertyName: String?
-    @JvmField
-    val typeName: String?
+    fun getPluginId(): String?
+    fun getPropertyName(): String?
+    fun getFunctionName(): String?
+    fun getParentPropertyName(): String?
+    fun getTypeName(): String?
 }

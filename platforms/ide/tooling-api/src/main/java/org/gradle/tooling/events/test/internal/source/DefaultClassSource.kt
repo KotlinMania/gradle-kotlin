@@ -17,8 +17,6 @@ package org.gradle.tooling.events.test.internal.source
 
 import org.gradle.tooling.events.test.source.ClassSource
 
-class DefaultClassSource(private val className: String) : ClassSource {
-    override fun getClassName(): String {
-        return className
-    }
+class DefaultClassSource(override val className: String) : ClassSource {
+
 }

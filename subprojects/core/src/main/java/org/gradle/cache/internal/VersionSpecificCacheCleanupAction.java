@@ -77,7 +77,7 @@ public class VersionSpecificCacheCleanupAction implements MonitoredCleanupAction
         if (requiresCleanup()) {
             Timer timer = Time.startTimer();
             performCleanup(progressMonitor);
-            LOGGER.debug("Processed version-specific caches at {} for cleanup in {}", versionSpecificCacheDirectoryScanner.baseDir, timer.elapsed);
+            LOGGER.debug("Processed version-specific caches at {} for cleanup in {}", versionSpecificCacheDirectoryScanner.baseDir, timer.getElapsed());
             return true;
         }
         return false;

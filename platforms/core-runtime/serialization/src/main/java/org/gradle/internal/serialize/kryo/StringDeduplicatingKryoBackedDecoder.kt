@@ -28,7 +28,7 @@ import java.io.InputStream
  * Note that this decoder uses buffering, so will attempt to read beyond the end of the encoded data. This means you should use this type only when this decoder will be used to decode the entire
  * stream.
  */
-class StringDeduplicatingKryoBackedDecoder @JvmOverloads constructor(private val inputStream: InputStream, bufferSize: Int = 4096) : AbstractDecoder(), Decoder, Closeable {
+class StringDeduplicatingKryoBackedDecoder @JvmOverloads constructor(override val inputStream: InputStream, bufferSize: Int = 4096) : AbstractDecoder(), Decoder, Closeable {
     private val input: Input
     private var strings: Array<String?>? = INITIAL_CAPACITY_MARKER
 
@@ -51,7 +51,7 @@ class StringDeduplicatingKryoBackedDecoder @JvmOverloads constructor(private val
         input = Input(this.inputStream, bufferSize)
     }
 
-    override fun maybeReadBytes(buffer: ByteArray?, offset: Int, count: Int): Int {
+    override fun maybeReadBytes(buffer: ByteArray, offset: Int, count: Int): Int {
         return input.read(buffer, offset, count)
     }
 
@@ -75,11 +75,11 @@ class StringDeduplicatingKryoBackedDecoder @JvmOverloads constructor(private val
     }
 
     @Throws(EOFException::class)
-    private fun maybeEndOfStream(e: KryoException): RuntimeException? {
+    private fun maybeEndOfStream(e: KryoException): Throwable {
         if (e.message == "Buffer underflow.") {
-            throw EOFException().initCause(e) as EOFException?
+            return EOFException().also { it.initCause(e) }
         }
-        throw e
+        return e
     }
 
     @Throws(EOFException::class)
@@ -92,7 +92,7 @@ class StringDeduplicatingKryoBackedDecoder @JvmOverloads constructor(private val
     }
 
     @Throws(EOFException::class)
-    override fun readBytes(buffer: ByteArray?, offset: Int, count: Int) {
+    override fun readBytes(buffer: ByteArray, offset: Int, count: Int) {
         try {
             input.readBytes(buffer, offset, count)
         } catch (e: KryoException) {
@@ -173,8 +173,8 @@ class StringDeduplicatingKryoBackedDecoder @JvmOverloads constructor(private val
     }
 
     @Throws(EOFException::class)
-    override fun readString(): String? {
-        return readNullableString()
+    override fun readString(): String {
+        return requireNotNull(readNullableString()) { "Cannot decode a null string." }
     }
 
     @Throws(EOFException::class)

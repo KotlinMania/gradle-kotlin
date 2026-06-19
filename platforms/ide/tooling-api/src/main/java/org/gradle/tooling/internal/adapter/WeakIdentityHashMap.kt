@@ -71,7 +71,7 @@ internal class WeakIdentityHashMap<K, V> {
             hashCode = System.identityHashCode(referent)
         }
 
-        override fun equals(obj: Any): Boolean {
+        override fun equals(obj: Any?): Boolean {
             if (this === obj) {
                 return true
             }

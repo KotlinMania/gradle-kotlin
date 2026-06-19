@@ -74,7 +74,7 @@ public class DaemonInfo implements Serializable, DaemonConnectDetails {
 
     public DaemonInfo setState(DaemonState state) {
         if ((this.state == Idle || this.state == null) && state == Busy) {
-            lastBusy = clock.currentTime;
+            lastBusy = clock.getCurrentTime();
         }
         this.state = state;
         return this;

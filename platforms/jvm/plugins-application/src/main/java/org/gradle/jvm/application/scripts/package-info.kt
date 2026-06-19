@@ -18,27 +18,4 @@
  */
 package org.gradle.jvm.application.scripts
 
-import org.gradle.api.tasks.compile.JavaCompile.getOptions
-import org.gradle.internal.UncheckedException.Companion.throwAsUncheckedException
-import org.gradle.api.tasks.JavaExec.getMainModule
-import org.gradle.api.tasks.JavaExec.setClasspath
-import org.gradle.api.tasks.JavaExec.getMainClass
-import org.gradle.api.tasks.JavaExec.getJvmArguments
-import org.gradle.api.tasks.JavaExec.getModularity
-import org.gradle.api.tasks.internal.JavaExecExecutableUtils.getExecutableOverrideToolchainSpec
-import org.gradle.util.internal.CollectionUtils.toStringList
-import org.gradle.internal.os.OperatingSystem.Companion.current
-import org.gradle.internal.os.OperatingSystem.isWindows
-import org.gradle.internal.deprecation.DeprecationLogger.deprecateMethod
-import org.gradle.internal.deprecation.DeprecationMessageBuilder.willBeRemovedInGradle10
-import org.gradle.internal.deprecation.Documentation.AbstractBuilder.withUpgradeGuideSection
-import org.gradle.internal.deprecation.DeprecationMessageBuilder.WithDocumentation.nagUser
-import org.gradle.process.internal.JavaExecHandleFactory.newJavaExec
-import org.gradle.process.internal.JavaExecHandleBuilder.setExecutable
-import org.gradle.process.internal.JavaExecHandleBuilder.setClasspath
-import org.gradle.process.internal.JavaExecHandleBuilder.setArgs
-import org.gradle.process.internal.ExecHandle.state
-import org.gradle.process.internal.JavaExecHandleBuilder.build
-import org.gradle.process.internal.ExecHandle.start
-import org.gradle.process.internal.ExecHandle.abort
 

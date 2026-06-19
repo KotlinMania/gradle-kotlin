@@ -30,7 +30,7 @@ class VersionSpecificCacheDirectory(dir: File, version: GradleVersion) : Compara
         this.version = Preconditions.checkNotNull<GradleVersion>(version, "version must not be null")
     }
 
-    override fun equals(o: Any): Boolean {
+    override fun equals(o: Any?): Boolean {
         if (this === o) {
             return true
         }

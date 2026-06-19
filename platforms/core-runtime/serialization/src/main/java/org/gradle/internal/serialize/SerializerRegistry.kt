@@ -22,21 +22,21 @@ interface SerializerRegistry {
      *
      * The provided serializer must be thread-safe and reusable.
      */
-    fun <T> register(implementationType: Class<T?>?, serializer: Serializer<T?>?)
+    fun <T : Any> register(implementationType: Class<T>, serializer: Serializer<T>)
 
     /**
      * Use Java serialization for the specified type and all subtypes. Should be avoided, but useful when migrating to using serializers or when dealing with
      * arbitrary user types.
      */
-    fun <T> useJavaSerialization(implementationType: Class<T?>?)
+    fun <T : Any> useJavaSerialization(implementationType: Class<T>)
 
     /**
      * Returns true when this registry can serialize objects of the given type.
      */
-    fun canSerialize(baseType: Class<*>?): Boolean
+    fun canSerialize(baseType: Class<*>): Boolean
 
     /**
      * Creates a serializer that uses the current registrations to serialize objects of type T.
      */
-    fun <T> build(baseType: Class<T?>?): Serializer<T?>?
+    fun <T : Any> build(baseType: Class<T>): Serializer<T>
 }

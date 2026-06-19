@@ -18,13 +18,9 @@ package org.gradle.tooling.internal.consumer
 import org.gradle.tooling.Failure
 import org.gradle.tooling.TestFrameworkFailure
 
-class DefaultTestFrameworkFailure(message: String?, description: String?, causes: MutableList<out Failure?>?, private val className: String?, private val stacktrace: String?) :
+class DefaultTestFrameworkFailure(message: String?, description: String?, causes: MutableList<out Failure?>?, override val className: String?, override val stacktrace: String?) :
     DefaultFailure(message, description, causes), TestFrameworkFailure {
-    override fun getClassName(): String? {
-        return className
-    }
 
-    override fun getStacktrace(): String? {
-        return stacktrace
-    }
+
+
 }

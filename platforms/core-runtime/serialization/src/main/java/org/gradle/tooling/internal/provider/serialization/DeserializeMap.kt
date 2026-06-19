@@ -20,5 +20,5 @@ interface DeserializeMap {
      * Loads a serialized Class.
      */
     @Throws(ClassNotFoundException::class)
-    fun resolveClass(classLoaderDetails: ClassLoaderDetails?, className: String?): Class<*>?
+    fun resolveClass(classLoaderDetails: ClassLoaderDetails, className: String): Class<*>
 }

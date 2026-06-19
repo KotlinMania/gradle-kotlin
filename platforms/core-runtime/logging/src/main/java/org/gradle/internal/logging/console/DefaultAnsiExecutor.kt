@@ -33,14 +33,14 @@ class DefaultAnsiExecutor(
 ) : AnsiExecutor {
     override fun write(action: Action<in AnsiContext>) {
         val ansi = factory.create()
-        action.execute(DefaultAnsiExecutor.AnsiContextImpl(ansi, colorMap, writeCursor))
+        action.execute(AnsiContextImpl(ansi, colorMap, writeCursor))
         write(ansi)
     }
 
     override fun writeAt(writePos: Cursor, action: Action<in AnsiContext>) {
         val ansi = factory.create()
         positionCursorAt(writePos, ansi)
-        action.execute(DefaultAnsiExecutor.AnsiContextImpl(ansi, colorMap, writePos))
+        action.execute(AnsiContextImpl(ansi, colorMap, writePos))
         write(ansi)
     }
 
@@ -96,7 +96,7 @@ class DefaultAnsiExecutor(
         }
     }
 
-    internal interface NewLineListener {
+    interface NewLineListener {
         fun beforeNewLineWritten(ansi: AnsiContext, writeCursor: Cursor)
 
         fun beforeLineWrap(ansi: AnsiContext, writeCursor: Cursor)
@@ -125,7 +125,7 @@ class DefaultAnsiExecutor(
 
         override fun a(value: CharSequence): AnsiContext {
             if (value.length > 0) {
-                val cols = consoleMetaData.cols
+                val cols = consoleMetaData.getCols()
 
                 val numberOfWrapBefore = if (cols > 0) writeCursor.col / (cols + 1) else 0
                 delegate.a(value)
@@ -160,7 +160,7 @@ class DefaultAnsiExecutor(
         }
 
         override fun newLine(): AnsiContext {
-            val cols = consoleMetaData.cols
+            val cols = consoleMetaData.getCols()
             val col = if (cols > 0) writeCursor.col % cols else 0
             listener.beforeNewLineWritten(this, Cursor.Companion.at(writeCursor.row, col))
             delegate.newline()
@@ -185,7 +185,7 @@ class DefaultAnsiExecutor(
 
         override fun writeAt(writePos: Cursor): AnsiContext {
             positionCursorAt(writePos, delegate)
-            return DefaultAnsiExecutor.AnsiContextImpl(delegate, colorMap, writePos)
+            return AnsiContextImpl(delegate, colorMap, writePos)
         }
     }
 }

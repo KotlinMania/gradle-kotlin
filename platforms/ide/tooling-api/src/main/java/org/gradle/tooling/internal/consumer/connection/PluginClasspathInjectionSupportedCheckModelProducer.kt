@@ -22,7 +22,7 @@ import org.gradle.tooling.model.internal.Exceptions
 class PluginClasspathInjectionSupportedCheckModelProducer(private val delegate: ModelProducer, private val versionDetails: VersionDetails) : ModelProducer {
     override fun <T> produceModel(type: Class<T?>, operationParameters: ConsumerOperationParameters): T? {
         if (!operationParameters.getInjectedPluginClasspath().isEmpty() && !this.isSupported) {
-            throw Exceptions.unsupportedFeature("plugin classpath injection feature", versionDetails.getVersion(), "2.8")
+            throw Exceptions.unsupportedFeature("plugin classpath injection feature", versionDetails.version!!, "2.8")
         }
 
         return delegate.produceModel<T?>(type, operationParameters)

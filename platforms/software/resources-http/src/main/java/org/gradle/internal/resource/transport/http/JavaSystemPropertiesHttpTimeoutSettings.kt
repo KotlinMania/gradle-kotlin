@@ -21,26 +21,14 @@ import org.slf4j.LoggerFactory
 import java.time.Duration
 
 class JavaSystemPropertiesHttpTimeoutSettings : HttpTimeoutSettings {
-    private val connectionTimeoutMs: Int
-    private val socketTimeoutMs: Int
-    private val idleConnectionTimeoutMs: Int
+    override val connectionTimeoutMs: Int
+    override val socketTimeoutMs: Int
+    override val idleConnectionTimeoutMs: Int
 
     init {
         this.connectionTimeoutMs = initTimeout(CONNECTION_TIMEOUT_SYSTEM_PROPERTY, DEFAULT_CONNECTION_TIMEOUT)
         this.socketTimeoutMs = initTimeout(SOCKET_TIMEOUT_SYSTEM_PROPERTY, DEFAULT_SOCKET_TIMEOUT)
         this.idleConnectionTimeoutMs = initTimeout(IDLE_CONNECTION_TIMEOUT_SYSTEM_PROPERTY, DEFAULT_IDLE_CONNECTION_TIMEOUT)
-    }
-
-    override fun getConnectionTimeoutMs(): Int {
-        return connectionTimeoutMs
-    }
-
-    override fun getSocketTimeoutMs(): Int {
-        return socketTimeoutMs
-    }
-
-    override fun getIdleConnectionTimeoutMs(): Int {
-        return idleConnectionTimeoutMs
     }
 
     private fun initTimeout(propertyName: String, defaultValue: Int): Int {

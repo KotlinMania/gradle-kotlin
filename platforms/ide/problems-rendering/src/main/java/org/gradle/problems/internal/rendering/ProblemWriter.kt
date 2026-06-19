@@ -49,7 +49,7 @@ abstract class ProblemWriter private constructor() {
     private class SimpleProblemWriter(private val writerRegistry: ProblemWriterRegistry, private val options: RenderOptions) : ProblemWriter() {
         override fun write(problem: ProblemInternal, writer: Writer) {
             val output = PrintWriter(writer)
-            writerRegistry.problemWriterFor(problem.definition.getId()).write(problem, options, output)
+            writerRegistry.problemWriterFor(problem.getDefinition()!!.getId()!!).write(problem, options, output)
         }
 
         override fun write(problems: MutableCollection<ProblemInternal>, writer: Writer) {
@@ -58,7 +58,7 @@ abstract class ProblemWriter private constructor() {
             for (problem in problems) {
                 output.printf(sep)
                 sep = "%n"
-                writerRegistry.problemWriterFor(problem.definition.getId()).write(problem, options, output)
+                writerRegistry.problemWriterFor(problem.getDefinition()!!.getId()!!).write(problem, options, output)
             }
         }
     }
@@ -79,7 +79,7 @@ abstract class ProblemWriter private constructor() {
             // Group problems by problem id
             // When generic rendering is addressed, maybe we also group by the whole problem group hierarchy
             val problemIdListMap: MutableMap<ProblemId, MutableList<ProblemInternal>> =
-                problems.stream().collect(Collectors.groupingBy(Function { internalProblem: ProblemInternal? -> internalProblem!!.definition.getId() }))
+                problems.stream().collect(Collectors.groupingBy(Function { internalProblem: ProblemInternal? -> internalProblem!!.getDefinition()!!.getId()!! }))
             var separator = ""
             for (problemIdListEntry in problemIdListMap.entries) {
                 renderProblemsById(output, problemIdListEntry.key, problemIdListEntry.value, separator)

@@ -30,7 +30,6 @@ interface HttpHeaderCredentials : Credentials {
      *
      * @param name The header name. May be null.
      */
-    @JvmField
     @get:ToBeReplacedByLazyProperty
     var name: String?
 
@@ -39,7 +38,6 @@ interface HttpHeaderCredentials : Credentials {
      *
      * @param value The header value. May be null.
      */
-    @JvmField
     @get:ToBeReplacedByLazyProperty
     var value: String?
 }

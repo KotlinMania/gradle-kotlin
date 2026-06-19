@@ -30,7 +30,7 @@ interface FileSource : FilesystemSource {
      *
      * @since 9.4.0
      */
-    override fun getFile(): File?
+    override val file: File?
 
     /**
      * Returns the position within the file, or null if not available.

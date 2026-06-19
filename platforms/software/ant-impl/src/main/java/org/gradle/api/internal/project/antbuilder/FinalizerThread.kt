@@ -45,7 +45,7 @@ internal class FinalizerThread(cacheEntries: MutableMap<ClassPath?, CacheEntry?>
         try {
             while (!stopped.get()) {
                 val entry = referenceQueue.remove() as Cleanup
-                val key = entry.getKey()
+                val key = entry.key!!
                 removeCacheEntry(key, entry, Cleanup.Mode.DONT_CLOSE_CLASSLOADER)
             }
         } catch (ex: InterruptedException) {
@@ -87,7 +87,7 @@ internal class FinalizerThread(cacheEntries: MutableMap<ClassPath?, CacheEntry?>
         }
     }
 
-    fun putCleanup(key: ClassPath?, cleanup: Cleanup?) {
+    fun putCleanup(key: ClassPath, cleanup: Cleanup) {
         cleanups.put(key, cleanup)
     }
 

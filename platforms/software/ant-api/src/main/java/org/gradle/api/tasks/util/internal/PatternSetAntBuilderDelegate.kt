@@ -62,6 +62,7 @@ class PatternSetAntBuilderDelegate(private val includes: MutableSet<String>, pri
             return node
         }
 
+        @JvmStatic
         fun and(node: Any, withNode: Action<Any>): Any {
             return logical(node, "and", withNode)
         }

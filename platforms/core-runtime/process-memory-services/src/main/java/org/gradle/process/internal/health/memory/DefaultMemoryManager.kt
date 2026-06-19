@@ -46,7 +46,7 @@ class DefaultMemoryManager @VisibleForTesting internal constructor(
     private val osMemoryStatusSupported: Boolean
     private val holdersLock = Any()
     private val memoryLock = Any()
-    private val holders: MutableList<MemoryHolder?> = ArrayList<MemoryHolder?>()
+    private val holders: MutableList<MemoryHolder> = ArrayList<MemoryHolder>()
     private var currentOsMemoryStatus: OsMemoryStatus? = null
     private val osMemoryStatusListener: OsMemoryStatusListener
 
@@ -67,10 +67,12 @@ class DefaultMemoryManager @VisibleForTesting internal constructor(
         this.jvmMemoryInfo = jvmMemoryInfo
         this.listenerManager = listenerManager
         this.scheduler = executorFactory.createScheduled("Memory manager", 1)
-        this.jvmBroadcast = listenerManager.getBroadcaster<JvmMemoryStatusListener?>(JvmMemoryStatusListener::class.java)
-        this.osBroadcast = listenerManager.getBroadcaster<OsMemoryStatusListener?>(OsMemoryStatusListener::class.java)
+        @Suppress("UNCHECKED_CAST")
+        this.jvmBroadcast = listenerManager.getBroadcaster<JvmMemoryStatusListener>(JvmMemoryStatusListener::class.java as Class<JvmMemoryStatusListener?>)
+        @Suppress("UNCHECKED_CAST")
+        this.osBroadcast = listenerManager.getBroadcaster<OsMemoryStatusListener>(OsMemoryStatusListener::class.java as Class<OsMemoryStatusListener?>)
         this.osMemoryStatusSupported = supportsOsMemoryStatus()
-        this.osMemoryStatusListener = DefaultMemoryManager.OsMemoryListener(autoFree)
+        this.osMemoryStatusListener = OsMemoryListener(autoFree)
         start()
     }
 
@@ -84,7 +86,7 @@ class DefaultMemoryManager @VisibleForTesting internal constructor(
     }
 
     private fun start() {
-        val ignored = scheduler.scheduleAtFixedRate(DefaultMemoryManager.MemoryCheck(), STATUS_INTERVAL_SECONDS.toLong(), STATUS_INTERVAL_SECONDS.toLong(), TimeUnit.SECONDS)
+        val ignored = scheduler.scheduleAtFixedRate(MemoryCheck(), STATUS_INTERVAL_SECONDS.toLong(), STATUS_INTERVAL_SECONDS.toLong(), TimeUnit.SECONDS)
         LOGGER.debug("Memory status broadcaster started")
         if (osMemoryStatusSupported) {
             addListener(osMemoryStatusListener)
@@ -178,13 +180,13 @@ class DefaultMemoryManager @VisibleForTesting internal constructor(
         }
     }
 
-    override fun addMemoryHolder(holder: MemoryHolder?) {
+    override fun addMemoryHolder(holder: MemoryHolder) {
         synchronized(holdersLock) {
             holders.add(holder)
         }
     }
 
-    override fun removeMemoryHolder(holder: MemoryHolder?) {
+    override fun removeMemoryHolder(holder: MemoryHolder) {
         synchronized(holdersLock) {
             holders.remove(holder)
         }

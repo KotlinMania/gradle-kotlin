@@ -15,6 +15,8 @@
  */
 package org.gradle.tooling.model.eclipse
 
+import java.net.URI
+
 /**
  * Linked resources are files and folders that are stored in locations in the file system outside of the project's location.
  *

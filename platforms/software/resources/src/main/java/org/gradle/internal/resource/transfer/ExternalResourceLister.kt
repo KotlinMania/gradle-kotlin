@@ -29,5 +29,5 @@ interface ExternalResourceLister {
      * @return A list of the direct children of the `parent`, null when the resource does not exist.
      */
     @Throws(ResourceException::class)
-    fun list(parent: ExternalResourceName?): MutableList<String?>?
+    fun list(parent: ExternalResourceName): MutableList<String?>?
 }

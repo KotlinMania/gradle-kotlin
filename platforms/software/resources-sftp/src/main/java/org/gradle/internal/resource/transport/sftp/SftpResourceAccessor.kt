@@ -28,23 +28,23 @@ import org.gradle.internal.resource.transfer.ExternalResourceAccessor
 import org.gradle.internal.resource.transfer.ExternalResourceReadResponse
 import java.net.URI
 
-class SftpResourceAccessor(private val sftpClientFactory: SftpClientFactory, private val credentials: PasswordCredentials?) : AbstractExternalResourceAccessor(), ExternalResourceAccessor {
+class SftpResourceAccessor(private val sftpClientFactory: SftpClientFactory, private val credentials: PasswordCredentials) : AbstractExternalResourceAccessor(), ExternalResourceAccessor {
     override fun getMetaData(location: ExternalResourceName, revalidate: Boolean): ExternalResourceMetaData? {
-        val sftpClient = sftpClientFactory.createSftpClient(location.getUri(), credentials)
+        val sftpClient = sftpClientFactory.createSftpClient(location.uri, credentials)
         try {
-            val attributes = sftpClient.getSftpClient().lstat(location.getPath())
-            return if (attributes != null) toMetaData(location.getUri(), attributes) else null
+            val attributes = sftpClient.getSftpClient().lstat(location.path)
+            return if (attributes != null) toMetaData(location.uri, attributes) else null
         } catch (e: SftpException) {
             if (e.id == ChannelSftp.SSH_FX_NO_SUCH_FILE) {
                 return null
             }
-            throw ResourceExceptions.getFailed(location.getUri(), e)
+            throw ResourceExceptions.getFailed(location.uri, e)
         } finally {
             sftpClientFactory.releaseSftpClient(sftpClient)
         }
     }
 
-    private fun toMetaData(uri: URI?, attributes: SftpATTRS): ExternalResourceMetaData {
+    private fun toMetaData(uri: URI, attributes: SftpATTRS): ExternalResourceMetaData {
         var lastModified: Long = -1
         var contentLength: Long = -1
 
@@ -60,6 +60,6 @@ class SftpResourceAccessor(private val sftpClientFactory: SftpClientFactory, pri
 
     public override fun openResource(location: ExternalResourceName, revalidate: Boolean): ExternalResourceReadResponse? {
         val metaData = getMetaData(location, revalidate)
-        return if (metaData != null) SftpResource(sftpClientFactory, metaData, location.getUri(), credentials) else null
+        return if (metaData != null) SftpResource(sftpClientFactory, metaData, location.uri, credentials) else null
     }
 }

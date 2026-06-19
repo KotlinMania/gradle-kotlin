@@ -15,6 +15,11 @@
  */
 package org.gradle.tooling.internal.consumer
 
+import kotlin.IllegalStateException
+import kotlin.Throwable
+import kotlin.Throws
+import kotlin.UnsupportedOperationException
+import org.gradle.tooling.Failure
 import org.gradle.tooling.GradleConnectionException
 import org.gradle.tooling.ModelBuilder
 import org.gradle.tooling.ResultHandler
@@ -24,19 +29,14 @@ import org.gradle.tooling.internal.consumer.connection.ConsumerAction
 import org.gradle.tooling.internal.consumer.connection.ConsumerConnection
 import org.gradle.tooling.model.UnsupportedMethodException
 import org.gradle.tooling.model.internal.Exceptions
-import java.lang.String
-import kotlin.IllegalStateException
-import kotlin.Throwable
-import kotlin.Throws
-import kotlin.UnsupportedOperationException
 
 class DefaultModelBuilder<T>(private val modelType: Class<T?>, private val connection: AsyncConsumerActionExecutor, parameters: ConnectionParameters) :
-    AbstractLongRunningOperation<DefaultModelBuilder<T?>?>(parameters), ModelBuilder<T?> {
+    AbstractLongRunningOperation<DefaultModelBuilder<T>>(parameters), ModelBuilder<T?> {
     init {
         operationParamsBuilder.setEntryPoint("ModelBuilder API")
     }
 
-    val `this`: DefaultModelBuilder<T?>?
+    override val `this`: DefaultModelBuilder<T>
         get() = this
 
     @Throws(GradleConnectionException::class)
@@ -48,20 +48,22 @@ class DefaultModelBuilder<T>(private val modelType: Class<T?>, private val conne
 
     @Throws(IllegalStateException::class)
     override fun get(handler: ResultHandler<in T?>?) {
-        val parameters = consumerOperationParameters
+        val operationParameters = consumerOperationParameters
         connection.run<T?>(object : ConsumerAction<T?> {
+            override val parameters = operationParameters
+
             override fun run(connection: ConsumerConnection): T? {
-                val model = connection.run<T?>(modelType, this.parameters)
+                val model = connection.run<T?>(modelType, parameters)
                 return model
             }
-        }, DefaultModelBuilder.ResultHandlerAdapter<T?>(handler))
+        }, ResultHandlerAdapter<T?>(handler))
     }
 
-    override fun forTasks(vararg tasks: String?): DefaultModelBuilder<T?> {
+    override fun forTasks(vararg tasks: String?): DefaultModelBuilder<T> {
         // only set a non-null task list on the operationParamsBuilder if at least one task has been given to this method,
         // this is needed since any non-null list, even if empty, is treated as 'execute these tasks before building the model'
         // this would cause an error when fetching the BuildEnvironment model
-        val rationalizedTasks: MutableList<String?> = rationalizeInput(tasks)
+        val rationalizedTasks: MutableList<String>? = rationalizeInput(tasks)
         operationParamsBuilder.setTasks(rationalizedTasks)
         return this
     }

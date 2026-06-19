@@ -31,6 +31,5 @@ interface GeneralData : AdditionalData {
      * @return the data
      * @since 8.13
      */
-    @JvmField
-    val asMap: MutableMap<String, String>?
+    fun getAsMap(): MutableMap<String, String>?
 }

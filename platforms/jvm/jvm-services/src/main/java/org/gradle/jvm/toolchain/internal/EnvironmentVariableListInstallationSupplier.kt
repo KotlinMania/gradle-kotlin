@@ -21,27 +21,25 @@ import java.util.stream.Collectors
 import javax.inject.Inject
 
 class EnvironmentVariableListInstallationSupplier @Inject constructor(private val buildOptions: ToolchainConfiguration, private val fileResolver: FileResolver) : InstallationSupplier {
-    override fun getSourceName(): String {
-        return "environment variables from gradle property '" + JAVA_INSTALLATIONS_FROM_ENV_PROPERTY + "'"
-    }
+    override val sourceName: String = "environment variables from gradle property '" + JAVA_INSTALLATIONS_FROM_ENV_PROPERTY + "'"
 
-    override fun get(): MutableSet<InstallationLocation?> {
-        val possibleInstallations = buildOptions.getJavaInstallationsFromEnvironment()
-        return possibleInstallations.stream().map<Optional<InstallationLocation?>?> { environmentVariable: String? -> this.resolveEnvironmentVariable(environmentVariable!!) }
-            .filter { obj: Optional<InstallationLocation?>? -> obj!!.isPresent() }
-            .map<InstallationLocation?> { obj: Optional<InstallationLocation?>? -> obj!!.get() }
+    override fun get(): MutableSet<InstallationLocation> {
+        val possibleInstallations = buildOptions.javaInstallationsFromEnvironment
+        return possibleInstallations.stream().map<Optional<InstallationLocation>> { environmentVariable: String -> this.resolveEnvironmentVariable(environmentVariable) }
+            .filter { obj: Optional<InstallationLocation> -> obj.isPresent() }
+            .map<InstallationLocation> { obj: Optional<InstallationLocation> -> obj.get() }
             .collect(Collectors.toSet())
     }
 
-    private fun resolveEnvironmentVariable(environmentVariable: String): Optional<InstallationLocation?> {
+    private fun resolveEnvironmentVariable(environmentVariable: String): Optional<InstallationLocation> {
         val value = environmentVariableValue(environmentVariable)
         if (value != null) {
             val path = value.trim { it <= ' ' }
             if (!path.isEmpty()) {
-                return Optional.of<InstallationLocation?>(InstallationLocation.Companion.userDefined(fileResolver.resolve(path), "environment variable '" + environmentVariable + "'"))
+                return Optional.of(InstallationLocation.Companion.userDefined(fileResolver.resolve(path), "environment variable '" + environmentVariable + "'"))
             }
         }
-        return Optional.empty<InstallationLocation?>()
+        return Optional.empty()
     }
 
     private fun environmentVariableValue(environmentVariable: String): String? {

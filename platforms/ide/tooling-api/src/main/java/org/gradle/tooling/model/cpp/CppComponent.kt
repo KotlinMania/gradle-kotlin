@@ -15,6 +15,8 @@
  */
 package org.gradle.tooling.model.cpp
 
+import org.gradle.tooling.model.DomainObjectSet
+
 /**
  * Represents a C++ component.
  *

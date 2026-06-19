@@ -55,5 +55,5 @@ class LoggingSystemAdapter(private val configurer: LoggingConfigurer) : LoggingS
         configurer.configure(logLevel)
     }
 
-    private class SnapshotImpl(private val enabled: Boolean, private val level: LogLevel?) : LoggingSystem.Snapshot
+    private class SnapshotImpl(val enabled: Boolean, val level: LogLevel?) : LoggingSystem.Snapshot
 }

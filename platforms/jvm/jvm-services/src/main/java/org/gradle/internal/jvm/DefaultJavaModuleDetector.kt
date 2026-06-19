@@ -27,14 +27,14 @@ import java.util.jar.Manifest
 import java.util.regex.Pattern
 
 class DefaultJavaModuleDetector(cacheFactory: FileContentCacheFactory, private val fileCollectionFactory: FileCollectionFactory) : JavaModuleDetector {
-    private val cache: FileContentCache<Boolean?>
+    private val cache: FileContentCache<Boolean>
 
     init {
-        this.cache = cacheFactory.newCache<Boolean?>("java-modules", 20000, ModuleInfoLocator(), BaseSerializerFactory().getSerializerFor<Boolean?>(Boolean::class.java))
+        this.cache = cacheFactory.newCache<Boolean>("java-modules", 20000, ModuleInfoLocator(), BaseSerializerFactory().getSerializerFor<Boolean>(Boolean::class.java))
     }
 
     public override fun inferClasspath(inferModulePath: Boolean, classpath: MutableCollection<File?>): FileCollection {
-        return inferClasspath(inferModulePath, fileCollectionFactory.fixed(classpath))
+        return inferClasspath(inferModulePath, fileCollectionFactory.fixed(classpath.filterNotNull()))
     }
 
     public override fun inferClasspath(inferModulePath: Boolean, classpath: FileCollection?): FileCollection {
@@ -44,11 +44,15 @@ class DefaultJavaModuleDetector(cacheFactory: FileContentCacheFactory, private v
         if (!inferModulePath) {
             return classpath
         }
-        return classpath.filter(org.gradle.api.specs.Spec { file: File? -> this.isNotModule(file!!) })
+        return classpath.filter(object : org.gradle.api.specs.Spec<File> {
+            override fun isSatisfiedBy(file: File): Boolean {
+                return isNotModule(file)
+            }
+        })
     }
 
     public override fun inferModulePath(inferModulePath: Boolean, classpath: MutableCollection<File?>): FileCollection {
-        return inferModulePath(inferModulePath, fileCollectionFactory.fixed(classpath))
+        return inferModulePath(inferModulePath, fileCollectionFactory.fixed(classpath.filterNotNull()))
     }
 
     public override fun inferModulePath(inferModulePath: Boolean, classpath: FileCollection?): FileCollection {
@@ -58,7 +62,11 @@ class DefaultJavaModuleDetector(cacheFactory: FileContentCacheFactory, private v
         if (!inferModulePath) {
             return FileCollectionFactory.empty()
         }
-        return classpath.filter(org.gradle.api.specs.Spec { file: File? -> this.isModule(file!!) })
+        return classpath.filter(object : org.gradle.api.specs.Spec<File> {
+            override fun isSatisfiedBy(file: File): Boolean {
+                return isModule(file)
+            }
+        })
     }
 
     public override fun isModule(inferModulePath: Boolean, files: FileCollection): Boolean {
@@ -108,7 +116,7 @@ class DefaultJavaModuleDetector(cacheFactory: FileContentCacheFactory, private v
                 return file.getName().endsWith(".jar")
             }
 
-            private fun isModuleFolder(folder: File?): Boolean {
+            private fun isModuleFolder(folder: File): Boolean {
                 return File(folder, MODULE_INFO_CLASS_FILE).exists()
             }
 

@@ -26,7 +26,7 @@ import org.gradle.model.internal.core.UnmanagedStruct
  */
 @Incubating
 @UnmanagedStruct
-interface BinaryTasksCollection : DomainObjectSet<Task?> {
+interface BinaryTasksCollection : DomainObjectSet<Task> {
     /**
      * Generates a name for a task that performs some action on the binary.
      */
@@ -40,14 +40,12 @@ interface BinaryTasksCollection : DomainObjectSet<Task?> {
     /**
      * The task that can be used to assemble this binary.
      */
-    @JvmField
     val build: Task?
 
     /**
      * The task that can be used to check this binary.
      */
-    @JvmField
     val check: Task?
 
-    fun <T : Task?> create(name: String?, type: Class<T?>?, config: Action<in T?>?)
+    fun <T : Task> create(name: String, type: Class<T>, config: Action<in T>)
 }

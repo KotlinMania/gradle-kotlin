@@ -15,32 +15,31 @@
  */
 package org.gradle.tooling.internal.consumer
 
+import java.util.Arrays
+import kotlin.Throwable
 import org.gradle.tooling.BuildLauncher
+import org.gradle.tooling.Failure
 import org.gradle.tooling.ResultHandler
 import org.gradle.tooling.internal.consumer.async.AsyncConsumerActionExecutor
 import org.gradle.tooling.internal.consumer.connection.ConsumerAction
 import org.gradle.tooling.internal.consumer.connection.ConsumerConnection
 import org.gradle.tooling.model.Launchable
 import org.gradle.tooling.model.Task
-import java.lang.String
-import java.util.Arrays
-import kotlin.Throwable
 
-class DefaultBuildLauncher(connection: AsyncConsumerActionExecutor, parameters: ConnectionParameters?) : AbstractLongRunningOperation<DefaultBuildLauncher?>(parameters), BuildLauncher {
+class DefaultBuildLauncher(connection: AsyncConsumerActionExecutor, parameters: ConnectionParameters) : AbstractLongRunningOperation<DefaultBuildLauncher>(parameters), BuildLauncher {
     protected val connection: AsyncConsumerActionExecutor
 
     init {
         operationParamsBuilder.setEntryPoint("BuildLauncher API")
-        operationParamsBuilder.setTasks(mutableListOf<String?>())
+        operationParamsBuilder.setTasks(mutableListOf())
         this.connection = connection
     }
 
-    override fun getThis(): DefaultBuildLauncher {
-        return this
-    }
+    override val `this`: DefaultBuildLauncher
+        get() = this
 
     override fun forTasks(vararg tasks: String?): BuildLauncher {
-        operationParamsBuilder.setTasks(Arrays.asList<String>(*tasks))
+        operationParamsBuilder.setTasks(tasks.filterNotNull().toMutableList())
         return this
     }
 
@@ -49,8 +48,8 @@ class DefaultBuildLauncher(connection: AsyncConsumerActionExecutor, parameters: 
         return this
     }
 
-    override fun forTasks(tasks: Iterable<out Task?>): BuildLauncher {
-        forLaunchables(tasks)
+    override fun forTasks(tasks: Iterable<out Task?>?): BuildLauncher {
+        forLaunchables(tasks ?: emptyList())
         return this
     }
 
@@ -58,9 +57,9 @@ class DefaultBuildLauncher(connection: AsyncConsumerActionExecutor, parameters: 
         return forLaunchables(Arrays.asList<Launchable?>(*launchables))
     }
 
-    override fun forLaunchables(launchables: Iterable<out Launchable?>): BuildLauncher {
+    override fun forLaunchables(launchables: Iterable<out Launchable?>?): BuildLauncher {
         preprocessLaunchables(launchables)
-        operationParamsBuilder.setLaunchables(launchables)
+        operationParamsBuilder.setLaunchables((launchables ?: emptyList()).filterNotNull())
         return this
     }
 
@@ -68,18 +67,21 @@ class DefaultBuildLauncher(connection: AsyncConsumerActionExecutor, parameters: 
     }
 
     override fun run() {
-        val handler = BlockingResultHandler<Void?>(Void::class.java)
+        val handler = BlockingResultHandler<Void>(Void::class.java as Class<Void?>)
         run(handler)
-        handler.getResult()
+        handler.result
     }
 
     override fun run(handler: ResultHandler<in Void?>?) {
-        val parameters = getConsumerOperationParameters()
+        val operationParameters = consumerOperationParameters
         connection.run<Void?>(object : ConsumerAction<Void?> {
+            override val parameters = operationParameters
+
             override fun run(connection: ConsumerConnection): Void? {
-                return connection.run<Void?>(Void::class.java, this.parameters)
+                connection.run(Void::class.java as Class<Void?>, parameters)
+                return null
             }
-        }, DefaultBuildLauncher.ResultHandlerAdapter(handler))
+        }, ResultHandlerAdapter(handler))
     }
 
     private inner class ResultHandlerAdapter(handler: ResultHandler<in Void?>?) : org.gradle.tooling.internal.consumer.ResultHandlerAdapter<Void?>(

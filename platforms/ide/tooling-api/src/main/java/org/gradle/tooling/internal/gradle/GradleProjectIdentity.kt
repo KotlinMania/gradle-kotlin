@@ -15,7 +15,8 @@
  */
 package org.gradle.tooling.internal.gradle
 
+import org.gradle.tooling.model.gradle.GradleBuild
+
 interface GradleProjectIdentity : GradleBuildIdentity {
-    @JvmField
     val projectPath: String?
 }

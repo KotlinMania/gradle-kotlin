@@ -15,6 +15,17 @@
  */
 package org.gradle.integtests.tooling.r940
 
+import org.gradle.tooling.*
+import org.gradle.tooling.model.*
+import org.gradle.tooling.model.build.*
+import org.gradle.tooling.model.eclipse.*
+import org.gradle.tooling.model.gradle.*
+import org.gradle.tooling.model.idea.*
+import org.gradle.tooling.model.kotlin.dsl.*
+import org.gradle.tooling.internal.adapter.ProtocolToModelAdapter
+import java.io.File
+import org.gradle.integtests.tooling.r48.*
+
 import org.gradle.tooling.Failure
 import java.io.Serializable
 import java.util.stream.Collectors
@@ -25,6 +36,6 @@ internal class GradleBuildModel(model: GradleBuild?, failures: MutableCollection
 
     init {
         this.model = model
-        this.failures = failures.stream().map<Any?>(Failure::getMessage).collect(Collectors.toList())
+        this.failures = failures.map { it.getMessage() }.toMutableList()
     }
 }

@@ -52,11 +52,11 @@ class DefaultProblemDiagnosticsFactory @VisibleForTesting internal constructor(
     ) : this(failureFactory, locationAnalyzer, userCodeContext, getMaxStackTraces(buildModelParameters))
 
     override fun newStream(): ProblemStream {
-        return DefaultProblemDiagnosticsFactory.DefaultProblemStream()
+        return DefaultProblemStream()
     }
 
     override fun newUnlimitedStream(): ProblemStream {
-        val defaultProblemStream: DefaultProblemStream = DefaultProblemDiagnosticsFactory.DefaultProblemStream()
+        val defaultProblemStream: DefaultProblemStream = DefaultProblemStream()
         defaultProblemStream.remainingStackTraces.set(Int.MAX_VALUE)
         return defaultProblemStream
     }
@@ -76,9 +76,9 @@ class DefaultProblemDiagnosticsFactory @VisibleForTesting internal constructor(
         var stackTracingFailure: Failure? = null
         var location: Location? = null
         if (throwable != null) {
-            stackTrace = transformer.transform(throwable.getStackTrace())
+            stackTrace = transformer.transform(throwable.getStackTrace())!!
             stackTracingFailure = failureFactory.create(throwable)
-            location = locationAnalyzer.locationForUsage(stackTracingFailure, fromException)
+            location = locationAnalyzer.locationForUsage(stackTracingFailure!!, fromException)
         }
 
         val source = if (applicationContext != null) applicationContext.getSource() else null
@@ -87,7 +87,7 @@ class DefaultProblemDiagnosticsFactory @VisibleForTesting internal constructor(
 
     @NullMarked
     private inner class DefaultProblemStream : ProblemStream {
-        private val remainingStackTraces = AtomicInteger()
+        val remainingStackTraces = AtomicInteger()
 
         init {
             remainingStackTraces.set(maxStackTraces)

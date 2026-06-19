@@ -24,9 +24,7 @@ import org.gradle.api.Incubating
  */
 @Incubating
 interface BuildPlatform {
-    @JvmField
     val operatingSystem: OperatingSystem?
 
-    @JvmField
     val architecture: Architecture?
 }

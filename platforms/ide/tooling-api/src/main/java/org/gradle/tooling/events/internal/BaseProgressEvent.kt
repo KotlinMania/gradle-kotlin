@@ -21,20 +21,12 @@ import org.gradle.tooling.events.ProgressEvent
 /**
  * Base class for `ProgressEvent` implementations.
  */
-abstract class BaseProgressEvent protected constructor(private val eventTime: Long, private val displayName: String?, private val descriptor: OperationDescriptor?) : ProgressEvent {
-    override fun getEventTime(): Long {
-        return eventTime
-    }
-
-    override fun getDisplayName(): String? {
-        return displayName
-    }
-
-    override fun getDescriptor(): OperationDescriptor? {
-        return descriptor
-    }
-
+abstract class BaseProgressEvent<D : OperationDescriptor?> protected constructor(
+    final override val eventTime: Long,
+    open override val displayName: String?,
+    open override val descriptor: D
+) : ProgressEvent {
     override fun toString(): String {
-        return getDisplayName()!!
+        return displayName!!
     }
 }

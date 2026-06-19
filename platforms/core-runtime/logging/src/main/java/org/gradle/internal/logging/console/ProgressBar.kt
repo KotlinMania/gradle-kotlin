@@ -73,7 +73,7 @@ class ProgressBar(
             return formatted!!
         }
 
-        val consoleCols = consoleMetaData.cols
+        val consoleCols = consoleMetaData.getCols()
 
         // Calculate progress percentage for both display and taskbar
         val progressPercent = (current * 100.0 / total).toInt()

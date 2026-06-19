@@ -21,9 +21,9 @@ import org.gradle.jvm.toolchain.internal.InstallationLocation
 import org.jspecify.annotations.NullMarked
 
 @NullMarked
-@ServiceScope([Scope.Build::class, Scope.Global::class])
+@ServiceScope(Scope.Build::class, Scope.Global::class)
 interface JavaInstallationRegistry {
-    fun toolchains(): MutableList<JvmToolchainMetadata>?
+    fun toolchains(): MutableList<JvmToolchainMetadata>
 
     fun addInstallation(downloadedInstallation: InstallationLocation)
 }

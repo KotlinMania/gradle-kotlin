@@ -16,6 +16,7 @@
 package org.gradle.jvm.toolchain
 
 import org.gradle.api.Incubating
+import org.gradle.platform.BuildPlatform
 
 /**
  * Describes Java toolchains that need to be auto-provisioned, including
@@ -26,7 +27,7 @@ import org.gradle.api.Incubating
  */
 @Incubating
 interface JavaToolchainRequest {
-    val javaToolchainSpec: JavaToolchainSpec?
+    val javaToolchainSpec: JavaToolchainSpec
 
-    val buildPlatform: BuildPlatform?
+    val buildPlatform: BuildPlatform
 }

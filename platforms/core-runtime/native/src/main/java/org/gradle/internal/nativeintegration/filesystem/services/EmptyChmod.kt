@@ -13,9 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.internal.nativeintegration.filesystem
+package org.gradle.internal.nativeintegration.filesystem.services
 
-import org.gradle.internal.file.FileSystem
+import org.gradle.internal.file.FileModeMutator
+import java.io.File
+import java.io.IOException
 
-// TODO Kept to keep AbstractCopyTask binary compatible
-interface FileSystem : FileSystem
+internal class EmptyChmod : FileModeMutator {
+    @Throws(IOException::class)
+    override fun chmod(file: File, mode: Int) {
+    }
+}

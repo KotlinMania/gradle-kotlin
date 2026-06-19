@@ -21,13 +21,12 @@ interface ConsoleMetaData {
     /**
      * Returns true if the current process' stdout is attached to the console.
      */
-    @JvmField
-    val isStdOutATerminal: Boolean
+    fun isStdOutATerminal(): Boolean
 
     /**
      * Returns true if the current process' stderr is attached to the console.
      */
-    val isStdErrATerminal: Boolean
+    fun isStdErrATerminal(): Boolean
 
     /**
      *
@@ -35,7 +34,7 @@ interface ConsoleMetaData {
      *
      * @return The number of columns available in the console. If no information is available return 0.
      */
-    val cols: Int
+    fun getCols(): Int
 
     /**
      *
@@ -43,9 +42,9 @@ interface ConsoleMetaData {
      *
      * @return The height of the console (rows). If no information is available return 0.
      */
-    val rows: Int
+    fun getRows(): Int
 
-    val isWrapStreams: Boolean
+    fun isWrapStreams(): Boolean
 
     /**
      *

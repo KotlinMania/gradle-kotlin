@@ -24,7 +24,8 @@ class BuildLogLevelFilterRenderer(private val listener: OutputEventListener) : O
     private var logLevel = LogLevel.LIFECYCLE
 
     override fun onOutput(event: OutputEvent) {
-        if (event.logLevel != null && event.logLevel!!.compareTo(logLevel) < 0) {
+        val eventLogLevel = event.logLevel
+        if (eventLogLevel != null && eventLogLevel.ordinal < logLevel.ordinal) {
             return
         }
         if (event is LogLevelChangeEvent) {

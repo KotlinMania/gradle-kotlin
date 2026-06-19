@@ -34,16 +34,16 @@ import javax.annotation.concurrent.ThreadSafe
  */
 @ThreadSafe
 class DefaultPayloadClassLoaderRegistry(private val cache: ClassLoaderCache, private val classLoaderFactory: PayloadClassLoaderFactory) : PayloadClassLoaderRegistry {
-    private val detailsToClassLoader: ClassLoaderToDetailsTransformer = DefaultPayloadClassLoaderRegistry.ClassLoaderToDetailsTransformer()
-    private val classLoaderToDetails: DetailsToClassLoaderTransformer = DefaultPayloadClassLoaderRegistry.DetailsToClassLoaderTransformer()
+    private val detailsToClassLoader: ClassLoaderToDetailsTransformer = ClassLoaderToDetailsTransformer()
+    private val classLoaderToDetails: DetailsToClassLoaderTransformer = DetailsToClassLoaderTransformer()
 
     override fun newSerializeSession(): SerializeMap {
         return object : SerializeMap {
-            val classLoaderIds: MutableMap<ClassLoader?, Short?> = HashMap<ClassLoader?, Short?>()
-            val classLoaderDetails: MutableMap<Short?, ClassLoaderDetails?> = HashMap<Short?, ClassLoaderDetails?>()
+            val classLoaderIds: MutableMap<ClassLoader, Short> = HashMap<ClassLoader, Short>()
+            val classLoaderDetails: MutableMap<Short, ClassLoaderDetails> = HashMap<Short, ClassLoaderDetails>()
 
             override fun visitClass(target: Class<*>): Short {
-                val classLoader = target.getClassLoader()
+                val classLoader = requireNotNull(target.classLoader) { "Bootstrap classes should be handled by WellKnownClassLoaderRegistry." }
                 var id = classLoaderIds.get(classLoader)
                 if (id != null) {
                     return id
@@ -60,7 +60,7 @@ class DefaultPayloadClassLoaderRegistry(private val cache: ClassLoaderCache, pri
                 return id
             }
 
-            override fun collectClassLoaderDefinitions(details: MutableMap<Short?, ClassLoaderDetails?>) {
+            override fun collectClassLoaderDefinitions(details: MutableMap<Short, ClassLoaderDetails>) {
                 details.putAll(classLoaderDetails)
             }
         }
@@ -69,14 +69,14 @@ class DefaultPayloadClassLoaderRegistry(private val cache: ClassLoaderCache, pri
     override fun newDeserializeSession(): DeserializeMap {
         return object : DeserializeMap {
             @Throws(ClassNotFoundException::class)
-            override fun resolveClass(classLoaderDetails: ClassLoaderDetails, className: String?): Class<*> {
+            override fun resolveClass(classLoaderDetails: ClassLoaderDetails, className: String): Class<*> {
                 val classLoader = getClassLoader(classLoaderDetails)
                 return Class.forName(className, false, classLoader)
             }
         }
     }
 
-    private fun getClassLoader(details: ClassLoaderDetails): ClassLoader? {
+    private fun getClassLoader(details: ClassLoaderDetails): ClassLoader {
         val classLoader = cache.getClassLoader(details, detailsToClassLoader)
         // A single classloader is used in the daemon for a given set of client owned classloaders
         // When this classloader is reused for multiple requests, the classpath of subsequent requests may be different.
@@ -86,8 +86,8 @@ class DefaultPayloadClassLoaderRegistry(private val cache: ClassLoaderCache, pri
             val spec = details.spec
             val urlClassLoader = classLoader as VisitableURLClassLoader
             try {
-                val currentClassPath: MutableSet<URI?> = uris(urlClassLoader)
-                for (uri in spec.getClasspath()) {
+                val currentClassPath: MutableSet<URI> = uris(urlClassLoader)
+                for (uri in spec.classpath) {
                     if (!currentClassPath.contains(uri)) {
                         urlClassLoader.addURL(uri.toURL())
                     }
@@ -101,12 +101,12 @@ class DefaultPayloadClassLoaderRegistry(private val cache: ClassLoaderCache, pri
         return classLoader
     }
 
-    private fun getDetails(classLoader: ClassLoader?): ClassLoaderDetails? {
+    private fun getDetails(classLoader: ClassLoader): ClassLoaderDetails {
         return cache.getDetails(classLoader, classLoaderToDetails)
     }
 
     private class ClassLoaderSpecVisitor : ClassLoaderVisitor() {
-        val parents: MutableList<ClassLoader?> = ArrayList<ClassLoader?>()
+        val parents: MutableList<ClassLoader> = ArrayList<ClassLoader>()
         var spec: ClassLoaderSpec? = null
 
         override fun visitParent(classLoader: ClassLoader) {
@@ -118,14 +118,14 @@ class DefaultPayloadClassLoaderRegistry(private val cache: ClassLoaderCache, pri
         }
     }
 
-    private inner class ClassLoaderToDetailsTransformer : ClassLoaderCache.Transformer<ClassLoader?, ClassLoaderDetails?> {
+    private inner class ClassLoaderToDetailsTransformer : ClassLoaderCache.Transformer<ClassLoader, ClassLoaderDetails> {
         override fun transform(details: ClassLoaderDetails): ClassLoader {
-            val parents: MutableList<ClassLoader?> = ArrayList<ClassLoader?>()
+            val parents: MutableList<ClassLoader> = ArrayList<ClassLoader>()
             for (parentDetails in details.parents) {
                 parents.add(getClassLoader(parentDetails))
             }
             if (parents.isEmpty()) {
-                parents.add(classLoaderFactory.getClassLoaderFor(SystemClassLoaderSpec.INSTANCE, ImmutableList.of<ClassLoader?>()))
+                parents.add(classLoaderFactory.getClassLoaderFor(SystemClassLoaderSpec.INSTANCE, ImmutableList.of<ClassLoader>()))
             }
 
             LOGGER.info("Creating ClassLoader {} from {} and {}.", details.uuid, details.spec, parents)
@@ -134,13 +134,13 @@ class DefaultPayloadClassLoaderRegistry(private val cache: ClassLoaderCache, pri
         }
     }
 
-    private inner class DetailsToClassLoaderTransformer : ClassLoaderCache.Transformer<ClassLoaderDetails?, ClassLoader?> {
+    private inner class DetailsToClassLoaderTransformer : ClassLoaderCache.Transformer<ClassLoaderDetails, ClassLoader> {
         override fun transform(classLoader: ClassLoader): ClassLoaderDetails {
             val visitor = ClassLoaderSpecVisitor()
             visitor.visit(classLoader)
 
             val uuid = UUID.randomUUID()
-            val details = ClassLoaderDetails(uuid, visitor.spec)
+            val details = ClassLoaderDetails(uuid, requireNotNull(visitor.spec))
             for (parent in visitor.parents) {
                 details.parents.add(getDetails(parent))
             }
@@ -152,9 +152,9 @@ class DefaultPayloadClassLoaderRegistry(private val cache: ClassLoaderCache, pri
         private val LOGGER: Logger = LoggerFactory.getLogger(DefaultPayloadClassLoaderRegistry::class.java)
 
         @Throws(URISyntaxException::class)
-        private fun uris(classLoader: VisitableURLClassLoader): MutableSet<URI?> {
+        private fun uris(classLoader: VisitableURLClassLoader): MutableSet<URI> {
             val urls = classLoader.getURLs()
-            val uris: MutableSet<URI?> = HashSet<URI?>(urls.size)
+            val uris: MutableSet<URI> = HashSet<URI>(urls.size)
             for (url in urls) {
                 uris.add(url.toURI())
             }

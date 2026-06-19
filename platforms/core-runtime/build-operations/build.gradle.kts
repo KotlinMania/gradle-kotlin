@@ -16,6 +16,7 @@ dependencies {
     implementation(libs.slf4jApi)
     implementation(libs.guava)
 
+    testFixturesCompileOnly(kotlin("stdlib"))
     testFixturesImplementation(libs.guava)
 
     testImplementation(testFixtures(projects.time))

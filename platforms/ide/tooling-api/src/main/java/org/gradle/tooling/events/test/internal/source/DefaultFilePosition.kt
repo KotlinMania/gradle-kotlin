@@ -17,12 +17,7 @@ package org.gradle.tooling.events.test.internal.source
 
 import org.gradle.tooling.events.test.source.FilePosition
 
-class DefaultFilePosition(private val line: Int, private val column: Int?) : FilePosition {
-    override fun getLine(): Int {
-        return line
-    }
-
-    override fun getColumn(): Int {
-        return column!!
-    }
+class DefaultFilePosition(override val line: Int, private val columnValue: Int?) : FilePosition {
+    override val column: Int
+        get() = columnValue!!
 }

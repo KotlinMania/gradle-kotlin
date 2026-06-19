@@ -47,8 +47,8 @@ class MessageHubBackedObjectConnection(executorFactory: ExecutorFactory, complet
     private var connection: RemoteConnection<InterHubMessage?>? = null
 
     //    private ClassLoader methodParamClassLoader;
-    private val paramSerializers: MutableList<SerializerRegistry?> = ArrayList<SerializerRegistry?>()
-    private val methodParamClassLoaders: MutableSet<ClassLoader?> = HashSet<ClassLoader?>()
+    private val paramSerializers: MutableList<SerializerRegistry> = ArrayList<SerializerRegistry>()
+    private val methodParamClassLoaders: MutableSet<ClassLoader> = HashSet<ClassLoader>()
 
     @Volatile
     private var aborted = false
@@ -77,39 +77,39 @@ class MessageHubBackedObjectConnection(executorFactory: ExecutorFactory, complet
         })
     }
 
-    override fun useJavaSerializationForParameters(incomingMessageClassLoader: ClassLoader?) {
+    override fun useJavaSerializationForParameters(incomingMessageClassLoader: ClassLoader) {
         methodParamClassLoaders.add(incomingMessageClassLoader)
     }
 
-    override fun <T> addIncoming(type: Class<T?>, instance: T?) {
+    override fun <T> addIncoming(type: Class<T>, instance: T) {
         if (connection != null) {
             throw GradleException("Cannot add incoming message handler after connection established.")
         }
         // we don't want to add core classloader explicitly here.
         if (type.getClassLoader() !== javaClass.getClassLoader()) {
-            methodParamClassLoaders.add(type.getClassLoader())
+            methodParamClassLoaders.add(type.getClassLoader() ?: ClassLoader.getSystemClassLoader())
         }
-        val handler: Dispatch<MethodInvocation?> = DispatchWrapper<T?>(instance)
+        val handler: Dispatch<MethodInvocation?> = DispatchWrapper(instance)
         hub.addHandler(type.getName(), handler)
     }
 
-    override fun <T> addOutgoing(type: Class<T?>): T? {
+    override fun <T> addOutgoing(type: Class<T>): T {
         if (connection != null) {
             throw GradleException("Cannot add outgoing message transmitter after connection established.")
         }
-        methodParamClassLoaders.add(type.getClassLoader())
-        val adapter = ProxyDispatchAdapter<T?>(hub.getOutgoing<MethodInvocation?>(type.getName(), MethodInvocation::class.java), type, ThreadSafe::class.java)
+        methodParamClassLoaders.add(type.getClassLoader() ?: ClassLoader.getSystemClassLoader())
+        val adapter = ProxyDispatchAdapter<T>(hub.getOutgoing<MethodInvocation>(type.getName(), MethodInvocation::class.java), type, ThreadSafe::class.java)
         return adapter.source
     }
 
-    override fun useParameterSerializers(serializer: SerializerRegistry?) {
+    override fun useParameterSerializers(serializer: SerializerRegistry) {
         this.paramSerializers.add(serializer)
     }
 
     override fun connect() {
         val methodParamClassLoader: ClassLoader?
         if (methodParamClassLoaders.size == 0) {
-            methodParamClassLoader = javaClass.getClassLoader()
+            methodParamClassLoader = javaClass.getClassLoader() ?: ClassLoader.getSystemClassLoader()
         } else if (methodParamClassLoaders.size == 1) {
             methodParamClassLoader = methodParamClassLoaders.iterator().next()
         } else {
@@ -118,17 +118,18 @@ class MessageHubBackedObjectConnection(executorFactory: ExecutorFactory, complet
         val argsSerializer: MethodArgsSerializer = DefaultMethodArgsSerializer(paramSerializers, JavaSerializationBackedMethodArgsSerializer(methodParamClassLoader))
 
         val serializer: StatefulSerializer<InterHubMessage?> = InterHubMessageSerializer(
-            TypeSafeSerializer<MethodInvocation?>(
-                MethodInvocation::class.java,
-                MethodInvocationSerializer(
-                    methodParamClassLoader,
+                TypeSafeSerializer<MethodInvocation>(
+                    MethodInvocation::class.java,
+                    MethodInvocationSerializer(
+                        methodParamClassLoader,
                     argsSerializer
                 )
             )
         )
 
-        connection = completion!!.create<InterHubMessage?>(serializer)
-        hub.addConnection(connection)
+        val newConnection = completion!!.create<InterHubMessage>(serializer)
+        connection = newConnection
+        hub.addConnection(newConnection)
         hub.noFurtherConnections()
         completion = null
     }
@@ -151,7 +152,7 @@ class MessageHubBackedObjectConnection(executorFactory: ExecutorFactory, complet
         unrecoverableErrorHandlers.add(handler!!)
     }
 
-    private class DispatchWrapper<T>(private val instance: T?) : BoundedDispatch<MethodInvocation?>, StreamFailureHandler {
+    private class DispatchWrapper<T>(private val instance: T) : BoundedDispatch<MethodInvocation?>, StreamFailureHandler {
         private val handler: Dispatch<MethodInvocation?>
 
         init {

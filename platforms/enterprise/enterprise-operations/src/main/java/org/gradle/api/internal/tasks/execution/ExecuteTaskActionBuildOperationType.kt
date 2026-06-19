@@ -23,7 +23,9 @@ import org.gradle.internal.operations.BuildOperationType
  * @since 5.6
  */
 object ExecuteTaskActionBuildOperationType : BuildOperationType<ExecuteTaskActionBuildOperationType.Details, ExecuteTaskActionBuildOperationType.Result> {
+    @JvmField
     val DETAILS_INSTANCE: Details = object : Details {}
+    @JvmField
     val RESULT_INSTANCE: Result = object : Result {}
 
     // Info about the owning task can be inferred, and we don't provide any further info at this point.

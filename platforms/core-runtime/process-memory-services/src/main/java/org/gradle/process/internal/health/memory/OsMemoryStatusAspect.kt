@@ -39,15 +39,14 @@ interface OsMemoryStatusAspect : Named {
          *
          * @return the total memory of this category in bytes
          */
-        @JvmField
-        val total: Long
+        fun getTotal(): Long
 
         /**
          * Get the free memory of this category in bytes.
          *
          * @return the free memory of this category in bytes
          */
-        val free: Long
+        fun getFree(): Long
     }
 
     /**

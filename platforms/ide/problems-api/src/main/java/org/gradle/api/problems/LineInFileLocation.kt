@@ -36,8 +36,7 @@ interface LineInFileLocation : FileLocation {
      * @return the line number
      * @since 8.13
      */
-    @JvmField
-    val line: Int
+    fun getLine(): Int
 
     /**
      * The starting column on the selected line.
@@ -49,8 +48,7 @@ interface LineInFileLocation : FileLocation {
      * @return the column
      * @since 8.13
      */
-    @JvmField
-    val column: Int
+    fun getColumn(): Int
 
     /**
      * The length of the selected content starting from specified column.
@@ -59,6 +57,5 @@ interface LineInFileLocation : FileLocation {
      * @return the length
      * @since 8.13
      */
-    @JvmField
-    val length: Int
+    fun getLength(): Int
 }

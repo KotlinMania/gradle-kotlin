@@ -15,16 +15,19 @@
  */
 package org.gradle.internal.resource
 
+import java.io.File
+import java.net.URI
+
 /**
  * Some binary resource available somewhere on the local file system.
  */
 interface LocalBinaryResource : Resource, ReadableContent {
-    val uRI: URI?
+    fun getURI(): URI?
 
-    val baseName: String?
+    fun getBaseName(): String?
 
     /**
      * Returns the file containing this resource. Note that the content of this resource may not be the same as the file (for example, the file may be compressed, or this resource may represent an entry in an archive file, or both)
      */
-    val containingFile: File?
+    fun getContainingFile(): File?
 }

@@ -16,7 +16,6 @@
 package org.gradle.tooling.internal.consumer.connection
 
 import org.gradle.tooling.internal.adapter.ProtocolToModelAdapter
-import org.gradle.tooling.internal.adapter.ViewBuilder.build
 import org.gradle.tooling.internal.consumer.parameters.BuildCancellationTokenAdapter
 import org.gradle.tooling.internal.consumer.parameters.ConsumerOperationParameters
 import org.gradle.tooling.internal.consumer.versioning.ModelMapping
@@ -37,17 +36,17 @@ class CancellableModelBuilderBackedModelProducer(
 ), ModelProducer {
     override fun <T> produceModel(type: Class<T?>, operationParameters: ConsumerOperationParameters): T? {
         if (!versionDetails.maySupportModel(type)) {
-            throw Exceptions.unsupportedModel(type, versionDetails.getVersion())
+            throw Exceptions.unsupportedModel(type, versionDetails.version)
         }
         val modelIdentifier = modelMapping.getModelIdentifierFromModelType(type)
         val result: BuildResult<*>
         try {
-            result = builder.getModel(modelIdentifier, BuildCancellationTokenAdapter(operationParameters.getCancellationToken()), operationParameters)
+            result = builder.getModel(modelIdentifier, BuildCancellationTokenAdapter(operationParameters.getCancellationToken()), operationParameters)!!
         } catch (e: InternalUnsupportedModelException) {
             throw Exceptions.unknownModel(type, e)
         } catch (e: RuntimeException) {
-            throw exceptionTransformer.transform(e)
+            throw exceptionTransformer.transform(e)!!
         }
-        return applyCompatibilityMapping<T?>(adapter.builder<T?>(type), operationParameters).build(result.model)
+        return applyCompatibilityMapping<T?>(adapter.builder<T?>(type), operationParameters).build(result.model!!)
     }
 }

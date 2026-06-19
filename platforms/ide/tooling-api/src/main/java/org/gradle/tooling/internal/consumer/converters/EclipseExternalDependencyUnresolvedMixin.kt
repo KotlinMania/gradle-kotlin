@@ -15,6 +15,7 @@
  */
 package org.gradle.tooling.internal.consumer.converters
 
+import org.gradle.tooling.model.ComponentSelector
 import org.gradle.tooling.model.eclipse.EclipseExternalDependency
 
 /**

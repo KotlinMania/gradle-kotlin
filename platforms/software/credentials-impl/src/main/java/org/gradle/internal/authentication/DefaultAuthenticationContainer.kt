@@ -23,4 +23,4 @@ import org.gradle.internal.reflect.Instantiator
 import javax.inject.Inject
 
 class DefaultAuthenticationContainer @Inject constructor(instantiator: Instantiator, callbackDecorator: CollectionCallbackActionDecorator) :
-    DefaultPolymorphicDomainObjectContainer<Authentication?>(Authentication::class.java, instantiator, instantiator, callbackDecorator), AuthenticationContainer
+    DefaultPolymorphicDomainObjectContainer<Authentication>(Authentication::class.java, instantiator, instantiator, callbackDecorator), AuthenticationContainer

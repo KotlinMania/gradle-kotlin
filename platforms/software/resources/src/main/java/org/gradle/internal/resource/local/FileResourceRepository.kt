@@ -26,19 +26,19 @@ import java.net.URI
 
 @ServiceScope(Scope.Build::class)
 interface FileResourceRepository : ExternalResourceRepository {
-    fun localResource(file: File?): LocalBinaryResource?
+    fun localResource(file: File): LocalBinaryResource
 
     /**
      * Returns the given file as a resource.
      */
-    fun resource(file: File?): LocallyAvailableExternalResource?
+    fun resource(file: File): LocallyAvailableExternalResource
 
     /**
      * Returns the given file as a resource, with the given origin details.
      */
-    fun resource(file: File?, originUri: URI?, originMetadata: ExternalResourceMetaData?): LocallyAvailableExternalResource?
+    fun resource(file: File, originUri: URI, originMetadata: ExternalResourceMetaData?): LocallyAvailableExternalResource
 
-    override fun resource(resource: ExternalResourceName?): LocallyAvailableExternalResource?
+    override fun resource(resource: ExternalResourceName): LocallyAvailableExternalResource
 
-    override fun resource(resource: ExternalResourceName?, revalidate: Boolean): LocallyAvailableExternalResource?
+    override fun resource(resource: ExternalResourceName, revalidate: Boolean): LocallyAvailableExternalResource
 }

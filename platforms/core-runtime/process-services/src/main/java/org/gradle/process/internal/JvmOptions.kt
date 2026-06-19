@@ -22,105 +22,41 @@ import org.jspecify.annotations.NullMarked
 interface JvmDebugSpec {
     var isEnabled: Boolean
 
-    @JvmField
     var host: String?
 
-    @JvmField
     var port: Int
 
-    @JvmField
     var isServer: Boolean
 
-    @JvmField
     var isSuspend: Boolean
 
     class DefaultJvmDebugSpec : JvmDebugSpec {
-        private var enabled = false
-        private var host: String? = null
-        private var port = 5005
-        private var server = true
-        private var suspend = true
-
-        override fun isEnabled(): Boolean {
-            return enabled
-        }
-
-        override fun setEnabled(enabled: Boolean) {
-            this.enabled = enabled
-        }
-
-        override fun getHost(): String? {
-            return host
-        }
-
-        override fun setHost(host: String?) {
-            this.host = host
-        }
-
-        override fun getPort(): Int {
-            return port
-        }
-
-        override fun setPort(port: Int) {
-            this.port = port
-        }
-
-        override fun isServer(): Boolean {
-            return server
-        }
-
-        override fun setServer(server: Boolean) {
-            this.server = server
-        }
-
-        override fun isSuspend(): Boolean {
-            return suspend
-        }
-
-        override fun setSuspend(suspend: Boolean) {
-            this.suspend = suspend
-        }
+        override var isEnabled = false
+        override var host: String? = null
+        override var port = 5005
+        override var isServer = true
+        override var isSuspend = true
     }
 
     class JavaDebugOptionsBackedSpec(private val delegate: JavaDebugOptions) : JvmDebugSpec {
-        override fun isEnabled(): Boolean {
-            return delegate.getEnabled().get()
-        }
+        override var isEnabled: Boolean
+            get() = delegate.getEnabled().get()
+            set(enabled) = delegate.getEnabled().set(enabled)
 
-        override fun setEnabled(enabled: Boolean) {
-            delegate.getEnabled().set(enabled)
-        }
+        override var host: String?
+            get() = delegate.getHost().getOrNull()
+            set(host) = delegate.getHost().set(host)
 
-        override fun getHost(): String? {
-            return delegate.getHost().getOrNull()
-        }
+        override var port: Int
+            get() = delegate.getPort().get()
+            set(port) = delegate.getPort().set(port)
 
-        override fun setHost(host: String?) {
-            delegate.getHost().set(host)
-        }
+        override var isServer: Boolean
+            get() = delegate.getServer().get()
+            set(server) = delegate.getServer().set(server)
 
-        override fun getPort(): Int {
-            return delegate.getPort().get()
-        }
-
-        override fun setPort(port: Int) {
-            delegate.getPort().set(port)
-        }
-
-        override fun isServer(): Boolean {
-            return delegate.getServer().get()
-        }
-
-        override fun setServer(server: Boolean) {
-            delegate.getServer().set(server)
-        }
-
-        override fun isSuspend(): Boolean {
-            return delegate.getSuspend().get()
-        }
-
-        override fun setSuspend(suspend: Boolean) {
-            delegate.getSuspend().set(suspend)
-        }
+        override var isSuspend: Boolean
+            get() = delegate.getSuspend().get()
+            set(suspend) = delegate.getSuspend().set(suspend)
     }
 }

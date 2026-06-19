@@ -21,5 +21,5 @@ import java.io.File
 
 @ServiceScope(Scope.Build::class)
 interface TextFileResourceLoader {
-    fun loadFile(description: String?, sourceFile: File?): TextResource?
+    fun loadFile(description: String, sourceFile: File?): TextResource
 }

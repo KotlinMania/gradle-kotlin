@@ -21,21 +21,8 @@ import org.gradle.tooling.events.StatusEvent
 /**
  * Base implementation of the `StatusEvent` interface.
  */
-class DefaultStatusEvent(eventTime: Long, descriptor: OperationDescriptor, private val total: Long, private val progress: Long, private val unit: String?) :
-    BaseProgressEvent(eventTime, descriptor.displayName, descriptor), StatusEvent {
-    override fun getDisplayName(): String {
-        return getDescriptor().displayName + " " + progress + "/" + total + " " + unit + " completed"
-    }
-
-    override fun getProgress(): Long {
-        return progress
-    }
-
-    override fun getTotal(): Long {
-        return total
-    }
-
-    override fun getUnit(): String? {
-        return unit
-    }
+class DefaultStatusEvent(eventTime: Long, descriptor: OperationDescriptor, override val total: Long, override val progress: Long, override val unit: String?) :
+    BaseProgressEvent<OperationDescriptor>(eventTime, descriptor.displayName, descriptor), StatusEvent {
+    override val displayName: String
+        get() = descriptor.displayName + " " + progress + "/" + total + " " + unit + " completed"
 }

@@ -28,5 +28,5 @@ interface WorkItemProgressEvent : ProgressEvent {
      *
      * @return The description of the underlying work item operation.
      */
-    override fun getDescriptor(): WorkItemOperationDescriptor?
+    override val descriptor: WorkItemOperationDescriptor?
 }

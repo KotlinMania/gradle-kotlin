@@ -16,16 +16,17 @@
 package org.gradle.internal.logging.events
 
 class IntQuestionPromptEvent(timestamp: Long, @JvmField val question: String, @JvmField val minValue: Int, @JvmField val defaultValue: Int) : PromptOutputEvent(timestamp) {
-    override fun getPrompt(): String {
-        val builder = StringBuilder()
-        builder.append(question)
-        builder.append(" (min: ")
-        builder.append(minValue)
-        builder.append(", default: ")
-        builder.append(defaultValue)
-        builder.append("): ")
-        return builder.toString()
-    }
+    override val prompt: String
+        get() {
+            val builder = StringBuilder()
+            builder.append(question)
+            builder.append(" (min: ")
+            builder.append(minValue)
+            builder.append(", default: ")
+            builder.append(defaultValue)
+            builder.append("): ")
+            return builder.toString()
+        }
 
     override fun convert(text: String): PromptResult<Int> {
         if (text.isEmpty()) {

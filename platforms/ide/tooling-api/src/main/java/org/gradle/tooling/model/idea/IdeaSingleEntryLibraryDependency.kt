@@ -29,19 +29,19 @@ interface IdeaSingleEntryLibraryDependency : IdeaDependency, ExternalDependency 
      *
      * @return The file. Never null.
      */
-    override fun getFile(): File?
+    override val file: File?
 
     /**
      * Returns the source directory/archive for this dependency.
      *
      * @return The source file. Returns null when the source is not available for this dependency.
      */
-    override fun getSource(): File?
+    override val source: File?
 
     /**
      * Returns the Javadoc directory/archive for this dependency.
      *
      * @return The Javadoc file. Returns null when the Javadoc is not available for this dependency.
      */
-    override fun getJavadoc(): File?
+    override val javadoc: File?
 }

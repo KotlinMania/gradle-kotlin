@@ -15,6 +15,7 @@
  */
 package org.gradle.tooling.internal.consumer
 
+import java.io.File
 import org.gradle.tooling.Failure
 import org.gradle.tooling.FileComparisonTestAssertionFailure
 import org.jspecify.annotations.NullMarked
@@ -28,15 +29,11 @@ class DefaultFileComparisonTestAssertionFailure(
     causes: MutableList<out Failure>,
     className: String,
     stacktrace: String,
-    private val expectedContent: ByteArray,
-    private val actualContent: ByteArray
+    override val expectedContent: ByteArray,
+    override val actualContent: ByteArray
 ) : DefaultTestAssertionFailure(message, description, expected, actual, causes, className, stacktrace), FileComparisonTestAssertionFailure {
-    override fun getExpectedContent(): ByteArray? {
-        return expectedContent
-    }
 
 
-    override fun getActualContent(): ByteArray? {
-        return actualContent
-    }
+
+
 }

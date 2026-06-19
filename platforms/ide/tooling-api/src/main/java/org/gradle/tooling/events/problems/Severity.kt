@@ -31,7 +31,6 @@ interface Severity {
      * @return the severity
      * @since 8.6
      */
-    @JvmField
     val severity: Int
 
     /**
@@ -57,7 +56,6 @@ interface Severity {
          *
          * @since 8.6
          */
-        @JvmField
         val WARNING: Severity = DefaultSeverity(1, true)
 
         /**

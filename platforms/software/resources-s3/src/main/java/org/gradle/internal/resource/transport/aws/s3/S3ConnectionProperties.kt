@@ -26,10 +26,10 @@ import java.net.URI
 import java.net.URISyntaxException
 
 class S3ConnectionProperties {
-    val endpoint: Optional<URI?>
+    val endpoint: Optional<URI>
     private val proxySettings: HttpProxySettings
     private val secureProxySettings: HttpProxySettings
-    val maxErrorRetryCount: Optional<Int?>
+    val maxErrorRetryCount: Optional<Int>
     val partSize: Long
 
     constructor() {
@@ -41,14 +41,14 @@ class S3ConnectionProperties {
     }
 
     constructor(proxySettings: HttpProxySettings, secureProxySettings: HttpProxySettings, endpoint: URI?, maxErrorRetryCount: Int?) {
-        this.endpoint = Optional.fromNullable<URI?>(endpoint)
+        this.endpoint = Optional.fromNullable<URI>(endpoint)
         this.proxySettings = proxySettings
         this.secureProxySettings = secureProxySettings
-        this.maxErrorRetryCount = Optional.fromNullable<Int?>(maxErrorRetryCount)
+        this.maxErrorRetryCount = Optional.fromNullable<Int>(maxErrorRetryCount)
         this.partSize = DEFAULT_PART_SIZE
     }
 
-    private fun configureEndpoint(property: String?): Optional<URI?> {
+    private fun configureEndpoint(property: String?): Optional<URI> {
         var uri: URI? = null
         if (StringUtils.isNotBlank(property)) {
             try {
@@ -62,28 +62,28 @@ class S3ConnectionProperties {
                 throw IllegalArgumentException("System property [" + S3_ENDPOINT_PROPERTY + "=" + property + "]  must be a valid URI")
             }
         }
-        return Optional.fromNullable<URI?>(uri)
+        return Optional.fromNullable<URI>(uri)
     }
 
-    val proxy: Optional<HttpProxySettings.HttpProxy?>
+    val proxy: Optional<HttpProxySettings.HttpProxy>
         get() {
             if (endpoint.isPresent()) {
-                if (endpoint.get()!!.getScheme().equals("HTTP", ignoreCase = true)) {
-                    return Optional.fromNullable<HttpProxySettings.HttpProxy?>(proxySettings.proxy)
+                if (endpoint.get().getScheme().equals("HTTP", ignoreCase = true)) {
+                    return Optional.fromNullable<HttpProxySettings.HttpProxy>(proxySettings.proxy)
                 } else {
-                    return Optional.fromNullable<HttpProxySettings.HttpProxy?>(secureProxySettings.proxy)
+                    return Optional.fromNullable<HttpProxySettings.HttpProxy>(secureProxySettings.proxy)
                 }
             }
-            return Optional.fromNullable<HttpProxySettings.HttpProxy?>(secureProxySettings.proxy)
+            return Optional.fromNullable<HttpProxySettings.HttpProxy>(secureProxySettings.proxy)
         }
 
-    private fun configureErrorRetryCount(property: String?): Optional<Int?> {
+    private fun configureErrorRetryCount(property: String?): Optional<Int> {
         var count: Int? = null
         if (null != property) {
             count = Ints.tryParse(property)
             require(!(null == count || count < 0)) { "System property [" + S3_MAX_ERROR_RETRY + "=" + property + "]  must be a valid positive Integer" }
         }
-        return Optional.fromNullable<Int?>(count)
+        return Optional.fromNullable<Int>(count)
     }
 
     val multipartThreshold: Long
@@ -94,7 +94,7 @@ class S3ConnectionProperties {
 
         //The maximum number of times to retry a request when S3 responds with a http 5xx error
         const val S3_MAX_ERROR_RETRY: String = "org.gradle.s3.maxErrorRetry"
-        private val SUPPORTED_SCHEMES: MutableSet<String?> = Sets.newHashSet<String?>("HTTP", "HTTPS")
+        private val SUPPORTED_SCHEMES: MutableSet<String> = Sets.newHashSet<String>("HTTP", "HTTPS")
         private val DEFAULT_PART_SIZE = (50 * 1024 * 1024).toLong()
     }
 }

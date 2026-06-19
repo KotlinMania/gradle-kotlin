@@ -19,16 +19,15 @@ import org.gradle.platform.base.ComponentSpec
 import org.gradle.platform.base.internal.ComponentSpecIdentifier
 import org.gradle.platform.base.internal.ComponentSpecInternal
 
-open class AbstractComponentSpec(private val identifier: ComponentSpecIdentifier, private val publicType: Class<*>) : ComponentSpec, ComponentSpecInternal {
-    public override fun getIdentifier(): ComponentSpecIdentifier? {
-        return identifier
+open class AbstractComponentSpec(private val componentIdentifier: ComponentSpecIdentifier, private val publicType: Class<*>) : ComponentSpec, ComponentSpecInternal {
+    override val identifier: ComponentSpecIdentifier
+        get() = componentIdentifier
+
+    override fun getName(): String {
+        return identifier.name!!
     }
 
-    override fun getName(): String? {
-        return identifier.name
-    }
-
-    val projectPath: String?
+    override val projectPath: String?
         get() = identifier.projectPath
 
     protected open val typeName: String?

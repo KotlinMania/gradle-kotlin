@@ -18,6 +18,7 @@ package org.gradle.tooling
 import org.gradle.api.Action
 import org.gradle.api.Incubating
 import org.gradle.tooling.model.Model
+import org.gradle.tooling.model.gradle.GradleBuild
 
 /**
  * Provides a [BuildAction] various ways to control a Gradle build and access information about the build.
@@ -75,7 +76,6 @@ interface BuildController {
      *
      * @return The model.
      */
-    @JvmField
     val buildModel: GradleBuild?
 
     /**

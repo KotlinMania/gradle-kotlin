@@ -24,18 +24,16 @@ import java.util.stream.Collectors
 import java.util.stream.Stream
 
 class WindowsInstallationSupplier(private val windowsRegistry: WindowsRegistry, private val os: OperatingSystem) : InstallationSupplier {
-    override fun getSourceName(): String {
-        return "Windows Registry"
-    }
+    override val sourceName: String = "Windows Registry"
 
-    override fun get(): MutableSet<InstallationLocation?>? {
+    override fun get(): MutableSet<InstallationLocation> {
         if (os.isWindows) {
             return findInstallationsInRegistry()
         }
-        return mutableSetOf<InstallationLocation?>()
+        return mutableSetOf()
     }
 
-    private fun findInstallationsInRegistry(): MutableSet<InstallationLocation?> {
+    private fun findInstallationsInRegistry(): MutableSet<InstallationLocation> {
         val openJdkInstallations = findOpenJDKs()
         val jvms = Stream.of<String?>(
             "SOFTWARE\\JavaSoft\\JDK",
@@ -45,7 +43,8 @@ class WindowsInstallationSupplier(private val windowsRegistry: WindowsRegistry, 
             "SOFTWARE\\Wow6432Node\\JavaSoft\\Java Runtime Environment"
         ).map<MutableList<String?>?> { sdkSubkey: String? -> this.findJvms(sdkSubkey) }.flatMap<String?> { obj: MutableList<String?>? -> obj!!.stream() }
         return Stream.concat<String?>(openJdkInstallations, jvms)
-            .map<InstallationLocation?> { javaHome: String? -> InstallationLocation.Companion.autoDetected(File(javaHome), getSourceName()) }
+            .filter { javaHome: String? -> javaHome != null }
+            .map<InstallationLocation> { javaHome: String? -> InstallationLocation.Companion.autoDetected(File(javaHome!!), sourceName) }
             .collect(Collectors.toSet())
     }
 

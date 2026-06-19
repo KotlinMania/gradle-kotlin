@@ -15,6 +15,4 @@
  */
 package org.gradle.api.plugins.jvm.internal
 
-import org.gradle.internal.Cast.uncheckedCast
-import org.gradle.api.internal.parameters.NoneParameters
 

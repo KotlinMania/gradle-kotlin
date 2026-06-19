@@ -16,6 +16,11 @@
 package org.gradle.internal.resource
 
 import org.gradle.api.resources.ResourceException
+import org.gradle.internal.DisplayName
+import org.gradle.internal.hash.HashCode
+import java.io.File
+import java.io.Reader
+import java.nio.charset.Charset
 
 /**
  * A `Resource` that has text content.
@@ -24,17 +29,17 @@ interface TextResource : Resource {
     /**
      * Returns the location of this resource.
      */
-    val location: ResourceLocation?
+    fun getLocation(): ResourceLocation?
 
     /**
      * A long display name for this resource. The display name must use absolute paths and assume no context.
      */
-    val longDisplayName: DisplayName?
+    fun getLongDisplayName(): DisplayName?
 
     /**
      * A short display name for this resource. The display name may use relative paths.
      */
-    val shortDisplayName: DisplayName?
+    fun getShortDisplayName(): DisplayName?
 
     /**
      * Returns a file that contains the same content as this resource, encoded using the charset specified by [.getCharset].
@@ -43,14 +48,14 @@ interface TextResource : Resource {
      *
      * @return A file containing this resource. Returns null if this resource is not available as a file.
      */
-    val file: File?
+    fun getFile(): File?
 
     /**
      * Returns the charset use to encode the file containing the resource's content, as returned by [.getFile].
      *
      * @return The charset. Returns null when this resource is not available as a file.
      */
-    val charset: Charset?
+    fun getCharset(): Charset?
 
     /**
      * Returns true when the content of this resource is cached in-heap or uses a hard-coded value. Returns false when the content requires IO on each query.
@@ -58,20 +63,20 @@ interface TextResource : Resource {
      *
      * When this method returns false, the caller should avoid querying the content more than once.
      */
-    val isContentCached: Boolean
+    fun isContentCached(): Boolean
 
-    @get:Throws(ResourceException::class)
-    val exists: Boolean
+    @Throws(ResourceException::class)
+    fun getExists(): Boolean
 
-    @get:Throws(ResourceException::class)
-    val hasEmptyContent: Boolean
+    @Throws(ResourceException::class)
+    fun getHasEmptyContent(): Boolean
 
-    @get:Throws(ResourceException::class)
-    val asReader: Reader?
+    @Throws(ResourceException::class)
+    fun getAsReader(): Reader?
 
-    @get:Throws(ResourceException::class)
-    val text: String?
+    @Throws(ResourceException::class)
+    fun getText(): String?
 
-    @get:Throws(ResourceException::class)
-    val contentHash: HashCode?
+    @Throws(ResourceException::class)
+    fun getContentHash(): HashCode?
 }

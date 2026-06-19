@@ -21,5 +21,5 @@ object FileSystems {
     @JvmStatic
     val default: FileSystem
         get() = NativeServices.Companion.getInstance()
-            .get<FileSystem>(FileSystem::class.java)
+            .get(FileSystem::class.java) as FileSystem
 }

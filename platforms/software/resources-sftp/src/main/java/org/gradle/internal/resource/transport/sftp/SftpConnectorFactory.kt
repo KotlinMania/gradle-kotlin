@@ -23,19 +23,19 @@ import org.gradle.internal.resource.connector.ResourceConnectorSpecification
 import org.gradle.internal.resource.transfer.DefaultExternalResourceConnector
 import org.gradle.internal.resource.transfer.ExternalResourceConnector
 
-class SftpConnectorFactory(private val sftpClientFactory: SftpClientFactory?) : ResourceConnectorFactory {
-    override fun getSupportedProtocols(): MutableSet<String?> {
-        return mutableSetOf<String?>("sftp")
+class SftpConnectorFactory(private val sftpClientFactory: SftpClientFactory) : ResourceConnectorFactory {
+    override fun getSupportedProtocols(): MutableSet<String> {
+        return mutableSetOf("sftp")
     }
 
-    override fun getSupportedAuthentication(): MutableSet<Class<out Authentication?>?> {
-        val supported: MutableSet<Class<out Authentication?>?> = HashSet<Class<out Authentication?>?>()
+    override fun getSupportedAuthentication(): MutableSet<Class<out Authentication>> {
+        val supported: MutableSet<Class<out Authentication>> = HashSet()
         supported.add(AllSchemesAuthentication::class.java)
         return supported
     }
 
     override fun createResourceConnector(connectionDetails: ResourceConnectorSpecification): ExternalResourceConnector {
-        val passwordCredentials = connectionDetails.getCredentials<PasswordCredentials?>(PasswordCredentials::class.java)
+        val passwordCredentials = connectionDetails.getCredentials(PasswordCredentials::class.java)!!
         val accessor = SftpResourceAccessor(sftpClientFactory, passwordCredentials)
         val lister = SftpResourceLister(sftpClientFactory, passwordCredentials)
         val uploader = SftpResourceUploader(sftpClientFactory, passwordCredentials)

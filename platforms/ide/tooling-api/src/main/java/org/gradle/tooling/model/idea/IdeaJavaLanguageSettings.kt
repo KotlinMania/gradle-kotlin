@@ -15,7 +15,9 @@
  */
 package org.gradle.tooling.model.idea
 
+import org.gradle.api.JavaVersion
 import org.gradle.tooling.model.UnsupportedMethodException
+import org.gradle.tooling.model.java.InstalledJdk
 
 /**
  * Describes Java language settings for an IDEA module.

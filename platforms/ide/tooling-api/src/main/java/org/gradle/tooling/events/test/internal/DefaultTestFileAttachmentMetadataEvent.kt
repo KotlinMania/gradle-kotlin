@@ -24,13 +24,9 @@ import java.io.File
  * Consumer implementation of file attachment event
  */
 @NullMarked
-class DefaultTestFileAttachmentMetadataEvent(eventTime: Long, descriptor: OperationDescriptor, private val file: File, private val mediaType: String?) :
+class DefaultTestFileAttachmentMetadataEvent(eventTime: Long, descriptor: OperationDescriptor, override val file: File, override val mediaType: String?) :
     AbstractTestMetadataEvent(eventTime, descriptor), TestFileAttachmentMetadataEvent {
-    override fun getFile(): File {
-        return file
-    }
 
-    override fun getMediaType(): String? {
-        return mediaType
-    }
+
+
 }

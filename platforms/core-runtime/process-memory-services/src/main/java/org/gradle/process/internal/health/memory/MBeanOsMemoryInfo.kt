@@ -27,8 +27,8 @@ import org.gradle.internal.jvm.Jvm
 class MBeanOsMemoryInfo(private val mBeanAttributeProvider: MBeanAttributeProvider) : OsMemoryInfo {
     override fun getOsSnapshot(): OsMemoryStatus {
         val totalMemoryAttribute = if (Jvm.current().isIbmJvm()) "TotalPhysicalMemory" else "TotalPhysicalMemorySize"
-        val total: Long = mBeanAttributeProvider.getMbeanAttribute<Long?>("java.lang:type=OperatingSystem", totalMemoryAttribute, Long::class.java)!!
-        val free: Long = mBeanAttributeProvider.getMbeanAttribute<Long?>("java.lang:type=OperatingSystem", "FreePhysicalMemorySize", Long::class.java)!!
+        val total: Long = mBeanAttributeProvider.getMbeanAttribute("java.lang:type=OperatingSystem", totalMemoryAttribute, Long::class.javaObjectType)
+        val free: Long = mBeanAttributeProvider.getMbeanAttribute("java.lang:type=OperatingSystem", "FreePhysicalMemorySize", Long::class.javaObjectType)
         if (total == -1L) {
             throw UnsupportedOperationException("Unable to retrieve total physical memory from MBean")
         }

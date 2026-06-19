@@ -38,7 +38,7 @@ class StringDeduplicatingKryoBackedEncoder @JvmOverloads constructor(outputStrea
         output.writeByte(value)
     }
 
-    override fun writeBytes(bytes: ByteArray?, offset: Int, count: Int) {
+    override fun writeBytes(bytes: ByteArray, offset: Int, count: Int) {
         output.writeBytes(bytes, offset, count)
     }
 
@@ -85,7 +85,7 @@ class StringDeduplicatingKryoBackedEncoder @JvmOverloads constructor(outputStrea
         writeNonnullString(value)
     }
 
-    override fun writeString(value: CharSequence) {
+    override fun writeString(value: CharSequence?) {
         requireNotNull(value) { "Cannot encode a null string." }
         writeNonnullString(value)
     }
@@ -112,7 +112,7 @@ class StringDeduplicatingKryoBackedEncoder @JvmOverloads constructor(outputStrea
           - 1 for a new string
           And be efficiently encoded as var ints (writeVarInt/readVarInt) to save even more space.
          */
-        val newIndex: Int = strings.size() + 2
+        val newIndex: Int = strings!!.size + 2
         strings!!.put(key, newIndex)
         writeStringIndex(NEW_STRING)
         output.writeString(key)
@@ -125,9 +125,8 @@ class StringDeduplicatingKryoBackedEncoder @JvmOverloads constructor(outputStrea
     /**
      * Returns the total number of bytes written by this encoder, some of which may still be buffered.
      */
-    override fun getWritePosition(): Long {
-        return output.total()
-    }
+    override val writePosition: Long
+        get() = output.total()
 
     override fun flush() {
         output.flush()

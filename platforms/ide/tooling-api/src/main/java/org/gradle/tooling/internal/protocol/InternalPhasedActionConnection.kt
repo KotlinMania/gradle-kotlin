@@ -15,6 +15,7 @@
  */
 package org.gradle.tooling.internal.protocol
 
+import org.gradle.tooling.Failure
 import org.gradle.tooling.internal.protocol.exceptions.InternalUnsupportedBuildArgumentException
 
 /**

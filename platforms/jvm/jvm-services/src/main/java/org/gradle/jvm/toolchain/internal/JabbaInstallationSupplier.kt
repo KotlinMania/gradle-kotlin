@@ -20,20 +20,18 @@ import java.util.function.BiFunction
 import javax.inject.Inject
 
 class JabbaInstallationSupplier @Inject constructor(private val toolchainConfiguration: ToolchainConfiguration) : InstallationSupplier {
-    override fun getSourceName(): String {
-        return "Jabba"
+    override val sourceName: String = "Jabba"
+
+    override fun get(): MutableSet<InstallationLocation> {
+        return findJavaCandidates(toolchainConfiguration.jabbaHomeDirectory)
     }
 
-    override fun get(): MutableSet<InstallationLocation?>? {
-        return findJavaCandidates(toolchainConfiguration.getJabbaHomeDirectory())
-    }
-
-    private fun findJavaCandidates(candidatesDir: File?): MutableSet<InstallationLocation?>? {
+    private fun findJavaCandidates(candidatesDir: File?): MutableSet<InstallationLocation> {
         if (candidatesDir != null) {
             val root = File(candidatesDir, "jdk")
-            return FileBasedInstallationFactory.fromDirectory(root, getSourceName(), BiFunction { location: File?, source: String? -> InstallationLocation.Companion.autoDetected(location, source) })
+            return FileBasedInstallationFactory.fromDirectory(root, sourceName, BiFunction { location: File, source: String -> InstallationLocation.Companion.autoDetected(location, source) })
         } else {
-            return mutableSetOf<InstallationLocation?>()
+            return mutableSetOf()
         }
     }
 }

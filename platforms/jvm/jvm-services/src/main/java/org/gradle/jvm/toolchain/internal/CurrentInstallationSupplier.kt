@@ -19,18 +19,16 @@ import org.gradle.internal.jvm.Jvm
 import java.io.File
 
 class CurrentInstallationSupplier : InstallationSupplier {
-    override fun getSourceName(): String {
-        return "Current JVM"
-    }
+    override val sourceName: String = "Current JVM"
 
-    override fun get(): MutableSet<InstallationLocation?> {
-        return mutableSetOf<InstallationLocation?>(this.installation)
+    override fun get(): MutableSet<InstallationLocation> {
+        return mutableSetOf(this.installation)
     }
 
     val installation: InstallationLocation
         get() = asInstallation(Jvm.current().getJavaHome())
 
-    private fun asInstallation(javaHome: File?): InstallationLocation {
-        return InstallationLocation.Companion.autoDetected(javaHome, getSourceName())
+    private fun asInstallation(javaHome: File): InstallationLocation {
+        return InstallationLocation.Companion.autoDetected(javaHome, sourceName)
     }
 }

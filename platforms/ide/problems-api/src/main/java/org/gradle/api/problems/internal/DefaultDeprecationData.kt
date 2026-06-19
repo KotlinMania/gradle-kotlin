@@ -22,7 +22,7 @@ class DefaultDeprecationData(private val type: DeprecationData.Type) : Deprecati
         return type
     }
 
-    override fun equals(o: Any): Boolean {
+    override fun equals(o: Any?): Boolean {
         if (o !is DefaultDeprecationData) {
             return false
         }
@@ -34,7 +34,7 @@ class DefaultDeprecationData(private val type: DeprecationData.Type) : Deprecati
         return Objects.hashCode(type)
     }
 
-    private class DefaultDeprecationDataBuilder : DeprecationDataSpec, AdditionalDataBuilder<DeprecationData?> {
+    private class DefaultDeprecationDataBuilder : DeprecationDataSpec, AdditionalDataBuilder<DeprecationData> {
         private var type: DeprecationData.Type
 
         constructor() {
@@ -42,7 +42,7 @@ class DefaultDeprecationData(private val type: DeprecationData.Type) : Deprecati
         }
 
         constructor(from: DeprecationData) {
-            this.type = from.getType()
+            this.type = from.getType()!!
         }
 
         override fun type(type: DeprecationData.Type): DeprecationDataSpec {

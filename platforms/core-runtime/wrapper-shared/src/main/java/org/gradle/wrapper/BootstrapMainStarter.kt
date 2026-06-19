@@ -23,7 +23,7 @@ import java.net.URLClassLoader
 
 class BootstrapMainStarter {
     @Throws(Exception::class)
-    fun start(args: Array<String?>?, gradleHome: File?) {
+    fun start(args: Array<String>, gradleHome: File?) {
         val gradleJar: File? = findLauncherJar(gradleHome)
         if (gradleJar == null) {
             throw RuntimeException(String.format("Could not locate the Gradle launcher JAR in Gradle distribution '%s'.", gradleHome))

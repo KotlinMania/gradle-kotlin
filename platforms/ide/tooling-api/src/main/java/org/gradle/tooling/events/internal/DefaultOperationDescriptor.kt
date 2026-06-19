@@ -22,9 +22,9 @@ import org.gradle.tooling.internal.protocol.events.InternalOperationDescriptor
  * Implementation of the [OperationDescriptor] interface, for those operations which are performed by the provider.
  */
 open class DefaultOperationDescriptor : OperationDescriptor {
-    private val name: String?
-    private val displayName: String?
-    private val parent: OperationDescriptor?
+    final override val name: String?
+    final override val displayName: String?
+    final override val parent: OperationDescriptor?
 
     constructor(internalDescriptor: InternalOperationDescriptor, parent: OperationDescriptor?) {
         this.name = internalDescriptor.name
@@ -38,19 +38,13 @@ open class DefaultOperationDescriptor : OperationDescriptor {
         this.parent = parent
     }
 
-    override fun getName(): String? {
-        return name
-    }
 
-    override fun getDisplayName(): String? {
-        return displayName
-    }
 
-    override fun getParent(): OperationDescriptor? {
-        return parent
-    }
+
+
+
 
     override fun toString(): String {
-        return getDisplayName()!!
+        return displayName!!
     }
 }

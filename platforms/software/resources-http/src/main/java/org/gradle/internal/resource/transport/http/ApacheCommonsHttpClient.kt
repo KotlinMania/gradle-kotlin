@@ -40,7 +40,6 @@ import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
-import java.lang.String
 import java.net.SocketException
 import java.net.URI
 import java.net.URISyntaxException
@@ -55,8 +54,6 @@ import kotlin.Throwable
 import kotlin.Throws
 import kotlin.UnsupportedOperationException
 import kotlin.text.contains
-import kotlin.text.format
-import kotlin.toString
 
 /**
  * Implementation of [HttpClient] backed by Apache Commons HttpClient.
@@ -88,7 +85,7 @@ class ApacheCommonsHttpClient @VisibleForTesting internal constructor(
      * Overload intended specifically for unit testing, allowing injection of mocked HttpClientBuilder.
      */
     init {
-        if (!settings.authenticationSettings!!.isEmpty()) {
+        if (!settings.authenticationSettings.isEmpty()) {
             sharedContext = ConcurrentLinkedQueue<HttpContext>()
         } else {
             sharedContext = null
@@ -132,7 +129,7 @@ class ApacheCommonsHttpClient @VisibleForTesting internal constructor(
             }
 
             override fun getContentLength(): Long {
-                return resource.getSize()
+                return resource.size
             }
 
             override fun getContent(): InputStream? {
@@ -182,7 +179,7 @@ class ApacheCommonsHttpClient @VisibleForTesting internal constructor(
                         "You may need to configure the client to allow other protocols to be used. " +
                         "%s",
                 getConfidenceNote(sslException),
-                String.join(", ", supportedTlsVersions),
+                supportedTlsVersions!!.joinToString(", "),
                 documentationRegistry.getDocumentationRecommendationFor("on this", "build_environment", "sec:gradle_system_properties")
             )
         }
@@ -273,17 +270,17 @@ class ApacheCommonsHttpClient @VisibleForTesting internal constructor(
     companion object {
         private val LOGGER: Logger = LoggerFactory.getLogger(ApacheCommonsHttpClient::class.java)
 
-        private fun addHeaders(request: HttpRequestBase, headers: ImmutableMap<kotlin.String, kotlin.String>) {
+        private fun addHeaders(request: HttpRequestBase, headers: ImmutableMap<String, String>) {
             for (entry in headers.entries) {
                 request.addHeader(entry.key, entry.value)
             }
         }
 
-        private fun createHttpRequestException(method: kotlin.String, cause: Throwable, uri: URI): HttpRequestException {
-            return HttpRequestException(kotlin.String.format("Could not %s '%s'.", method, stripUserCredentials(uri)), cause)
+        private fun createHttpRequestException(method: String, cause: Throwable, uri: URI): HttpRequestException {
+            return HttpRequestException(String.format("Could not %s '%s'.", method, stripUserCredentials(uri)), cause)
         }
 
-        private fun getConfidenceNote(sslException: SSLHandshakeException): kotlin.String {
+        private fun getConfidenceNote(sslException: SSLHandshakeException): String {
             if (sslException.message != null && sslException.message!!.contains("protocol_version")) {
                 // If we're handling an SSLHandshakeException with the error of 'protocol_version' we know that the server doesn't support this protocol.
                 return "does"
@@ -304,21 +301,21 @@ class ApacheCommonsHttpClient @VisibleForTesting internal constructor(
         }
 
         private fun processResponse(response: HttpClient.Response): HttpClient.Response {
-            if (response.isSuccessful()) {
+            if (response.isSuccessful) {
                 return response
             }
 
             // Consume content for non-successful responses. This avoids the connection being left open.
             response.close()
 
-            if (response.isMissing()) {
-                LOGGER.info("Resource missing. [HTTP {}: {}]", response.getMethod(), stripUserCredentials(response.getEffectiveUri()))
+            if (response.isMissing) {
+                LOGGER.info("Resource missing. [HTTP {}: {}]", response.method, stripUserCredentials(response.effectiveUri))
                 return response
             }
 
-            val effectiveUri: URI? = stripUserCredentials(response.getEffectiveUri())
-            LOGGER.info("Failed to get resource: {}. [HTTP {}: {})]", response.getMethod(), response.getStatusCode(), effectiveUri)
-            throw HttpErrorStatusCodeException(response.getMethod(), effectiveUri.toString(), response.getStatusCode(), response.getStatusReason())
+            val effectiveUri: URI? = stripUserCredentials(response.effectiveUri)
+            LOGGER.info("Failed to get resource: {}. [HTTP {}: {})]", response.method, response.statusCode, effectiveUri)
+            throw HttpErrorStatusCodeException(response.method, effectiveUri.toString(), response.statusCode, response.statusReason)
         }
 
         /**

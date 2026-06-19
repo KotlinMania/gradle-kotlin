@@ -28,5 +28,5 @@ interface MessagingClient {
      *
      * @param address The address to connect to.
      */
-    fun getConnection(address: Address?): ObjectConnection?
+    fun getConnection(address: Address): ObjectConnection
 }

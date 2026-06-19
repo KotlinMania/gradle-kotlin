@@ -16,6 +16,14 @@
 package org.gradle.tooling.internal.consumer.parameters
 
 import com.google.common.collect.Lists
+import java.io.File
+import java.io.InputStream
+import java.io.OutputStream
+import java.util.EnumMap
+import java.util.concurrent.TimeUnit
+import java.util.function.Function
+import java.util.function.Predicate
+import java.util.stream.Collectors
 import org.gradle.api.GradleException
 import org.gradle.initialization.BuildCancellationToken
 import org.gradle.internal.classpath.ClassPath
@@ -33,13 +41,7 @@ import org.gradle.tooling.internal.protocol.InternalLaunchable
 import org.gradle.tooling.internal.protocol.ProgressListenerVersion1
 import org.gradle.tooling.model.Launchable
 import org.gradle.tooling.model.Task
-import java.io.File
-import java.io.InputStream
-import java.io.OutputStream
-import java.util.EnumMap
-import java.util.function.Function
-import java.util.function.Predicate
-import java.util.stream.Collectors
+import org.gradle.tooling.model.TaskSelector
 
 /**
  * This is used via reflection from `ProviderOperationParameters`.
@@ -77,7 +79,7 @@ class ConsumerOperationParameters private constructor(
     private val systemProperties: MutableMap<String, String>,
     val streamedValueListener: FailsafeStreamedValueListener
 ) : BuildParameters {
-    class Builder private constructor() {
+    class Builder {
         private val legacyProgressListeners: MutableList<ProgressListener> = ArrayList<ProgressListener>()
         private val progressListeners: MutableMap<OperationType, MutableList<org.gradle.tooling.events.ProgressListener>> =
             EnumMap<OperationType, MutableList<org.gradle.tooling.events.ProgressListener>>(
@@ -149,12 +151,12 @@ class ConsumerOperationParameters private constructor(
             return this
         }
 
-        fun setArguments(arguments: MutableList<String>): Builder {
+        fun setArguments(arguments: MutableList<String>?): Builder {
             this.arguments = arguments
             return this
         }
 
-        fun addArguments(arguments: MutableList<String>): Builder {
+        fun addArguments(arguments: MutableList<String>?): Builder {
             this.arguments = concat(this.arguments, arguments)
             return this
         }
@@ -164,7 +166,7 @@ class ConsumerOperationParameters private constructor(
             return this
         }
 
-        fun setTasks(tasks: MutableList<String>): Builder {
+        fun setTasks(tasks: MutableList<String>?): Builder {
             this.tasks = tasks
             return this
         }
@@ -179,10 +181,10 @@ class ConsumerOperationParameters private constructor(
                     launchablesParams.add(original)
                 } else if (original is TaskListingLaunchable) {
                     // A launchable synthesized by the consumer - unpack it into a set of task names
-                    taskPaths.addAll(original.taskNames)
+                    taskPaths.addAll(original.taskNames?.filterNotNull().orEmpty())
                 } else if (launchable is Task) {
                     // A task created by a provider that does not understand launchables
-                    taskPaths.add(launchable.path)
+                    taskPaths.add(launchable.path!!)
                 } else {
                     throw GradleException(
                         "Only Task or TaskSelector instances are supported: "
@@ -192,7 +194,7 @@ class ConsumerOperationParameters private constructor(
             }
             // Tasks are ignored by providers if launchables is not null
             this.launchables = if (launchablesParams.isEmpty()) null else launchablesParams
-            tasks = Lists.newArrayList<String>(taskPaths)
+            tasks = Lists.newArrayList<String>(taskPaths.filterNotNull())
             return this
         }
 
@@ -359,43 +361,43 @@ class ConsumerOperationParameters private constructor(
         /**
          * @since 1.0-milestone-3
          */
-        get() = parameters.gradleUserHomeDir
+        get() = parameters.gradleUserHomeDir!!
 
     val projectDir: File
         /**
          * @since 1.0-milestone-3
          */
-        get() = parameters.projectDir
+        get() = parameters.projectDir!!
 
     val isSearchUpwards: Boolean
         /**
          * @since 1.0-milestone-3
          */
-        get() = parameters.isSearchUpwards
+        get() = parameters.isSearchUpwards!!
 
     val isEmbedded: Boolean
         /**
          * @since 1.0-milestone-3
          */
-        get() = parameters.isEmbedded
+        get() = parameters.isEmbedded!!
 
     val daemonMaxIdleTimeUnits: TimeUnit
         /**
          * @since 1.0-milestone-3
          */
-        get() = parameters.daemonMaxIdleTimeUnits
+        get() = parameters.daemonMaxIdleTimeUnits!!
 
     val daemonMaxIdleTimeValue: Int
         /**
          * @since 1.0-milestone-3
          */
-        get() = parameters.daemonMaxIdleTimeValue
+        get() = parameters.daemonMaxIdleTimeValue!!
 
     val daemonBaseDir: File
         /**
          * @since 2.2-rc-1
          */
-        get() = parameters.daemonBaseDir
+        get() = parameters.daemonBaseDir!!
 
     val jvmArguments: MutableList<String>?
         get() {
@@ -441,7 +443,7 @@ class ConsumerOperationParameters private constructor(
     }
 
     fun getCancellationToken(): BuildCancellationToken {
-        return (cancellationToken as CancellationTokenInternal).token
+        return (cancellationToken as CancellationTokenInternal).token!!
     }
 
     /**

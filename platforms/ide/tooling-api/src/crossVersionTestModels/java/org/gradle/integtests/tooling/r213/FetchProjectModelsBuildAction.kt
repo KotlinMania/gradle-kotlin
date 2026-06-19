@@ -15,12 +15,23 @@
  */
 package org.gradle.integtests.tooling.r213
 
+import org.gradle.tooling.*
+import org.gradle.tooling.model.*
+import org.gradle.tooling.model.build.*
+import org.gradle.tooling.model.eclipse.*
+import org.gradle.tooling.model.gradle.*
+import org.gradle.tooling.model.idea.*
+import org.gradle.tooling.model.kotlin.dsl.*
+import org.gradle.tooling.internal.adapter.ProtocolToModelAdapter
+import java.io.File
+import org.gradle.integtests.tooling.r48.*
+
 import org.gradle.tooling.BuildAction
 import kotlin.collections.ArrayList
 import kotlin.collections.MutableList
 
 class FetchProjectModelsBuildAction(private val modelType: Class<*>?) : BuildAction<MutableList<Any?>?> {
-    fun execute(controller: BuildController): MutableList<Any?> {
+    override fun execute(controller: BuildController?): MutableList<Any?> {
         val models: MutableList<Any?> = ArrayList<Any?>()
         for (project in controller.getBuildModel().getProjects()) {
             val model: Any? = controller.getModel(project, modelType)

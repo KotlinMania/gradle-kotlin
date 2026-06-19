@@ -15,12 +15,23 @@
  */
 package org.gradle.integtests.tooling.r68
 
+import org.gradle.tooling.*
+import org.gradle.tooling.model.*
+import org.gradle.tooling.model.build.*
+import org.gradle.tooling.model.eclipse.*
+import org.gradle.tooling.model.gradle.*
+import org.gradle.tooling.model.idea.*
+import org.gradle.tooling.model.kotlin.dsl.*
+import org.gradle.tooling.internal.adapter.ProtocolToModelAdapter
+import java.io.File
+import org.gradle.integtests.tooling.r48.*
+
 import org.gradle.tooling.BuildAction
 import kotlin.collections.ArrayList
 import kotlin.collections.MutableList
 
 class AccessIncludedBuildProjectBuildAction : BuildAction<MutableList<String?>?> {
-    fun execute(controller: BuildController): MutableList<String?> {
+    override fun execute(controller: BuildController?): MutableList<String?> {
         val model: MutableList<String?> = ArrayList<String?>()
         for (included in controller.getBuildModel().getIncludedBuilds()) {
             val project: EclipseProject = controller.getModel(included.getRootProject(), EclipseProject::class.java)

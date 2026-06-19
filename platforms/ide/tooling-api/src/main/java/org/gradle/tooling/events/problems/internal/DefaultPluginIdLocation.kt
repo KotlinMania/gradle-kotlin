@@ -17,8 +17,6 @@ package org.gradle.tooling.events.problems.internal
 
 import org.gradle.tooling.events.problems.PluginIdLocation
 
-class DefaultPluginIdLocation(private val pluginId: String) : PluginIdLocation {
-    override fun getPluginId(): String {
-        return pluginId
-    }
+class DefaultPluginIdLocation(override val pluginId: String) : PluginIdLocation {
+
 }

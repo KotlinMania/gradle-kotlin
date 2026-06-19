@@ -27,12 +27,12 @@ import java.nio.charset.Charset
 class FeatureCheckBuildResult(
     buildOperationParameters: BuildOperationParameters,
     outputSource: ByteSource,
-    tasks: MutableList<BuildTask?>
+    tasks: List<BuildTask?>
 ) : BuildResult {
     private val delegateBuildResult: BuildResult
     private val outputFeatureCheck: FeatureCheck
 
-    constructor(buildOperationParameters: BuildOperationParameters, output: String, tasks: MutableList<BuildTask?>) : this(
+    constructor(buildOperationParameters: BuildOperationParameters, output: String, tasks: List<BuildTask?>) : this(
         buildOperationParameters,
         ByteSource.wrap(output.toByteArray(Charset.defaultCharset())),
         tasks
@@ -43,19 +43,20 @@ class FeatureCheckBuildResult(
         outputFeatureCheck = BuildResultOutputFeatureCheck(buildOperationParameters.targetGradleVersion!!, buildOperationParameters.isEmbedded)
     }
 
-    override fun getOutput(): String? {
-        outputFeatureCheck.verify()
-        return delegateBuildResult.output
-    }
+    override val output: String?
+        get() {
+            outputFeatureCheck.verify()
+            return delegateBuildResult.output
+        }
 
-    override fun getOutputReader(): BufferedReader? {
-        outputFeatureCheck.verify()
-        return delegateBuildResult.outputReader
-    }
+    override val outputReader: BufferedReader?
+        get() {
+            outputFeatureCheck.verify()
+            return delegateBuildResult.outputReader
+        }
 
-    override fun getTasks(): MutableList<BuildTask?>? {
-        return delegateBuildResult.tasks
-    }
+    override val tasks: MutableList<BuildTask?>?
+        get() = delegateBuildResult.tasks
 
     override fun tasks(outcome: TaskOutcome?): MutableList<BuildTask?>? {
         return delegateBuildResult.tasks(outcome)

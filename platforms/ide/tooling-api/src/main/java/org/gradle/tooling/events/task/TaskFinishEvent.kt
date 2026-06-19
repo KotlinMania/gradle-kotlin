@@ -15,6 +15,7 @@
  */
 package org.gradle.tooling.events.task
 
+import org.gradle.tooling.Failure
 import org.gradle.tooling.events.FinishEvent
 
 /**
@@ -34,5 +35,5 @@ interface TaskFinishEvent : TaskProgressEvent, FinishEvent {
      *
      * @return the result of the finished task operation
      */
-    override fun getResult(): TaskOperationResult?
+    override val result: TaskOperationResult?
 }

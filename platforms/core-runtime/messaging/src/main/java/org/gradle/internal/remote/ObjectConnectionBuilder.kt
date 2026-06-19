@@ -28,7 +28,7 @@ interface ObjectConnectionBuilder {
      * @param type The type
      * @return A sink. Method calls made on this object are sent as outgoing messages.
      */
-    fun <T> addOutgoing(type: Class<T?>?): T?
+    fun <T> addOutgoing(type: Class<T>): T
 
     /**
      * Registers a handler for incoming messages on the given type. The provided handler is not required to be
@@ -46,15 +46,15 @@ interface ObjectConnectionBuilder {
      * @param type The type.
      * @param instance The handler instance. Incoming messages on the given type are delivered to this handler.
      */
-    fun <T> addIncoming(type: Class<T?>?, instance: T?)
+    fun <T> addIncoming(type: Class<T>, instance: T)
 
     /**
      * Use the given Classloader to deserialize method parameters for method invocations received from the peer, for those types where Java serialization is used.
      */
-    fun useJavaSerializationForParameters(incomingMessageClassLoader: ClassLoader?)
+    fun useJavaSerializationForParameters(incomingMessageClassLoader: ClassLoader)
 
     /**
      * Adds a set of specified serializers for incoming and outgoing method parameters. For any types that are not known to any registry added using this method, then Java serialization is used.
      */
-    fun useParameterSerializers(serializers: SerializerRegistry?)
+    fun useParameterSerializers(serializers: SerializerRegistry)
 }

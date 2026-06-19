@@ -18,8 +18,8 @@ package org.gradle.internal.jvm.inspection
 import org.gradle.jvm.toolchain.internal.InstallationLocation
 import java.util.function.BiConsumer
 
-class ReportingJvmMetadataDetector(private val delegate: JvmMetadataDetector, private val reporter: BiConsumer<InstallationLocation?, JvmInstallationMetadata?>) : JvmMetadataDetector {
-    override fun getMetadata(javaInstallationLocation: InstallationLocation?): JvmInstallationMetadata? {
+class ReportingJvmMetadataDetector(private val delegate: JvmMetadataDetector, private val reporter: BiConsumer<InstallationLocation, JvmInstallationMetadata>) : JvmMetadataDetector {
+    override fun getMetadata(javaInstallationLocation: InstallationLocation): JvmInstallationMetadata {
         val delegateResult = delegate.getMetadata(javaInstallationLocation)
         reporter.accept(javaInstallationLocation, delegateResult)
         return delegateResult

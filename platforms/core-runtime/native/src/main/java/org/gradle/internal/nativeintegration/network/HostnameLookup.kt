@@ -16,6 +16,5 @@
 package org.gradle.internal.nativeintegration.network
 
 interface HostnameLookup {
-    @JvmField
     val hostname: String?
 }

@@ -15,7 +15,11 @@
  */
 package org.gradle.tooling.internal.consumer
 
+import kotlin.IllegalStateException
+import kotlin.Throwable
+import kotlin.Throws
 import org.gradle.tooling.BuildActionExecuter
+import org.gradle.tooling.Failure
 import org.gradle.tooling.GradleConnectionException
 import org.gradle.tooling.ResultHandler
 import org.gradle.tooling.StreamedValueListener
@@ -23,13 +27,9 @@ import org.gradle.tooling.internal.consumer.async.AsyncConsumerActionExecutor
 import org.gradle.tooling.internal.consumer.connection.ConsumerAction
 import org.gradle.tooling.internal.consumer.connection.ConsumerConnection
 import org.gradle.util.internal.CollectionUtils.toList
-import java.lang.String
-import kotlin.IllegalStateException
-import kotlin.Throwable
-import kotlin.Throws
 
 class DefaultPhasedBuildActionExecuter internal constructor(phasedBuildAction: PhasedBuildAction, connection: AsyncConsumerActionExecutor, parameters: ConnectionParameters) :
-    AbstractLongRunningOperation<DefaultPhasedBuildActionExecuter?>(parameters), BuildActionExecuter<Void?> {
+    AbstractLongRunningOperation<DefaultPhasedBuildActionExecuter>(parameters), BuildActionExecuter<Void?> {
     private val phasedBuildAction: PhasedBuildAction
     private val connection: AsyncConsumerActionExecutor
 
@@ -39,26 +39,26 @@ class DefaultPhasedBuildActionExecuter internal constructor(phasedBuildAction: P
         this.connection = connection
     }
 
-    val `this`: DefaultPhasedBuildActionExecuter?
+    override val `this`: DefaultPhasedBuildActionExecuter
         get() = this
 
-    override fun setStreamedValueListener(listener: StreamedValueListener) {
-        operationParamsBuilder.setStreamedValueListener(listener)
+    override fun setStreamedValueListener(listener: StreamedValueListener?) {
+        operationParamsBuilder.setStreamedValueListener(listener!!)
     }
 
     override fun forTasks(vararg tasks: String?): BuildActionExecuter<Void?>? {
-        operationParamsBuilder.setTasks((if (tasks != null) java.util.Arrays.asList<kotlin.String>(*tasks) else null)!!)
+        operationParamsBuilder.setTasks(tasks.filterNotNull().toMutableList())
         return `this`
     }
 
     override fun forTasks(tasks: Iterable<String?>?): BuildActionExecuter<Void?>? {
-        operationParamsBuilder.setTasks(if (tasks != null) toList<String>(tasks) else null)
+        operationParamsBuilder.setTasks(tasks?.filterNotNull()?.toMutableList())
         return `this`
     }
 
     @Throws(GradleConnectionException::class, IllegalStateException::class)
     override fun run(): Void? {
-        val handler = BlockingResultHandler<Void?>(Void::class.java)
+        val handler = BlockingResultHandler<Void>(Void::class.java as Class<Void?>)
         run(handler)
         handler.result
         return null
@@ -66,10 +66,12 @@ class DefaultPhasedBuildActionExecuter internal constructor(phasedBuildAction: P
 
     @Throws(IllegalStateException::class)
     override fun run(handler: ResultHandler<in Void?>?) {
-        val parameters = consumerOperationParameters
+        val operationParameters = consumerOperationParameters
         connection.run<Void?>(object : ConsumerAction<Void?> {
+            override val parameters = operationParameters
+
             override fun run(connection: ConsumerConnection): Void? {
-                connection.run(phasedBuildAction, this.parameters)
+                connection.run(phasedBuildAction, parameters)
                 return null
             }
         }, ResultHandlerAdapter<Void?>(handler, createExceptionTransformer(object : ConnectionExceptionTransformer.ConnectionFailureMessageProvider {

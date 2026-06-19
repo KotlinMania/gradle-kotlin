@@ -15,14 +15,11 @@
  */
 package org.gradle.tooling.events.problems.internal
 
+import java.io.File
 import org.gradle.tooling.events.problems.OffsetInFileLocation
 
-class DefaultOffsetInFileLocation(path: String, private val offset: Int, private val length: Int) : DefaultFileLocation(path), OffsetInFileLocation {
-    override fun getOffset(): Int {
-        return offset
-    }
+class DefaultOffsetInFileLocation(path: String, override val offset: Int, override val length: Int) : DefaultFileLocation(path), OffsetInFileLocation {
 
-    override fun getLength(): Int {
-        return length
-    }
+
+
 }

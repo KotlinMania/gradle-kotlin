@@ -20,15 +20,16 @@ import org.gradle.internal.logging.events.StyledTextOutputEvent
 import org.gradle.internal.operations.OperationIdentifier
 import org.gradle.internal.serialize.Decoder
 import org.gradle.internal.serialize.Encoder
+import org.gradle.internal.serialize.ListSerializer
 import org.gradle.internal.serialize.Serializer
 
-class StyledTextOutputEventSerializer(private val logLevelSerializer: Serializer<LogLevel>, private val spanSerializer: Serializer<MutableList<StyledTextOutputEvent.Span?>>) :
-    Serializer<StyledTextOutputEvent?> {
+class StyledTextOutputEventSerializer(private val logLevelSerializer: Serializer<LogLevel>, private val spanSerializer: ListSerializer<StyledTextOutputEvent.Span>) :
+    Serializer<StyledTextOutputEvent> {
     @Throws(Exception::class)
     override fun write(encoder: Encoder, event: StyledTextOutputEvent) {
         encoder.writeLong(event.timestamp)
         encoder.writeString(event.category)
-        logLevelSerializer.write(encoder, event.getLogLevel())
+        logLevelSerializer.write(encoder, event.logLevel)
         if (event.buildOperationId == null) {
             encoder.writeBoolean(false)
         } else {
@@ -45,7 +46,6 @@ class StyledTextOutputEventSerializer(private val logLevelSerializer: Serializer
         val logLevel = logLevelSerializer.read(decoder)
         val buildOperationId = if (decoder.readBoolean()) OperationIdentifier(decoder.readSmallLong()) else null
         val spans = spanSerializer.read(decoder)
-        return StyledTextOutputEvent(timestamp, category, logLevel, buildOperationId, spans)
+        return StyledTextOutputEvent(timestamp, category, logLevel, buildOperationId, spans.toMutableList())
     }
 }
-

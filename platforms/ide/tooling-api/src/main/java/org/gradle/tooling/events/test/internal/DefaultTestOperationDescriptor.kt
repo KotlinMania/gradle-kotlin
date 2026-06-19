@@ -19,6 +19,7 @@ import org.gradle.tooling.events.OperationDescriptor
 import org.gradle.tooling.events.internal.DefaultOperationDescriptor
 import org.gradle.tooling.events.internal.OperationDescriptorWrapper
 import org.gradle.tooling.events.test.TestOperationDescriptor
+import org.gradle.tooling.internal.protocol.events.InternalOperationDescriptor
 import org.gradle.tooling.internal.protocol.events.InternalTestDescriptor
 
 /**
@@ -27,10 +28,9 @@ import org.gradle.tooling.internal.protocol.events.InternalTestDescriptor
 open class DefaultTestOperationDescriptor(private val internalTestDescriptor: InternalTestDescriptor, parent: OperationDescriptor?) : DefaultOperationDescriptor(
     internalTestDescriptor, parent
 ), TestOperationDescriptor, OperationDescriptorWrapper {
-    val internalOperationDescriptor: InternalOperationDescriptor
+    override val internalOperationDescriptor: InternalOperationDescriptor
         get() = internalTestDescriptor
 
-    override fun getTestDisplayName(): String {
-        return internalTestDescriptor.testDisplayName
-    }
+    override val testDisplayName: String
+        get() = internalTestDescriptor.testDisplayName!!
 }

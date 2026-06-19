@@ -15,7 +15,9 @@
  */
 package org.gradle.tooling.internal.gradle
 
+import java.io.File
+import org.gradle.tooling.model.gradle.GradleBuild
+
 interface GradleBuildIdentity {
-    @JvmField
     val rootDir: File?
 }

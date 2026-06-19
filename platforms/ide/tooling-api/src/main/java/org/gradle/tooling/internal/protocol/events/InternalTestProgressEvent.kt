@@ -26,5 +26,5 @@ interface InternalTestProgressEvent : InternalProgressEvent {
      *
      * @return The test description
      */
-    val descriptor: InternalTestDescriptor?
+    override val descriptor: InternalTestDescriptor?
 }

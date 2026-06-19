@@ -14,6 +14,3 @@
  * limitations under the License.
  */
 package org.gradle.internal.nativeintegration.services
-
-import org.gradle.internal.nativeintegration.jansi.JansiBootPathConfigurer.configure
-

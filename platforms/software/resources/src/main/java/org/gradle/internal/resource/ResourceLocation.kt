@@ -15,6 +15,9 @@
  */
 package org.gradle.internal.resource
 
+import java.io.File
+import java.net.URI
+
 /**
  * Represents the location or identity of a resource.
  */
@@ -24,7 +27,7 @@ interface ResourceLocation {
      *
      * @return the display name
      */
-    val displayName: String?
+    fun getDisplayName(): String?
 
     /**
      * Returns a file representing the location of the resource. Not all resources are available as a file.
@@ -33,7 +36,7 @@ interface ResourceLocation {
      *
      * @return A file location this resource. Returns null if this resource is not available as a file.
      */
-    val file: File?
+    fun getFile(): File?
 
     /**
      * Returns the URI for this resource. Not all resources have a URI.
@@ -42,5 +45,5 @@ interface ResourceLocation {
      *
      * @return The URI for this resource. Returns null if this resource does not have a URI.
      */
-    val uRI: URI?
+    fun getURI(): URI?
 }

@@ -173,7 +173,7 @@ class EnvironmentDecoder(
     val environment: Map<Int, Any>
 ) : ClassDecoder {
     override fun ReadContext.decodeClass(): Class<*> =
-        environment[readSmallInt()]!!.uncheckedCast()
+        environment[readSmallInt()]!!.uncheckedCast<Class<*>>()!!
 }
 
 

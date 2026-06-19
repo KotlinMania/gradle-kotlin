@@ -15,11 +15,4 @@
  */
 package org.gradle.api.internal.artifacts.dependencies
 
-import org.gradle.api.specs.Spec.isSatisfiedBy
-import org.gradle.api.logging.Logging.getLogger
-import org.gradle.api.internal.artifacts.dsl.dependencies.ModuleFactoryHelper.addExplicitArtifactsIfDefined
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionSelectorScheme.parseSelector
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionSelectorScheme.complementForRejection
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionSelector.accept
-import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionSelector.canShortCircuitWhenVersionAlreadyPreselected
 

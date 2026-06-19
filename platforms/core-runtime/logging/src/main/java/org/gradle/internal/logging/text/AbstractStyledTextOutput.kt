@@ -127,15 +127,15 @@ abstract class AbstractStyledTextOutput : StyledTextOutput, StandardOutputListen
             return this
         }
 
-        override fun append(csq: CharSequence?, start: Int, end: Int): StyledTextOutput? {
+        override fun append(csq: CharSequence?, start: Int, end: Int): StyledTextOutput {
             throw UnsupportedOperationException()
         }
 
-        override fun style(style: StyledTextOutput.Style?): StyledTextOutput? {
+        override fun style(style: StyledTextOutput.Style?): StyledTextOutput {
             throw UnsupportedOperationException()
         }
 
-        override fun withStyle(style: StyledTextOutput.Style?): StyledTextOutput? {
+        override fun withStyle(style: StyledTextOutput.Style?): StyledTextOutput {
             throw UnsupportedOperationException()
         }
 
@@ -151,21 +151,21 @@ abstract class AbstractStyledTextOutput : StyledTextOutput, StandardOutputListen
             return this
         }
 
-        override fun format(pattern: String?, vararg args: Any?): StyledTextOutput {
+        override fun format(pattern: String, vararg args: Any?): StyledTextOutput {
             val original = textOutput.style
             textOutput.style(style).format(pattern, *args).style(original)
             return this
         }
 
-        override fun formatln(pattern: String?, vararg args: Any?): StyledTextOutput? {
+        override fun formatln(pattern: String, vararg args: Any?): StyledTextOutput {
             throw UnsupportedOperationException()
         }
 
-        override fun println(): StyledTextOutput? {
+        override fun println(): StyledTextOutput {
             throw UnsupportedOperationException()
         }
 
-        override fun exception(throwable: Throwable?): StyledTextOutput? {
+        override fun exception(throwable: Throwable): StyledTextOutput {
             throw UnsupportedOperationException()
         }
     }

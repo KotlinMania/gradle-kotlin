@@ -26,6 +26,5 @@ interface TaskLocation : ProblemLocation {
      *
      * @return the build tree path
      */
-    @JvmField
-    val buildTreePath: String?
+    fun getBuildTreePath(): String?
 }

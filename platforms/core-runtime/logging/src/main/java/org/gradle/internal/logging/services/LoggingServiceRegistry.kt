@@ -72,15 +72,15 @@ abstract class LoggingServiceRegistry : ServiceRegistrationProvider {
     }
 
     @Provides
-    protected fun createStyledTextOutputFactory(clock: Clock?): StyledTextOutputFactory {
-        return DefaultStyledTextOutputFactory(this.stdoutListener, clock)
+    protected fun createStyledTextOutputFactory(clock: Clock): StyledTextOutputFactory {
+        return DefaultStyledTextOutputFactory(this.stdoutListener!!, clock)
     }
 
     @Provides
-    protected open fun createLoggingManagerFactory(clock: Clock?): LoggingManagerFactory {
+    protected open fun createLoggingManagerFactory(clock: Clock): LoggingManagerFactory {
         val outputEventBroadcaster = outputEventListenerManager.broadcaster
 
-        val stdout: LoggingSourceSystem = DefaultStdOutLoggingSystem(this.stdoutListener, clock)
+        val stdout: LoggingSourceSystem = DefaultStdOutLoggingSystem(this.stdoutListener!!, clock)
         stdout.setLevel(LogLevel.QUIET)
         val stderr: LoggingSourceSystem = DefaultStdErrLoggingSystem(TextStreamOutputEventListener(outputEventBroadcaster), clock)
         stderr.setLevel(LogLevel.ERROR)
@@ -120,7 +120,7 @@ abstract class LoggingServiceRegistry : ServiceRegistrationProvider {
 
     private class NestedLogging : LoggingServiceRegistry() {
         @Provides
-        override fun createLoggingManagerFactory(clock: Clock?): LoggingManagerFactory {
+        override fun createLoggingManagerFactory(clock: Clock): LoggingManagerFactory {
             // Don't configure anything
             return DefaultLoggingManagerFactory(
                 renderer,
@@ -159,9 +159,9 @@ abstract class LoggingServiceRegistry : ServiceRegistrationProvider {
         @JvmStatic
         fun newCommandLineProcessLogging(): ServiceRegistry {
             val loggingServices: ServiceRegistry = createCommandLineLogging()
-            val rootLoggingManager = loggingServices.get<LoggingManagerFactory?>(LoggingManagerFactory::class.java)!!.root
-            rootLoggingManager.captureSystemSources()
-            rootLoggingManager.attachSystemOutAndErr()
+        val rootLoggingManager = loggingServices.get(LoggingManagerFactory::class.java as Class<LoggingManagerFactory?>)!!.root!!
+        rootLoggingManager.captureSystemSources()
+        rootLoggingManager.attachSystemOutAndErr()
             return loggingServices
         }
 

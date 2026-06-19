@@ -15,7 +15,9 @@
  */
 package org.gradle.tooling.events.configuration
 
+import java.time.Duration
 import org.gradle.tooling.events.OperationResult
+import org.gradle.tooling.events.PluginIdentifier
 
 /**
  * Describes the result of running a project configuration operation.

@@ -31,7 +31,7 @@ import java.net.URI
 /**
  * A [LocallyAvailableExternalResource] implementation that represents a local file backed copy of some remote resource.
  */
-class DefaultLocallyAvailableExternalResource(private val source: URI, locallyAvailableResource: File?, private val metaData: ExternalResourceMetaData?, fileSystem: FileSystem?) :
+class DefaultLocallyAvailableExternalResource(private val source: URI, locallyAvailableResource: File, private val metaData: ExternalResourceMetaData?, fileSystem: FileSystem) :
     LocallyAvailableExternalResource {
     private val localFile: LocallyAvailableExternalResource
 
@@ -39,7 +39,7 @@ class DefaultLocallyAvailableExternalResource(private val source: URI, locallyAv
         localFile = LocalFileStandInExternalResource(locallyAvailableResource, fileSystem)
     }
 
-    override fun getDisplayName(): String? {
+    override fun getDisplayName(): String {
         return source.toString()
     }
 
@@ -51,7 +51,7 @@ class DefaultLocallyAvailableExternalResource(private val source: URI, locallyAv
         return metaData
     }
 
-    override fun getFile(): File? {
+    override fun getFile(): File {
         return localFile.getFile()
     }
 
@@ -65,47 +65,47 @@ class DefaultLocallyAvailableExternalResource(private val source: URI, locallyAv
     }
 
     @Throws(ResourceException::class)
-    override fun put(source: ReadableContent?): ExternalResourceWriteResult? {
+    override fun put(source: ReadableContent): ExternalResourceWriteResult {
         throw UnsupportedOperationException()
     }
 
     @Throws(ResourceException::class)
-    override fun writeTo(destination: File?): ExternalResourceReadResult<Void?>? {
+    override fun writeTo(destination: File): ExternalResourceReadResult<Void?> {
         return localFile.writeTo(destination)
     }
 
     @Throws(ResourceException::class)
-    override fun writeToIfPresent(destination: File?): ExternalResourceReadResult<Void?>? {
+    override fun writeToIfPresent(destination: File): ExternalResourceReadResult<Void?>? {
         return localFile.writeToIfPresent(destination)
     }
 
     @Throws(ResourceException::class)
-    override fun writeTo(destination: OutputStream?): ExternalResourceReadResult<Void?>? {
+    override fun writeTo(destination: OutputStream): ExternalResourceReadResult<Void?> {
         return localFile.writeTo(destination)
     }
 
     @Throws(ResourceException::class)
-    override fun withContent(readAction: Action<in InputStream?>?): ExternalResourceReadResult<Void?>? {
+    override fun withContent(readAction: Action<in InputStream>): ExternalResourceReadResult<Void?> {
         return localFile.withContent(readAction)
     }
 
     @Throws(ResourceException::class)
-    override fun <T> withContent(readAction: ExternalResource.ContentAction<out T?>?): ExternalResourceReadResult<T?>? {
+    override fun <T> withContent(readAction: ExternalResource.ContentAction<out T?>): ExternalResourceReadResult<T?> {
         return localFile.withContent<T?>(readAction)
     }
 
     @Throws(ResourceException::class)
-    override fun <T> withContentIfPresent(readAction: ExternalResource.ContentAction<out T?>?): ExternalResourceReadResult<T?>? {
+    override fun <T> withContentIfPresent(readAction: ExternalResource.ContentAction<out T?>): ExternalResourceReadResult<T?>? {
         return localFile.withContentIfPresent<T?>(readAction)
     }
 
     @Throws(ResourceException::class)
-    override fun <T> withContent(readAction: ExternalResource.ContentAndMetadataAction<out T?>?): ExternalResourceReadResult<T?>? {
+    override fun <T> withContent(readAction: ExternalResource.ContentAndMetadataAction<out T?>): ExternalResourceReadResult<T?> {
         return localFile.withContent<T?>(readAction)
     }
 
     @Throws(ResourceException::class)
-    override fun <T> withContentIfPresent(readAction: ExternalResource.ContentAndMetadataAction<out T?>?): ExternalResourceReadResult<T?>? {
+    override fun <T> withContentIfPresent(readAction: ExternalResource.ContentAndMetadataAction<out T?>): ExternalResourceReadResult<T?>? {
         return localFile.withContentIfPresent<T?>(readAction)
     }
 }

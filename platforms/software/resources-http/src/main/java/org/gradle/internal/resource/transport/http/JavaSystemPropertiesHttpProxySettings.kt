@@ -15,7 +15,4 @@
  */
 package org.gradle.internal.resource.transport.http
 
-object JavaSystemPropertiesHttpProxySettings : JavaSystemPropertiesProxySettings() {
-    private const val DEFAULT_PROXY_PORT = 80
-    private const val PROPERTY_PREFIX = "http"
-}
+class JavaSystemPropertiesHttpProxySettings : JavaSystemPropertiesProxySettings("http", 80)

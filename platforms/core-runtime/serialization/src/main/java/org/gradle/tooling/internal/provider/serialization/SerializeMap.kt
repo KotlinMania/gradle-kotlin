@@ -22,12 +22,12 @@ interface SerializeMap {
      *
      * @return The ClassLoader id.
      */
-    fun visitClass(target: Class<*>?): Short
+    fun visitClass(target: Class<*>): Short
 
     /**
      * Collects the set of ClassLoader definitions to use to deserialize the graph.
      *
      * @param details The map from ClassLoader id to details to use create that ClassLoader.
      */
-    fun collectClassLoaderDefinitions(details: MutableMap<Short?, ClassLoaderDetails?>?)
+    fun collectClassLoaderDefinitions(details: MutableMap<Short, ClassLoaderDetails>)
 }

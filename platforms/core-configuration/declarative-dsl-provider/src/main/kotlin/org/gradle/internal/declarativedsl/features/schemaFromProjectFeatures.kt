@@ -88,7 +88,7 @@ fun EvaluationSchemaBuilder.projectFeaturesComponent(
     if (withDefaultsApplication) {
         ifConversionSupported(mapper = { it as? ProjectInternal }) {
             registerObjectConversionComponent { project ->
-                ProjectFeatureConversionComponent(featureIndex.allFeatures, project.services.get(ProjectFeatureApplicator::class.java))
+                ProjectFeatureConversionComponent(featureIndex.allFeatures, project.services.get(ProjectFeatureApplicator::class.java) as ProjectFeatureApplicator)
             }
         }
     }

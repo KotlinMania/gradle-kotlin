@@ -39,7 +39,7 @@ class CompositeLocallyAvailableResourceFinder<C>(private val composites: Mutable
             return true
         }
 
-        override fun findByHashValue(hashValue: HashCode?): LocallyAvailableResource? {
+        override fun findByHashValue(hashValue: HashCode): LocallyAvailableResource? {
             for (candidates in allCandidates) {
                 val match = candidates.findByHashValue(hashValue)
                 if (match != null) {

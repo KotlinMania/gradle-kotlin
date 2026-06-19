@@ -60,7 +60,7 @@ public class LineEndingNormalizingResourceHasher extends FallbackHandlingResourc
 
     @Override
     boolean filter(ZipEntryContext context) {
-        return !context.getEntry().isDirectory;
+        return !context.getEntry().isDirectory();
     }
 
     @Override

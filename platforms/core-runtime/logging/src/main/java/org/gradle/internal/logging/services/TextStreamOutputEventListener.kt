@@ -29,7 +29,7 @@ import java.util.concurrent.atomic.AtomicReference
 class TextStreamOutputEventListener(private val listener: OutputEventListener) : OutputEventListener {
     private val logLevel = AtomicReference<LogLevel?>(LogLevel.LIFECYCLE)
 
-    override fun onOutput(event: OutputEvent?) {
+    override fun onOutput(event: OutputEvent) {
         if (event is StyledTextOutputEvent) {
             onTextEvent(event)
         } else if (event is LogLevelChangeEvent) {
@@ -44,7 +44,7 @@ class TextStreamOutputEventListener(private val listener: OutputEventListener) :
     }
 
     private fun onTextEvent(textOutputEvent: StyledTextOutputEvent) {
-        if (textOutputEvent.getLogLevel() != null) {
+        if (textOutputEvent.logLevel != null) {
             listener.onOutput(textOutputEvent)
         } else {
             listener.onOutput(textOutputEvent.withLogLevel(logLevel.get()!!))

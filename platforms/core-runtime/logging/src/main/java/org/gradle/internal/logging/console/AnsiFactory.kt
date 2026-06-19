@@ -18,5 +18,5 @@ package org.gradle.internal.logging.console
 import org.fusesource.jansi.Ansi
 
 interface AnsiFactory {
-    fun create(): Ansi?
+    fun create(): Ansi
 }

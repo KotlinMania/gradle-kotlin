@@ -187,10 +187,12 @@ open class DefaultDeleter(private val timeProvider: LongSupplier, private val is
 
     protected class FileDeletionResult private constructor(val isSuccessful: Boolean, val exception: Exception?) {
         companion object {
+            @JvmStatic
             fun withoutException(isSuccessful: Boolean): FileDeletionResult {
                 return FileDeletionResult(isSuccessful, null)
             }
 
+            @JvmStatic
             fun withException(exception: Exception): FileDeletionResult {
                 return FileDeletionResult(false, exception)
             }

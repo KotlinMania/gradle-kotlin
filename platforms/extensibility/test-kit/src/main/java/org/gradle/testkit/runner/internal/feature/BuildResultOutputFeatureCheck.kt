@@ -28,7 +28,7 @@ class BuildResultOutputFeatureCheck(private val targetGradleVersion: GradleVersi
             throw UnsupportedFeatureException(
                 "capture build output in debug mode with the GradleRunner",
                 targetGradleVersion,
-                TestKitFeature.CAPTURE_BUILD_RESULT_OUTPUT_IN_DEBUG.getSince()
+                TestKitFeature.CAPTURE_BUILD_RESULT_OUTPUT_IN_DEBUG.since!!
             )
         } else {
             warnIfUnsupportedVersion(targetGradleVersion, Function { version: String? ->
@@ -41,7 +41,7 @@ class BuildResultOutputFeatureCheck(private val targetGradleVersion: GradleVersi
     }
 
     private fun supportsVersion(): Boolean {
-        return targetGradleVersion.compareTo(TestKitFeature.CAPTURE_BUILD_RESULT_OUTPUT_IN_DEBUG.getSince()) >= 0
+        return targetGradleVersion.compareTo(TestKitFeature.CAPTURE_BUILD_RESULT_OUTPUT_IN_DEBUG.since!!) >= 0
     }
 
     companion object {

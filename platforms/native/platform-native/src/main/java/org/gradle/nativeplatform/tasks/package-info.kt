@@ -18,13 +18,4 @@
  */
 package org.gradle.nativeplatform.tasks
 
-import org.gradle.internal.service.ServiceRegistry.get
-import org.gradle.internal.Cast.cast
-import org.gradle.nativeplatform.toolchain.internal.NativeToolChainInternal.select
-import org.gradle.platform.base.internal.toolchain.ToolProvider.newCompiler
-import org.gradle.internal.os.OperatingSystem.Companion.forName
-import org.gradle.internal.os.OperatingSystem.getScriptName
-import org.gradle.internal.file.Chmod.chmod
-import org.gradle.nativeplatform.toolchain.internal.PlatformToolProvider.producesImportLibrary
-import org.gradle.nativeplatform.toolchain.internal.PlatformToolProvider.getImportLibraryName
 

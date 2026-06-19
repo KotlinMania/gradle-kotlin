@@ -322,7 +322,7 @@ public class DefaultBuildEventsListenerRegistry implements BuildEventsListenerRe
             // TODO - reuse adapters from tooling api client
             InternalTaskDescriptor providerDescriptor = providerEvent.getDescriptor();
             InternalTaskResult providerResult = providerEvent.getResult();
-            DefaultTaskOperationDescriptor descriptor = new DefaultTaskOperationDescriptor(providerDescriptor, null, providerDescriptor.taskPath);
+            DefaultTaskOperationDescriptor descriptor = new DefaultTaskOperationDescriptor(providerDescriptor, null, providerDescriptor.getTaskPath());
             TaskOperationResult result = BuildProgressListenerAdapter.toTaskResult(providerResult);
             DefaultTaskFinishEvent finishEvent = new DefaultTaskFinishEvent(providerEvent.getEventTime(), providerEvent.getDisplayName(), descriptor, result);
             listenerProvider.get().onFinish(finishEvent);

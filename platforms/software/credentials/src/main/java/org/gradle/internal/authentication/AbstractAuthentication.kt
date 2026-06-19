@@ -21,60 +21,39 @@ import java.util.Objects
 
 abstract class AbstractAuthentication @JvmOverloads constructor(
     private val name: String?,
-    private val type: Class<out Authentication?>?,
-    private val supportedCredentialType: Class<out Credentials?> = null
+    override val type: Class<out Authentication>,
+    private val supportedCredentialType: Class<out Credentials>? = null
 ) : AuthenticationInternal {
-    private var credentials: Credentials? = null
+    override var credentials: Credentials? = null
 
-    private val hosts: MutableSet<AuthenticationInternal.HostAndPort?>
+    private val hosts: MutableSet<AuthenticationInternal.HostAndPort>
 
     init {
-        this.hosts = HashSet<AuthenticationInternal.HostAndPort?>()
-    }
-
-    override fun getCredentials(): Credentials? {
-        return credentials
-    }
-
-    override fun setCredentials(credentials: Credentials?) {
-        this.credentials = credentials
+        this.hosts = HashSet<AuthenticationInternal.HostAndPort>()
     }
 
     override fun getName(): String? {
         return name
     }
 
-    override fun supports(credentials: Credentials): Boolean {
-        return supportedCredentialType.isAssignableFrom(credentials.javaClass)
-    }
-
-    override fun getType(): Class<out Authentication?>? {
-        return type
+    override fun supports(credentials: Credentials?): Boolean {
+        return credentials != null && supportedCredentialType?.isAssignableFrom(credentials.javaClass) == true
     }
 
     override fun toString(): String {
-        return String.format("'%s'(%s)", getName(), getType()!!.getSimpleName())
+        return String.format("'%s'(%s)", getName(), type.getSimpleName())
     }
 
 
-    override fun getHostsForAuthentication(): MutableCollection<AuthenticationInternal.HostAndPort?> {
-        return hosts
-    }
+    override val hostsForAuthentication: MutableCollection<AuthenticationInternal.HostAndPort>
+        get() = hosts
 
 
     override fun addHost(host: String?, port: Int) {
         hosts.add(DefaultHostAndPort(host, port))
     }
 
-    private class DefaultHostAndPort(private val host: String?, private val port: Int) : AuthenticationInternal.HostAndPort {
-        override fun getHost(): String? {
-            return host
-        }
-
-        override fun getPort(): Int {
-            return port
-        }
-
+    private class DefaultHostAndPort(override val host: String?, override val port: Int) : AuthenticationInternal.HostAndPort {
         override fun equals(o: Any?): Boolean {
             if (this === o) {
                 return true
@@ -83,12 +62,12 @@ abstract class AbstractAuthentication @JvmOverloads constructor(
                 return false
             }
             val that = o as DefaultHostAndPort
-            return getPort() == that.getPort() &&
-                    getHost() == that.getHost()
+            return port == that.port &&
+                    host == that.host
         }
 
         override fun hashCode(): Int {
-            return Objects.hash(getHost(), getPort())
+            return Objects.hash(host, port)
         }
     }
 }

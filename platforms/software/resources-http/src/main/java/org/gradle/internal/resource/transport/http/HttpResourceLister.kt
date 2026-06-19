@@ -24,16 +24,18 @@ import java.io.InputStream
 
 class HttpResourceLister(private val accessor: HttpResourceAccessor) : ExternalResourceLister {
     override fun list(directory: ExternalResourceName): MutableList<String?>? {
-        return accessor.withContent<MutableList<String?>?>(directory, true, ExternalResource.ContentAndMetadataAction { inputStream: InputStream?, metaData: ExternalResourceMetaData? ->
-            if (metaData!!.wasMissing()) {
-                return@withContent null
-            }
-            val contentType = metaData.getContentType()
-            val directoryListingParser = ApacheDirectoryListingParser()
-            try {
-                return@withContent directoryListingParser.parse(directory.getUri(), inputStream, contentType)
-            } catch (e: Exception) {
-                throw ResourceException(directory.getUri(), String.format("Unable to parse HTTP directory listing for '%s'.", directory.getUri()), e)
+        return accessor.withContent<MutableList<String?>>(directory, true, object : ExternalResource.ContentAndMetadataAction<MutableList<String?>?> {
+            override fun execute(inputStream: InputStream, metaData: ExternalResourceMetaData?): MutableList<String?>? {
+                if (metaData!!.wasMissing()) {
+                    return null
+                }
+                val contentType = metaData.getContentType()
+                val directoryListingParser = ApacheDirectoryListingParser()
+                try {
+                    return ArrayList<String?>(directoryListingParser.parse(directory.uri, inputStream, contentType))
+                } catch (e: Exception) {
+                    throw ResourceException(directory.uri, String.format("Unable to parse HTTP directory listing for '%s'.", directory.uri), e)
+                }
             }
         })
     }

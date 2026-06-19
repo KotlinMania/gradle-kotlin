@@ -37,7 +37,7 @@ object StaleOutputCleaner {
      */
     @CheckReturnValue
     fun cleanOutputs(deleter: Deleter, filesToDelete: Iterable<File>, directoryToClean: File): Boolean {
-        return cleanOutputs(deleter, filesToDelete, ImmutableSet.of<File?>(directoryToClean))
+        return cleanOutputs(deleter, filesToDelete, ImmutableSet.of(directoryToClean))
     }
 
     /**
@@ -49,19 +49,19 @@ object StaleOutputCleaner {
      * Returns {code true} if any file or directory was deleted, `false` otherwise.
      */
     @CheckReturnValue
-    fun cleanOutputs(deleter: Deleter, filesToDelete: Iterable<File>, directoriesToClean: ImmutableSet<File?>): Boolean {
+    fun cleanOutputs(deleter: Deleter, filesToDelete: Iterable<File>, directoriesToClean: ImmutableSet<File>): Boolean {
         val prefixes = directoriesToClean.stream()
-            .map<String?> { directoryToClean: File? -> directoryToClean!!.getAbsolutePath() + File.separator }
+            .map<String> { directoryToClean: File -> directoryToClean.getAbsolutePath() + File.separator }
             .collect(Collectors.toSet())
 
         val outputsCleaner = OutputsCleaner(
             deleter,
-            Predicate { file: File? ->
-                val absolutePath = file!!.getAbsolutePath()
+            Predicate { file: File ->
+                val absolutePath = file.getAbsolutePath()
                 prefixes.stream()
-                    .anyMatch { prefix: String? -> absolutePath.startsWith(prefix!!) }
+                    .anyMatch { prefix: String -> absolutePath.startsWith(prefix) }
             },
-            Predicate { dir: File? -> !directoriesToClean.contains(dir) }
+            Predicate { dir: File -> !directoriesToClean.contains(dir) }
         )
 
         try {
@@ -80,15 +80,15 @@ object StaleOutputCleaner {
 
     @CheckReturnValue
     fun cleanEmptyOutputDirectories(deleter: Deleter, directories: Iterable<File>, directoryToClean: File): Boolean {
-        return cleanEmptyOutputDirectories(deleter, directories, ImmutableSet.of<File?>(directoryToClean))
+        return cleanEmptyOutputDirectories(deleter, directories, ImmutableSet.of(directoryToClean))
     }
 
     @CheckReturnValue
-    fun cleanEmptyOutputDirectories(deleter: Deleter, directories: Iterable<File>, directoriesToClean: MutableCollection<File?>): Boolean {
+    fun cleanEmptyOutputDirectories(deleter: Deleter, directories: Iterable<File>, directoriesToClean: MutableCollection<File>): Boolean {
         val outputsCleaner = OutputsCleaner(
             deleter,
-            Predicate { file: File? -> false },
-            Predicate { dir: File? -> !directoriesToClean.contains(dir) }
+            Predicate { file: File -> false },
+            Predicate { dir: File -> !directoriesToClean.contains(dir) }
         )
 
         try {

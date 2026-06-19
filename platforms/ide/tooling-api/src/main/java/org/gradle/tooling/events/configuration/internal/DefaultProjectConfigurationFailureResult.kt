@@ -24,9 +24,7 @@ class DefaultProjectConfigurationFailureResult(
     startTime: Long,
     endTime: Long,
     failures: MutableList<out Failure?>?,
-    private val pluginApplicationResults: MutableList<out ProjectConfigurationOperationResult.PluginApplicationResult?>?
+    override val pluginApplicationResults: MutableList<out ProjectConfigurationOperationResult.PluginApplicationResult?>?
 ) : DefaultOperationFailureResult(startTime, endTime, failures), ProjectConfigurationFailureResult {
-    override fun getPluginApplicationResults(): MutableList<out ProjectConfigurationOperationResult.PluginApplicationResult?>? {
-        return pluginApplicationResults
-    }
+
 }

@@ -41,24 +41,24 @@ import org.jspecify.annotations.NullMarked
 
 @NullMarked
 class ProcessServices : AbstractGradleModuleServices() {
-    override fun registerGlobalServices(registration: ServiceRegistration) {
-        registration.addProvider(GlobalProcessServices())
+    override fun registerGlobalServices(registration: ServiceRegistration?) {
+        registration!!.addProvider(GlobalProcessServices())
     }
 
-    override fun registerGradleUserHomeServices(registration: ServiceRegistration) {
-        registration.addProvider(GradleUserHomeProcessServices())
+    override fun registerGradleUserHomeServices(registration: ServiceRegistration?) {
+        registration!!.addProvider(GradleUserHomeProcessServices())
     }
 
-    override fun registerBuildSessionServices(registration: ServiceRegistration) {
-        registration.addProvider(BuildSessionProcessServices())
+    override fun registerBuildSessionServices(registration: ServiceRegistration?) {
+        registration!!.addProvider(BuildSessionProcessServices())
     }
 
-    override fun registerBuildServices(registration: ServiceRegistration) {
-        registration.addProvider(BuildProcessServices())
+    override fun registerBuildServices(registration: ServiceRegistration?) {
+        registration!!.addProvider(BuildProcessServices())
     }
 
-    override fun registerProjectServices(registration: ServiceRegistration) {
-        registration.addProvider(ProjectProcessServices())
+    override fun registerProjectServices(registration: ServiceRegistration?) {
+        registration!!.addProvider(ProjectProcessServices())
     }
 
     private class GlobalProcessServices : ServiceRegistrationProvider {
@@ -128,8 +128,12 @@ class ProcessServices : AbstractGradleModuleServices() {
 
     private class BuildProcessServices : ServiceRegistrationProvider {
         @Provides
-        fun configure(registration: ServiceRegistration) {
-            registration.add<DefaultExecOperations>(ExecOperations::class.java, DefaultExecOperations::class.java)
+        fun configure(registration: ServiceRegistration?) {
+            @Suppress("UNCHECKED_CAST")
+            registration!!.add(
+                ExecOperations::class.java as Class<in DefaultExecOperations?>,
+                DefaultExecOperations::class.java as Class<DefaultExecOperations?>
+            )
         }
 
         @Provides
@@ -148,7 +152,7 @@ class ProcessServices : AbstractGradleModuleServices() {
                 .withInstantiator(instantiator)
                 .withObjectFactory(objectFactory)
                 .withJavaModuleDetector(javaModuleDetector)
-                .withExternalProcessStartedListener(listenerManager.getBroadcaster<ExternalProcessStartedListener?>(ExternalProcessStartedListener::class.java))
+                .withExternalProcessStartedListener(listenerManager.getBroadcaster(ExternalProcessStartedListener::class.java as Class<ExternalProcessStartedListener?>))
                 .build()
         }
 
@@ -175,7 +179,7 @@ class ProcessServices : AbstractGradleModuleServices() {
                 .withInstantiator(instantiatorFactory.decorateLenient())
                 .withObjectFactory(objectFactory)
                 .withJavaModuleDetector(javaModuleDetector)
-                .withExternalProcessStartedListener(listenerManager.getBroadcaster<ExternalProcessStartedListener?>(ExternalProcessStartedListener::class.java))
+                .withExternalProcessStartedListener(listenerManager.getBroadcaster(ExternalProcessStartedListener::class.java as Class<ExternalProcessStartedListener?>))
                 .build()
         }
     }

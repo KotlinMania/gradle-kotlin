@@ -29,22 +29,24 @@ import kotlin.math.min
  * Note that this decoder uses buffering, so will attempt to read beyond the end of the encoded data. This means you should use this type only when this decoder will be used to decode the entire
  * stream.
  */
-class KryoBackedDecoder @JvmOverloads constructor(private var inputStream: InputStream, bufferSize: Int = 4096) : AbstractDecoder(), Decoder, Closeable {
+class KryoBackedDecoder @JvmOverloads constructor(inputStream: InputStream, bufferSize: Int = 4096) : AbstractDecoder(), Decoder, Closeable {
+    private var backingInputStream: InputStream
     private val input: Input
     private var extraSkipped: Long = 0
     private var nested: KryoBackedDecoder? = null
 
     init {
-        input = Input(this.inputStream, bufferSize)
+        backingInputStream = inputStream
+        input = Input(backingInputStream, bufferSize)
     }
 
     fun restart(inputStream: InputStream) {
-        this.inputStream = inputStream
+        backingInputStream = inputStream
         input.setInputStream(inputStream)
         extraSkipped = 0
     }
 
-    override fun maybeReadBytes(buffer: ByteArray?, offset: Int, count: Int): Int {
+    override fun maybeReadBytes(buffer: ByteArray, offset: Int, count: Int): Int {
         return input.read(buffer, offset, count)
     }
 
@@ -53,7 +55,7 @@ class KryoBackedDecoder @JvmOverloads constructor(private var inputStream: Input
         // Work around some bugs in Input.skip()
         val remaining = input.limit() - input.position()
         if (remaining == 0) {
-            val skipped = inputStream.skip(count)
+            val skipped = backingInputStream.skip(count)
             if (skipped > 0) {
                 extraSkipped += skipped
             }
@@ -68,11 +70,11 @@ class KryoBackedDecoder @JvmOverloads constructor(private var inputStream: Input
     }
 
     @Throws(EOFException::class)
-    private fun maybeEndOfStream(e: KryoException): RuntimeException? {
+    private fun maybeEndOfStream(e: KryoException): Throwable {
         if (e.message == "Buffer underflow.") {
-            throw EOFException().initCause(e) as EOFException?
+            return EOFException().also { it.initCause(e) }
         }
-        throw e
+        return e
     }
 
     @Throws(EOFException::class)
@@ -85,7 +87,7 @@ class KryoBackedDecoder @JvmOverloads constructor(private var inputStream: Input
     }
 
     @Throws(EOFException::class)
-    override fun readBytes(buffer: ByteArray?, offset: Int, count: Int) {
+    override fun readBytes(buffer: ByteArray, offset: Int, count: Int) {
         try {
             input.readBytes(buffer, offset, count)
         } catch (e: KryoException) {
@@ -166,8 +168,8 @@ class KryoBackedDecoder @JvmOverloads constructor(private var inputStream: Input
     }
 
     @Throws(EOFException::class)
-    override fun readString(): String? {
-        return readNullableString()
+    override fun readString(): String {
+        return requireNotNull(readNullableString()) { "Cannot decode a null string." }
     }
 
     @Throws(EOFException::class)
@@ -191,7 +193,7 @@ class KryoBackedDecoder @JvmOverloads constructor(private var inputStream: Input
     }
 
     @Throws(EOFException::class, Exception::class)
-    override fun <T> decodeChunked(decodeAction: Decoder.DecodeAction<Decoder?, T?>): T? {
+    override fun <T> decodeChunked(decodeAction: Decoder.DecodeAction<Decoder, T>): T {
         if (nested == null) {
             nested = KryoBackedDecoder(object : InputStream() {
                 private var leftover = 0
@@ -202,7 +204,7 @@ class KryoBackedDecoder @JvmOverloads constructor(private var inputStream: Input
                 }
 
                 @Throws(IOException::class)
-                override fun read(buffer: ByteArray?, offset: Int, length: Int): Int {
+                override fun read(buffer: ByteArray, offset: Int, length: Int): Int {
                     if (leftover > 0) {
                         val count = min(leftover, length)
                         leftover -= count
@@ -224,7 +226,7 @@ class KryoBackedDecoder @JvmOverloads constructor(private var inputStream: Input
                 }
             })
         }
-        val value = decodeAction.read(nested)
+        val value = decodeAction.read(nested!!)
         check(readSmallInt() == 0) { "Expecting the end of nested stream." }
         return value
     }

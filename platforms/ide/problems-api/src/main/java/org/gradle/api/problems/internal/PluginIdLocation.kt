@@ -27,6 +27,5 @@ interface PluginIdLocation : ProblemLocation {
      *
      * @return the plugin ID
      */
-    @JvmField
-    val pluginId: String?
+    fun getPluginId(): String?
 }

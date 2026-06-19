@@ -15,6 +15,8 @@
  */
 package org.gradle.tooling.model.cpp
 
+import java.io.File
+
 /**
  * Provides details about a particular source file.
  *

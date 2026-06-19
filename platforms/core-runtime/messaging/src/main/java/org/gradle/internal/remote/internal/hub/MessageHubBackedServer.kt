@@ -23,12 +23,12 @@ import org.gradle.internal.remote.ObjectConnection
 import org.gradle.internal.remote.internal.ConnectCompletion
 import org.gradle.internal.remote.internal.IncomingConnector
 
-class MessageHubBackedServer(private val connector: IncomingConnector, private val executorFactory: ExecutorFactory?) : MessagingServer {
-    override fun accept(action: Action<ObjectConnection?>): ConnectionAcceptor? {
-        return connector.accept(MessageHubBackedServer.ConnectEventAction(action), false)
+class MessageHubBackedServer(private val connector: IncomingConnector, private val executorFactory: ExecutorFactory) : MessagingServer {
+    override fun accept(action: Action<ObjectConnection>): ConnectionAcceptor {
+        return connector.accept(ConnectEventAction(action), false)
     }
 
-    private inner class ConnectEventAction(private val action: Action<ObjectConnection?>) : Action<ConnectCompletion?> {
+    private inner class ConnectEventAction(private val action: Action<ObjectConnection>) : Action<ConnectCompletion> {
         override fun execute(completion: ConnectCompletion) {
             action.execute(MessageHubBackedObjectConnection(executorFactory, completion))
         }

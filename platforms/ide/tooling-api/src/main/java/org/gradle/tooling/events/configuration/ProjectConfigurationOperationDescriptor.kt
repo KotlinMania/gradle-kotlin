@@ -16,6 +16,7 @@
 package org.gradle.tooling.events.configuration
 
 import org.gradle.tooling.events.OperationDescriptor
+import org.gradle.tooling.model.ProjectIdentifier
 
 /**
  * Describes a project configuration operation for which an event has occurred.

@@ -15,32 +15,43 @@
  */
 package org.gradle.integtests.tooling.r930
 
+import org.gradle.tooling.*
+import org.gradle.tooling.model.*
+import org.gradle.tooling.model.build.*
+import org.gradle.tooling.model.eclipse.*
+import org.gradle.tooling.model.gradle.*
+import org.gradle.tooling.model.idea.*
+import org.gradle.tooling.model.kotlin.dsl.*
+import org.gradle.tooling.internal.adapter.ProtocolToModelAdapter
+import java.io.File
+import org.gradle.integtests.tooling.r48.*
+
 import org.gradle.integtests.tooling.r16.CustomModel
 import org.gradle.tooling.BuildAction
 import java.util.stream.Collectors
 
 internal open class FetchCustomModelAction : BuildAction<Result<String?>?> {
-    public override fun execute(controller: BuildController): Result<String?> {
+    public override fun execute(controller: BuildController?): Result<String?> {
         val result: FetchModelResult<CustomModel?> = fetch(controller)
         val failures: MutableList<String?>? = result.getFailures().stream()
-            .map(Failure::getMessage)
+            .map { it.getMessage() }
             .collect(Collectors.toList())
         val causes: MutableList<String?>? = result.getFailures().stream()
             .flatMap({ f -> f.getCauses().stream() })
-            .map(Failure::getMessage)
+            .map { it.getMessage() }
             .collect(Collectors.toList())
         val model: CustomModel? = result.getModel()
         return Result<String?>(if (model != null) model.value else null, failures, causes)
     }
 
-    protected open fun fetch(controller: BuildController): FetchModelResult<CustomModel?> {
-        return controller.fetch(CustomModel::class.java, null, null)
+    protected open fun fetch(controller: BuildController?): FetchModelResult<CustomModel?> {
+        return controller.fetch(CustomModel::class.java)
     }
 
     companion object {
         fun withFetchModelCall(): FetchCustomModelAction {
             return object : FetchCustomModelAction() {
-                public override fun fetch(controller: BuildController): FetchModelResult<CustomModel?> {
+                public override fun fetch(controller: BuildController?): FetchModelResult<CustomModel?> {
                     return controller.fetch(CustomModel::class.java)
                 }
             }
@@ -48,7 +59,7 @@ internal open class FetchCustomModelAction : BuildAction<Result<String?>?> {
 
         fun withFetchTargetModelCall(): FetchCustomModelAction {
             return object : FetchCustomModelAction() {
-                public override fun fetch(controller: BuildController): FetchModelResult<CustomModel?> {
+                public override fun fetch(controller: BuildController?): FetchModelResult<CustomModel?> {
                     return controller.fetch(CustomModel::class.java)
                 }
             }
@@ -56,8 +67,8 @@ internal open class FetchCustomModelAction : BuildAction<Result<String?>?> {
 
         fun withFetchModelParametersCall(): FetchCustomModelAction {
             return object : FetchCustomModelAction() {
-                public override fun fetch(controller: BuildController): FetchModelResult<CustomModel?> {
-                    return controller.fetch(CustomModel::class.java, null, null)
+                public override fun fetch(controller: BuildController?): FetchModelResult<CustomModel?> {
+                    return controller.fetch(CustomModel::class.java)
                 }
             }
         }

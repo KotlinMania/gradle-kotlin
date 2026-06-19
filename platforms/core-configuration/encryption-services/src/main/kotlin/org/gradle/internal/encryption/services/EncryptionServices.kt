@@ -24,7 +24,12 @@ import org.gradle.internal.service.scopes.AbstractGradleModuleServices
 
 
 class EncryptionServices : AbstractGradleModuleServices() {
-    override fun registerBuildTreeServices(registration: ServiceRegistration) {
-        registration.add(EncryptionConfiguration::class.java, EncryptionService::class.java, DefaultEncryptionService::class.java)
+    override fun registerBuildTreeServices(registration: ServiceRegistration?) {
+        @Suppress("UNCHECKED_CAST")
+        registration!!.add(
+            EncryptionConfiguration::class.java as Class<in DefaultEncryptionService?>,
+            EncryptionService::class.java as Class<in DefaultEncryptionService?>,
+            DefaultEncryptionService::class.java as Class<DefaultEncryptionService?>
+        )
     }
 }

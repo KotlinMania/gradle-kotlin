@@ -32,7 +32,7 @@ import java.nio.file.attribute.BasicFileAttributes
  */
 class WindowsJdk7Symlink : Jdk7Symlink(false) {
     @Throws(IOException::class)
-    override fun symlink(link: File?, target: File?) {
+    override fun symlink(link: File, target: File) {
         throw IOException("Creation of symlinks is not supported on this platform.")
     }
 

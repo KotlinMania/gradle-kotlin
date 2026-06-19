@@ -27,5 +27,5 @@ import org.gradle.internal.service.scopes.ServiceScope
  */
 @ServiceScope(Scope.UserHome::class)
 interface PayloadClassLoaderFactory {
-    fun getClassLoaderFor(spec: ClassLoaderSpec?, parents: MutableList<out ClassLoader?>?): ClassLoader?
+    fun getClassLoaderFor(spec: ClassLoaderSpec, parents: MutableList<out ClassLoader>): ClassLoader
 }

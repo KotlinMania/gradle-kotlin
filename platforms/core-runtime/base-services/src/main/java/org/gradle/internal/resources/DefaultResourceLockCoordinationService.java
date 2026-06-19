@@ -80,7 +80,7 @@ public class DefaultResourceLockCoordinationService implements ResourceLockCoord
     }
 
     @Override
-    public <T extends @Nullable Object> T withStateLock(final Supplier<T> action) {
+    public <T extends @Nullable Object> @Nullable T withStateLock(final Supplier<T> action) {
         final MutableReference<@Nullable T> result = MutableReference.empty();
         withStateLock(resourceLockState -> {
             result.set(action.get());

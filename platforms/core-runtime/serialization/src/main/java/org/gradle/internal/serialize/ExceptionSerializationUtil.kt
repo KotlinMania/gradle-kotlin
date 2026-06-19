@@ -26,12 +26,12 @@ import java.util.Collections
  */
 object ExceptionSerializationUtil {
     // It would be nice to use Guava's immutable collections here, if we could get them on the proper classpath
-    val CANDIDATE_GET_CAUSES: MutableSet<String?> = Collections.unmodifiableSet<String?>(HashSet<String?>(mutableListOf<String?>("getCauses", "getFailures")))
+    val CANDIDATE_GET_CAUSES: MutableSet<String> = Collections.unmodifiableSet<String>(HashSet<String>(mutableListOf("getCauses", "getFailures")))
 
     @JvmStatic
-    fun extractCauses(throwable: Throwable): MutableList<out Throwable?>? {
+    fun extractCauses(throwable: Throwable): MutableList<Throwable> {
         if (throwable is MultiCauseException) {
-            return (throwable as MultiCauseException).causes
+            return throwable.getCauses().filterNotNull().toMutableList()
         } else {
             val causes = tryExtractMultiCauses(throwable)
             if (causes != null) {
@@ -45,7 +45,7 @@ object ExceptionSerializationUtil {
                 //                LOGGER.debug("Ignoring failure to extract throwable cause.", ignored);
                 causeTmp = null
             }
-            return if (causeTmp == null) mutableListOf<Throwable?>() else mutableListOf<Throwable?>(causeTmp)
+            return if (causeTmp == null) mutableListOf() else mutableListOf(causeTmp)
         }
     }
 
@@ -55,7 +55,7 @@ object ExceptionSerializationUtil {
      * something similar to what we do in Gradle with [DefaultMultiCauseException].
      * It is, in particular, the case for opentest4j.
      */
-    private fun tryExtractMultiCauses(throwable: Throwable): MutableList<out Throwable?>? {
+    private fun tryExtractMultiCauses(throwable: Throwable): MutableList<Throwable>? {
         val causesMethod = findCandidateGetCausesMethod(throwable)
         if (causesMethod != null) {
             val causes: MutableCollection<*>?
@@ -74,9 +74,9 @@ object ExceptionSerializationUtil {
                     return null
                 }
             }
-            val result: MutableList<Throwable?> = ArrayList<Throwable?>(causes.size)
+            val result: MutableList<Throwable> = ArrayList<Throwable>(causes.size)
             for (cause in causes) {
-                result.add(Cast.uncheckedCast<Throwable?>(cause))
+                result.add(Cast.uncheckedNonnullCast<Throwable>(cause))
             }
             return result
         }

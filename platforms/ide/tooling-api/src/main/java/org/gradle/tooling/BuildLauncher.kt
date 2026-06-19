@@ -15,6 +15,7 @@
  */
 package org.gradle.tooling
 
+import java.io.File
 import org.gradle.tooling.model.Launchable
 import org.gradle.tooling.model.Task
 

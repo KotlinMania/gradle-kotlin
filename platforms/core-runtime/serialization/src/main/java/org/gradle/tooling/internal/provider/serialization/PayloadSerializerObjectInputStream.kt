@@ -24,11 +24,11 @@ import java.lang.reflect.Proxy
 internal class PayloadSerializerObjectInputStream(
     inputStream: InputStream?,
     classLoader: ClassLoader,
-    private val classLoaderDetails: MutableMap<Short?, ClassLoaderDetails?>,
+    private val classLoaderDetails: MutableMap<Short, ClassLoaderDetails>,
     private val map: DeserializeMap
 ) : ExceptionReplacingObjectInputStream(inputStream, classLoader) {
     @Throws(IOException::class)
-    override fun createNewInstance(inputStream: InputStream?): ExceptionReplacingObjectInputStream? {
+    override fun createNewInstance(inputStream: InputStream?): ExceptionReplacingObjectInputStream {
         return PayloadSerializerObjectInputStream(inputStream, classLoader, classLoaderDetails, map)
     }
 
@@ -43,8 +43,8 @@ internal class PayloadSerializerObjectInputStream(
     }
 
     @Throws(IOException::class, ClassNotFoundException::class)
-    protected override fun resolveClass(desc: ObjectStreamClass): Class<*>? {
-        return desc.forClass()
+    protected override fun resolveClass(desc: ObjectStreamClass): Class<*> {
+        return desc.forClass() ?: throw ClassNotFoundException(desc.name)
     }
 
     @Throws(IOException::class, ClassNotFoundException::class)
@@ -54,23 +54,19 @@ internal class PayloadSerializerObjectInputStream(
         if (id.toInt() == PayloadSerializerObjectOutputStream.Companion.SAME_CLASSLOADER_TOKEN) {
             return super.lookupClass(className)!!
         }
-        val classLoader = classLoaderDetails.get(id)
+        val classLoader = classLoaderDetails[id] ?: throw ClassNotFoundException(className)
         return map.resolveClass(classLoader, className)
     }
 
     @Throws(IOException::class, ClassNotFoundException::class)
-    override fun resolveProxyClass(interfaces: Array<String?>?): Class<*>? {
+    override fun resolveProxyClass(interfaces: Array<String?>?): Class<*> {
         val count = readInt()
-        val actualInterfaces = arrayOfNulls<Class<*>>(count)
-        for (i in 0..<count) {
-            actualInterfaces[i] = readClass()
-        }
-        @Suppress("deprecation") val proxyClass = Proxy.getProxyClass(actualInterfaces[0]!!.getClassLoader(), *actualInterfaces)
-        return proxyClass
+        val actualInterfaces = Array(count) { readClass() }
+        @Suppress("deprecation") return Proxy.getProxyClass(actualInterfaces[0].classLoader, *actualInterfaces)
     }
 
     @Throws(ClassNotFoundException::class)
-    override fun lookupClass(type: String?): Class<*> {
+    override fun lookupClass(type: String): Class<*> {
         try {
             return super.lookupClass(type)!!
         } catch (e: ClassNotFoundException) {

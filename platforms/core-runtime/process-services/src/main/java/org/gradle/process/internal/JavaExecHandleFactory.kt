@@ -30,8 +30,8 @@ import javax.inject.Inject
 
 open class DefaultJavaForkOptions @Inject constructor(
     objectFactory: ObjectFactory,
-    resolver: PathToFileResolver?,
-    private val fileCollectionFactory: FileCollectionFactory?
+    resolver: PathToFileResolver,
+    private val fileCollectionFactory: FileCollectionFactory
 ) : DefaultProcessForkOptions(resolver), JavaForkOptionsInternal {
     private val options: JvmOptions
     private val debugOptions: JavaDebugOptions
@@ -42,26 +42,26 @@ open class DefaultJavaForkOptions @Inject constructor(
         this.options = JvmOptions(fileCollectionFactory, JvmDebugSpec.JavaDebugOptionsBackedSpec(debugOptions))
     }
 
-    override fun getAllJvmArgs(): MutableList<String?>? {
+    override fun getAllJvmArgs(): MutableList<String> {
         if (hasJvmArgumentProviders(this)) {
             val copy = options.createCopy(fileCollectionFactory)
             for (jvmArgumentProvider in jvmArgumentProviders!!) {
                 copy.jvmArgs(jvmArgumentProvider.asArguments())
             }
-            return copy.getAllJvmArgs()
+            return copy.allJvmArgs.filterNotNull().toMutableList()
         } else {
-            return options.getAllJvmArgs()
+            return options.allJvmArgs.filterNotNull().toMutableList()
         }
     }
 
     @Deprecated("")
-    override fun setAllJvmArgs(arguments: MutableList<String?>?) {
+    override fun setAllJvmArgs(arguments: MutableList<String>?) {
         deprecateMethod(DefaultJavaForkOptions::class.java, "setAllJvmArgs")
             .withAdvice("Use `jvmArgs()`, `setJvmArgs()`, or `getJvmArgumentProviders()` instead to set JVM arguments.")!!
             .willBeRemovedInGradle10()
             .withUpgradeGuideSection(9, "set-all-jvm-args")!!
             .nagUser()
-        options.setAllJvmArgs(arguments)
+        options.allJvmArgs = arguments?.toMutableList() ?: mutableListOf()
         if (hasJvmArgumentProviders(this)) {
             jvmArgumentProviders!!.clear()
         }
@@ -74,25 +74,25 @@ open class DefaultJavaForkOptions @Inject constructor(
             .willBeRemovedInGradle10()
             .withUpgradeGuideSection(9, "set-all-jvm-args")!!
             .nagUser()
-        options.setAllJvmArgs(arguments)
+        options.allJvmArgs = arguments?.map { it.toString() }?.toMutableList() ?: mutableListOf()
         if (hasJvmArgumentProviders(this)) {
             jvmArgumentProviders!!.clear()
         }
     }
 
-    override fun getJvmArgs(): MutableList<String?>? {
-        return options.getJvmArgs()
+    override fun getJvmArgs(): MutableList<String> {
+        return options.jvmArgs.filterNotNull().toMutableList()
     }
 
-    override fun setJvmArgs(arguments: MutableList<String?>?) {
-        options.setJvmArgs(arguments)
+    override fun setJvmArgs(arguments: MutableList<String>) {
+        options.jvmArgs = arguments.toMutableList()
     }
 
-    override fun setJvmArgs(arguments: Iterable<*>?) {
-        options.setJvmArgs(arguments)
+    override fun setJvmArgs(arguments: Iterable<*>) {
+        options.jvmArgs = arguments.map { it.toString() }.toMutableList()
     }
 
-    override fun jvmArgs(arguments: Iterable<*>?): JavaForkOptions {
+    override fun jvmArgs(arguments: Iterable<*>): JavaForkOptions {
         options.jvmArgs(arguments)
         return this
     }
@@ -109,16 +109,19 @@ open class DefaultJavaForkOptions @Inject constructor(
         return jvmArgumentProviders!!
     }
 
-    override fun getSystemProperties(): MutableMap<String?, Any?>? {
-        return options.getMutableSystemProperties()
+    override fun getSystemProperties(): MutableMap<String, Any?> {
+        @Suppress("UNCHECKED_CAST")
+        return options.mutableSystemProperties as MutableMap<String, Any?>
     }
 
-    override fun setSystemProperties(properties: MutableMap<String?, out Any?>?) {
-        options.setSystemProperties(properties)
+    override fun setSystemProperties(properties: MutableMap<String, out Any?>) {
+        @Suppress("UNCHECKED_CAST")
+        options.setSystemProperties(properties as MutableMap<String?, *>)
     }
 
-    override fun systemProperties(properties: MutableMap<String?, out Any?>): JavaForkOptions {
-        options.systemProperties(properties)
+    override fun systemProperties(properties: MutableMap<String, out Any?>): JavaForkOptions {
+        @Suppress("UNCHECKED_CAST")
+        options.systemProperties(properties as MutableMap<String?, *>)
         return this
     }
 
@@ -127,11 +130,11 @@ open class DefaultJavaForkOptions @Inject constructor(
         return this
     }
 
-    override fun getBootstrapClasspath(): FileCollection? {
+    override fun getBootstrapClasspath(): FileCollection {
         return options.getBootstrapClasspath()
     }
 
-    override fun setBootstrapClasspath(classpath: FileCollection?) {
+    override fun setBootstrapClasspath(classpath: FileCollection) {
         options.setBootstrapClasspath(classpath)
     }
 
@@ -141,63 +144,64 @@ open class DefaultJavaForkOptions @Inject constructor(
     }
 
     override fun getMinHeapSize(): String? {
-        return options.getMinHeapSize()
+        return options.minHeapSize
     }
 
     override fun setMinHeapSize(heapSize: String?) {
-        options.setMinHeapSize(heapSize)
+        options.minHeapSize = heapSize
     }
 
     override fun getMaxHeapSize(): String? {
-        return options.getMaxHeapSize()
+        return options.maxHeapSize
     }
 
     override fun setMaxHeapSize(heapSize: String?) {
-        options.setMaxHeapSize(heapSize)
+        options.maxHeapSize = heapSize
     }
 
     override fun getDefaultCharacterEncoding(): String? {
-        return options.getDefaultCharacterEncoding()
+        return options.defaultCharacterEncoding
     }
 
     override fun setDefaultCharacterEncoding(defaultCharacterEncoding: String?) {
-        options.setDefaultCharacterEncoding(defaultCharacterEncoding)
+        options.defaultCharacterEncoding = defaultCharacterEncoding
     }
 
     override fun getEnableAssertions(): Boolean {
-        return options.getEnableAssertions()
+        return options.enableAssertions
     }
 
     override fun setEnableAssertions(enabled: Boolean) {
-        options.setEnableAssertions(enabled)
+        options.enableAssertions = enabled
     }
 
     override fun getDebug(): Boolean {
-        return options.getDebug()
+        return options.debug
     }
 
     override fun setDebug(enabled: Boolean) {
-        options.setDebug(enabled)
+        options.debug = enabled
     }
 
     override fun getDebugOptions(): JavaDebugOptions {
         return debugOptions
     }
 
-    override fun debugOptions(action: Action<JavaDebugOptions?>) {
+    override fun debugOptions(action: Action<JavaDebugOptions>) {
         action.execute(getDebugOptions())
     }
 
     override fun getInheritableEnvironment(): MutableMap<String?, *> {
         // Filter out any environment variables that should not be inherited.
-        return Jvm.getInheritableEnvironmentVariables(super.getInheritableEnvironment())
+        @Suppress("UNCHECKED_CAST")
+        return Jvm.getInheritableEnvironmentVariables(super.getInheritableEnvironment()) as MutableMap<String?, *>
     }
 
     override fun copyTo(target: JavaForkOptions): JavaForkOptions {
         super.copyTo(target)
         options.copyTo(target)
         if (jvmArgumentProviders != null) {
-            for (jvmArgumentProvider in jvmArgumentProviders) {
+            for (jvmArgumentProvider in jvmArgumentProviders!!) {
                 target.jvmArgs(jvmArgumentProvider.asArguments())
             }
         }
@@ -205,39 +209,33 @@ open class DefaultJavaForkOptions @Inject constructor(
     }
 
     override fun checkDebugConfiguration(arguments: Iterable<*>?) {
-        options.checkDebugConfiguration(arguments)
+        options.checkDebugConfiguration(arguments ?: emptyList<Any>())
     }
 
     override fun toEffectiveJavaForkOptions(fileCollectionFactory: FileCollectionFactory?): EffectiveJavaForkOptions {
-        val copy = options.createCopy(fileCollectionFactory)
+        val copy = options.createCopy(fileCollectionFactory!!)
         if (jvmArgumentProviders != null) {
-            for (jvmArgumentProvider in jvmArgumentProviders) {
+            for (jvmArgumentProvider in jvmArgumentProviders!!) {
                 copy.jvmArgs(jvmArgumentProvider.asArguments())
             }
         }
         return EffectiveJavaForkOptions(
-            getExecutable(),
-            getWorkingDir(),
+            getExecutable()!!,
+            getWorkingDir()!!,
             getEnvironment(),
             copy
         )
     }
 
-    override fun setExtraJvmArgs(arguments: Iterable<*>?) {
-        options.setExtraJvmArgs(arguments)
-    }
-
-    override fun getExtraJvmArgs(): Iterable<*>? {
-        return options.getExtraJvmArgs()
-    }
+    override var extraJvmArgs: Iterable<*>?
+        get() = options.getExtraJvmArgs()
+        set(arguments) {
+            options.setExtraJvmArgs(arguments ?: emptyList<Any>())
+        }
 
     companion object {
         private fun hasJvmArgumentProviders(forkOptions: DefaultJavaForkOptions): Boolean {
-            return !Companion.isNullOrEmpty<CommandLineArgumentProvider?>(forkOptions.jvmArgumentProviders)
-        }
-
-        private fun <T> isNullOrEmpty(list: MutableList<T?>?): Boolean {
-            return list == null || list.isEmpty()
+            return forkOptions.jvmArgumentProviders != null && forkOptions.jvmArgumentProviders!!.isNotEmpty()
         }
     }
 }

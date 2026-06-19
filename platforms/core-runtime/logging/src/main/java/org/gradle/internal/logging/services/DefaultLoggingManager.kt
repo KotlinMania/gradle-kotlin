@@ -46,7 +46,7 @@ class DefaultLoggingManager(
     private val loggingOutput: LoggingOutputInternal
     private val stdoutListeners: MutableSet<StandardOutputListener?> = LinkedHashSet<StandardOutputListener?>()
     private val stderrListeners: MutableSet<StandardOutputListener?> = LinkedHashSet<StandardOutputListener?>()
-    private val outputEventListeners: MutableSet<OutputEventListener?> = LinkedHashSet<OutputEventListener?>()
+    private val outputEventListeners: MutableSet<OutputEventListener> = LinkedHashSet<OutputEventListener>()
 
     init {
         this.loggingOutput = loggingRouter
@@ -113,9 +113,8 @@ class DefaultLoggingManager(
         return this
     }
 
-    override fun getLevel(): LogLevel? {
-        return slf4jLoggingSystem.level
-    }
+    override val level: LogLevel?
+        get() = slf4jLoggingSystem.levelValue
 
     override fun captureSystemSources(): DefaultLoggingManager {
         stdOutLoggingSystem.enableCapture()
@@ -124,9 +123,8 @@ class DefaultLoggingManager(
         return this
     }
 
-    override fun getStandardOutputCaptureLevel(): LogLevel? {
-        return stdOutLoggingSystem.level
-    }
+    override val standardOutputCaptureLevel: LogLevel?
+        get() = stdOutLoggingSystem.levelValue
 
     override fun captureStandardOutput(level: LogLevel?): DefaultLoggingManager {
         stdOutLoggingSystem.setLevel(level)
@@ -138,9 +136,8 @@ class DefaultLoggingManager(
         return this
     }
 
-    override fun getStandardErrorCaptureLevel(): LogLevel? {
-        return stdErrLoggingSystem.level
-    }
+    override val standardErrorCaptureLevel: LogLevel?
+        get() = stdErrLoggingSystem.levelValue
 
     override fun enableUserStandardOutputListeners(): LoggingManagerInternal {
         enableStdOutListeners = true
@@ -159,11 +156,11 @@ class DefaultLoggingManager(
         }
     }
 
-    override fun addStandardOutputListener(outputStream: OutputStream?) {
+    override fun addStandardOutputListener(outputStream: OutputStream) {
         addStandardOutputListener(StreamBackedStandardOutputListener(outputStream))
     }
 
-    override fun addStandardErrorListener(outputStream: OutputStream?) {
+    override fun addStandardErrorListener(outputStream: OutputStream) {
         addStandardErrorListener(StreamBackedStandardOutputListener(outputStream))
     }
 
@@ -179,13 +176,13 @@ class DefaultLoggingManager(
         }
     }
 
-    override fun addOutputEventListener(listener: OutputEventListener?) {
+    override fun addOutputEventListener(listener: OutputEventListener) {
         if (outputEventListeners.add(listener) && started) {
             loggingOutput.addOutputEventListener(listener)
         }
     }
 
-    override fun removeOutputEventListener(listener: OutputEventListener?) {
+    override fun removeOutputEventListener(listener: OutputEventListener) {
         if (outputEventListeners.remove(listener) && started) {
             loggingOutput.removeOutputEventListener(listener)
         }
@@ -211,7 +208,7 @@ class DefaultLoggingManager(
         loggingRouter.flush()
     }
 
-    private class StartableLoggingRouter(private val loggingRouter: LoggingRouter) : Stoppable {
+    private class StartableLoggingRouter(val loggingRouter: LoggingRouter) : Stoppable {
         private var level: LogLevel? = null
         private var originalState: LoggingSystem.Snapshot? = null
         private var consoleAttachment: Runnable? = null
@@ -276,7 +273,7 @@ class DefaultLoggingManager(
         }
     }
 
-    private class StartableLoggingSystem(private val loggingSystem: LoggingSourceSystem, private var level: LogLevel?) : Stoppable {
+    private class StartableLoggingSystem(private val loggingSystem: LoggingSourceSystem, var levelValue: LogLevel?) : Stoppable {
         private var enabled = false
         private var originalState: LoggingSystem.Snapshot? = null
 
@@ -285,8 +282,8 @@ class DefaultLoggingManager(
          */
         fun start() {
             originalState = loggingSystem.snapshot()
-            if (level != null) {
-                loggingSystem.setLevel(level)
+            if (levelValue != null) {
+                loggingSystem.setLevel(levelValue)
             }
             if (enabled) {
                 loggingSystem.startCapture()
@@ -312,11 +309,11 @@ class DefaultLoggingManager(
          * Sets the logging level for this log system. Does not take effect until started .
          */
         fun setLevel(logLevel: LogLevel?) {
-            if (this.level == logLevel) {
+            if (this.levelValue == logLevel) {
                 return
             }
 
-            this.level = logLevel
+            this.levelValue = logLevel
             if (originalState != null) {
                 // started, update the log level
                 loggingSystem.setLevel(logLevel)

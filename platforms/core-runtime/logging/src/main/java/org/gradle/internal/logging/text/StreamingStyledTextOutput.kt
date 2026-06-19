@@ -23,7 +23,7 @@ import java.io.IOException
  * A [StyledTextOutput] implementation which writes text to some char stream. Ignores any
  * styling information.
  */
-class StreamingStyledTextOutput private constructor(target: Any?, private val listener: StandardOutputListener) : AbstractStyledTextOutput(), Closeable {
+class StreamingStyledTextOutput private constructor(target: Any, private val listener: StandardOutputListener) : AbstractStyledTextOutput(), Closeable {
     private val closeable: Closeable?
 
     /**
@@ -36,7 +36,7 @@ class StreamingStyledTextOutput private constructor(target: Any?, private val li
      * Creates a text output which writes text to the given appendable.
      * @param appendable The appendable.
      */
-    constructor(appendable: Appendable?) : this(appendable, StreamBackedStandardOutputListener(appendable))
+    constructor(appendable: Appendable) : this(appendable, StreamBackedStandardOutputListener(appendable))
 
     init {
         closeable = if (target is Closeable) target else null

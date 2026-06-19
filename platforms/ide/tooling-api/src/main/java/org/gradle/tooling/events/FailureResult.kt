@@ -15,6 +15,8 @@
  */
 package org.gradle.tooling.events
 
+import org.gradle.tooling.Failure
+
 /**
  * Describes how an operation finished with failures.
  *
@@ -26,6 +28,5 @@ interface FailureResult : OperationResult {
      *
      * @return the failures, empty if the operation failed without any specific failure information.
      */
-    @JvmField
     val failures: MutableList<out Failure?>?
 }

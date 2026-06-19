@@ -23,12 +23,12 @@ import org.gradle.internal.resource.metadata.ExternalResourceMetaData
 import java.io.File
 import java.net.URI
 
-class FileResourceConnector(private val fileSystem: FileSystem?, private val listener: FileResourceListener?) : FileResourceRepository {
+class FileResourceConnector(private val fileSystem: FileSystem, private val listener: FileResourceListener) : FileResourceRepository {
     override fun withProgressLogging(): ExternalResourceRepository {
         return this
     }
 
-    override fun localResource(file: File?): LocalBinaryResource {
+    override fun localResource(file: File): LocalBinaryResource {
         return LocalFileStandInExternalResource(file, fileSystem, listener)
     }
 
@@ -41,17 +41,17 @@ class FileResourceConnector(private val fileSystem: FileSystem?, private val lis
         return LocalFileStandInExternalResource(localFile, fileSystem, listener)
     }
 
-    override fun resource(file: File?): LocallyAvailableExternalResource {
+    override fun resource(file: File): LocallyAvailableExternalResource {
         return LocalFileStandInExternalResource(file, fileSystem, listener)
     }
 
-    override fun resource(file: File?, originUri: URI?, originMetadata: ExternalResourceMetaData?): LocallyAvailableExternalResource {
+    override fun resource(file: File, originUri: URI, originMetadata: ExternalResourceMetaData?): LocallyAvailableExternalResource {
         return DefaultLocallyAvailableExternalResource(originUri, file, originMetadata, fileSystem)
     }
 
     companion object {
         private fun getFile(location: ExternalResourceName): File {
-            return File(location.getUri())
+            return File(location.uri)
         }
     }
 }

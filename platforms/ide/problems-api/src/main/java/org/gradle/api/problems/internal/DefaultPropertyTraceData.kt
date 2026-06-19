@@ -18,7 +18,7 @@ package org.gradle.api.problems.internal
 import com.google.common.base.Objects
 
 class DefaultPropertyTraceData(private val trace: String) : PropertyTraceData {
-    override fun equals(o: Any): Boolean {
+    override fun equals(o: Any?): Boolean {
         if (o !is DefaultPropertyTraceData) {
             return false
         }
@@ -34,7 +34,7 @@ class DefaultPropertyTraceData(private val trace: String) : PropertyTraceData {
         return trace
     }
 
-    private class DefaultPropertyTraceDataBuilder : PropertyTraceDataSpec, AdditionalDataBuilder<PropertyTraceData?> {
+    private class DefaultPropertyTraceDataBuilder : PropertyTraceDataSpec, AdditionalDataBuilder<PropertyTraceData> {
         private var trace: String? = null
 
         constructor(from: PropertyTraceData) {

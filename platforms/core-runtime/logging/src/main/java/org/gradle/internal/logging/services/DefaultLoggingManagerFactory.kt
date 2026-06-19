@@ -21,11 +21,11 @@ import org.gradle.internal.logging.config.LoggingRouter
 import org.gradle.internal.logging.config.LoggingSourceSystem
 
 class DefaultLoggingManagerFactory(
-    private val loggingRouter: LoggingRouter?,
-    private val slfLoggingSystem: LoggingSourceSystem?,
-    private val javaUtilLoggingSystem: LoggingSourceSystem?,
-    private val stdOutLoggingSystem: LoggingSourceSystem?,
-    private val stdErrLoggingSystem: LoggingSourceSystem?
+    private val loggingRouter: LoggingRouter,
+    private val slfLoggingSystem: LoggingSourceSystem,
+    private val javaUtilLoggingSystem: LoggingSourceSystem,
+    private val stdOutLoggingSystem: LoggingSourceSystem,
+    private val stdErrLoggingSystem: LoggingSourceSystem
 ) : LoggingManagerFactory {
     private val rootManager: DefaultLoggingManager
     private var created = false
@@ -34,14 +34,13 @@ class DefaultLoggingManagerFactory(
         rootManager = newManager()
     }
 
-    override fun getRoot(): LoggingManagerInternal {
-        return rootManager
-    }
+    override val root: LoggingManagerInternal
+        get() = rootManager
 
     override fun createLoggingManager(): LoggingManagerInternal {
         if (!created) {
             created = true
-            return getRoot()
+            return root
         }
         return newManager()
     }

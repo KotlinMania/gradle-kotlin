@@ -102,7 +102,7 @@ class DocumentationRegistry {
     }
 
     fun getDocumentationRecommendationFor(topic: String, docLink: DocLink): String {
-        val url = docLink.url
+        val url = docLink.getUrl()
         return getRecommendationString(topic, if (url == null) "<N/A>" else url)
     }
 

@@ -25,7 +25,7 @@ import java.util.Collections
 class DefaultDeprecatedUsageProgressDetails(@field:VisibleForTesting val featureUsage: DeprecatedFeatureUsage, private val diagnostics: ProblemDiagnostics) : DeprecatedUsageProgressDetails,
     CustomOperationTraceSerialization {
     override fun getSummary(): String {
-        return featureUsage.getSummary()
+        return featureUsage.summary
     }
 
     override fun getRemovalDetails(): String {
@@ -42,7 +42,7 @@ class DefaultDeprecatedUsageProgressDetails(@field:VisibleForTesting val feature
 
     override fun getDocumentationUrl(): String {
         val documentationUrl = featureUsage.documentationUrl
-        return (if (documentationUrl == null) null else documentationUrl.url)!!
+        return (if (documentationUrl == null) null else documentationUrl.getUrl())!!
     }
 
     override fun getType(): String {
@@ -50,7 +50,7 @@ class DefaultDeprecatedUsageProgressDetails(@field:VisibleForTesting val feature
     }
 
     override fun getStackTrace(): MutableList<StackTraceElement> {
-        return diagnostics.stack
+        return diagnostics.getStack() ?: mutableListOf()
     }
 
     override fun getCustomOperationTraceSerializableModel(): Any {

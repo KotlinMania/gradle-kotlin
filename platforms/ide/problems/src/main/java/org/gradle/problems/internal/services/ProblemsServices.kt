@@ -26,11 +26,11 @@ import org.gradle.internal.service.scopes.AbstractGradleModuleServices
  * See the `META-INF/services` directory to find the respective metadata file triggering the DI framework to load this class.
  */
 class ProblemsServices : AbstractGradleModuleServices() {
-    public override fun registerBuildTreeServices(registration: ServiceRegistration) {
-        registration.addProvider(ProblemsBuildTreeServices())
+    public override fun registerBuildTreeServices(registration: ServiceRegistration?) {
+        registration!!.addProvider(ProblemsBuildTreeServices())
     }
 
-    public override fun registerBuildSessionServices(registration: ServiceRegistration) {
-        registration.addProvider(ProblemsBuildSessionServices())
+    public override fun registerBuildSessionServices(registration: ServiceRegistration?) {
+        registration!!.addProvider(ProblemsBuildSessionServices())
     }
 }

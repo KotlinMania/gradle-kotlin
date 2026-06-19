@@ -19,5 +19,4 @@ import org.gradle.tooling.events.test.source.OtherSource
 
 
 object DefaultOtherSource : OtherSource {
-    val instance: DefaultOtherSource = DefaultOtherSource()
 }

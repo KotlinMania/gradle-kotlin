@@ -90,6 +90,10 @@ class DefaultJavaLanguageVersion private constructor(private val version: Int) :
             override fun compareTo(javaLanguageVersion: JavaLanguageVersion): Int {
                 return Integer.compare(asInt(), javaLanguageVersion.asInt())
             }
+
+            override fun toString(): String {
+                return "unknown"
+            }
         }
 
         fun of(version: Int): JavaLanguageVersion? {

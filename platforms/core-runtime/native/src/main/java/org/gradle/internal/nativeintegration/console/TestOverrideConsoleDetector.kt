@@ -15,7 +15,6 @@
  */
 package org.gradle.internal.nativeintegration.console
 
-import java.lang.Boolean
 import kotlin.String
 
 class TestOverrideConsoleDetector(private val detector: ConsoleDetector) : ConsoleDetector {
@@ -28,7 +27,7 @@ class TestOverrideConsoleDetector(private val detector: ConsoleDetector) : Conso
     }
 
     override fun isInteractiveConsole(): Boolean {
-        if (Boolean.getBoolean(INTERACTIVE_CONSOLE_TOGGLE)) {
+        if (java.lang.Boolean.getBoolean(INTERACTIVE_CONSOLE_TOGGLE)) {
             return true
         }
         return detector.isInteractiveConsole()

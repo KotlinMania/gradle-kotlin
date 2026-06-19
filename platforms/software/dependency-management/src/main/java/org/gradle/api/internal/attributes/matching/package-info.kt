@@ -15,36 +15,4 @@
  */
 package org.gradle.api.internal.attributes.matching
 
-import org.gradle.internal.component.model.AttributeMatchingExplanationBuilder.Companion.logging
-import org.gradle.internal.component.model.AttributeMatchingExplanationBuilder.noCandidates
-import org.gradle.internal.component.model.AttributeMatchingExplanationBuilder.singleMatch
-import org.gradle.internal.component.model.AttributeMatchingExplanationBuilder.candidateDoesNotMatchAttributes
-import org.gradle.internal.component.model.AttributeMatchingExplanationBuilder.candidateIsSuperSetOfAllOthers
-import org.gradle.internal.component.model.AttributeMatchingExplanationBuilder.candidateAttributeMissing
-import org.gradle.internal.component.model.AttributeMatchingExplanationBuilder.candidateAttributeDoesNotMatch
-import org.gradle.internal.Cast.uncheckedCast
-import org.gradle.internal.component.model.DefaultMultipleCandidateResult.hasResult
-import org.gradle.internal.component.model.DefaultMultipleCandidateResult.getMatches
-import org.gradle.internal.component.model.ComponentArtifactMetadata.getName
-import org.gradle.internal.component.local.model.DefaultProjectComponentSelector.getAttributes
-import org.gradle.internal.UncheckedException.Companion.throwAsUncheckedException
-import org.gradle.api.problems.internal.ProblemSpecInternal.details
-import org.gradle.api.problems.internal.ProblemSpecInternal.solution
-import org.gradle.api.problems.internal.ProblemSpecInternal.id
-import org.gradle.api.problems.internal.GradleCoreProblemGroup.versionCatalog
-import org.gradle.api.problems.internal.ProblemSpecInternal.contextualLabel
-import org.gradle.api.problems.internal.ProblemSpecInternal.documentedAt
-import org.gradle.internal.deprecation.Documentation.Companion.userManual
-import org.gradle.internal.management.VersionCatalogBuilderInternal.build
-import org.gradle.util.internal.IncubationLogger.incubatingFeatureUsed
-import org.gradle.internal.Try.get
-import org.gradle.internal.logging.text.TreeFormatter.node
-import org.gradle.internal.logging.text.TreeFormatter.startChildren
-import org.gradle.internal.logging.text.TreeFormatter.endChildren
-import org.gradle.internal.logging.text.TreeFormatter.toString
-import org.gradle.internal.service.ServiceRegistry.get
-import org.gradle.api.logging.Logging.getLogger
-import org.gradle.internal.lazy.Lazy.Companion.unsafe
-import org.gradle.internal.lazy.Lazy.Factory.of
-import org.gradle.api.problems.ProblemSpec.solution
 

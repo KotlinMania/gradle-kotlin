@@ -21,5 +21,5 @@ package org.gradle.api.specs
  * @param <T> The target type for this Spec
 </T> */
 interface Spec<T> {
-    fun isSatisfiedBy(element: T?): Boolean
+    fun isSatisfiedBy(element: T): Boolean
 }

@@ -18,5 +18,4 @@
  */
 package org.gradle.tooling.model.idea
 
-import org.gradle.tooling.internal.consumer.versioning.ModelMapping.getVersionAdded
 

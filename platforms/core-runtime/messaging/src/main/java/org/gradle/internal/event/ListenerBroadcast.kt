@@ -96,7 +96,7 @@ open class ListenerBroadcast<T>(
      */
     @Synchronized
     fun addAll(listeners: MutableCollection<out T>) {
-        broadcast = broadcast.addAll(listeners)
+        broadcast = broadcast.addAll(listeners)!!
     }
 
     /**
@@ -122,7 +122,7 @@ open class ListenerBroadcast<T>(
      */
     @Synchronized
     fun remove(listener: Any) {
-        broadcast = broadcast.remove(listener)
+        broadcast = broadcast.remove(listener)!!
     }
 
     /**
@@ -132,7 +132,7 @@ open class ListenerBroadcast<T>(
      */
     @Synchronized
     fun removeAll(listeners: MutableCollection<*>) {
-        broadcast = broadcast.removeAll(listeners)
+        broadcast = broadcast.removeAll(listeners)!!
     }
 
     /**
@@ -156,7 +156,7 @@ open class ListenerBroadcast<T>(
      *
      * @param event The event
      */
-    override fun dispatch(event: MethodInvocation) {
+    override fun dispatch(event: MethodInvocation?) {
         broadcast.dispatch(event)
     }
 

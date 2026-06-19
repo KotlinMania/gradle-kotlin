@@ -22,8 +22,13 @@ import org.gradle.util.GradleVersion
 import java.io.File
 import java.io.FileFilter
 import java.util.Arrays
+import java.util.SortedSet
 
 class VersionSpecificCacheDirectoryScanner(@JvmField val baseDir: File) {
+    fun getBaseDir(): File {
+        return baseDir
+    }
+
     fun getDirectory(gradleVersion: GradleVersion): File {
         return File(baseDir, gradleVersion.getVersion())
     }

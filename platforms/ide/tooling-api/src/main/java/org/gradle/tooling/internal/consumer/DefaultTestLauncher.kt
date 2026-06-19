@@ -15,10 +15,12 @@
  */
 package org.gradle.tooling.internal.consumer
 
-import com.google.common.collect.ImmutableList
-import com.google.common.collect.ImmutableMap
-import com.google.common.collect.ImmutableSet
+import java.util.Arrays
+import java.util.function.Function
+import kotlin.Int
+import kotlin.Throwable
 import org.gradle.api.Action
+import org.gradle.tooling.Failure
 import org.gradle.tooling.ResultHandler
 import org.gradle.tooling.TestExecutionException
 import org.gradle.tooling.TestLauncher
@@ -32,13 +34,8 @@ import org.gradle.tooling.internal.protocol.test.InternalJvmTestRequest
 import org.gradle.tooling.internal.protocol.test.InternalTaskSpec
 import org.gradle.util.internal.CollectionUtils.collect
 import org.gradle.util.internal.CollectionUtils.toList
-import java.lang.String
-import java.util.Arrays
-import java.util.function.Function
-import kotlin.Int
-import kotlin.Throwable
 
-class DefaultTestLauncher(connection: AsyncConsumerActionExecutor, parameters: ConnectionParameters) : AbstractLongRunningOperation<DefaultTestLauncher?>(parameters), TestLauncher {
+class DefaultTestLauncher(connection: AsyncConsumerActionExecutor, parameters: ConnectionParameters) : AbstractLongRunningOperation<DefaultTestLauncher>(parameters), TestLauncher {
     private val connection: AsyncConsumerActionExecutor
     private val operationDescriptors: MutableSet<TestOperationDescriptor?> = LinkedHashSet<TestOperationDescriptor?>()
     private val testClassNames: MutableSet<String?> = LinkedHashSet<String?>()
@@ -49,12 +46,12 @@ class DefaultTestLauncher(connection: AsyncConsumerActionExecutor, parameters: C
     private val taskSpecs: MutableList<InternalTaskSpec?> = ArrayList<InternalTaskSpec?>()
 
     init {
-        operationParamsBuilder.setTasks(mutableListOf<String?>())
+        operationParamsBuilder.setTasks(mutableListOf())
         operationParamsBuilder.setEntryPoint("TestLauncher API")
         this.connection = connection
     }
 
-    val `this`: DefaultTestLauncher?
+    override val `this`: DefaultTestLauncher
         get() = this
 
     override fun withTests(vararg testDescriptors: TestOperationDescriptor?): TestLauncher {
@@ -63,7 +60,7 @@ class DefaultTestLauncher(connection: AsyncConsumerActionExecutor, parameters: C
     }
 
     override fun withTests(descriptors: Iterable<out TestOperationDescriptor?>?): TestLauncher {
-        operationDescriptors.addAll(toList(descriptors))
+        operationDescriptors.addAll((descriptors ?: emptyList()).toList())
         return this
     }
 
@@ -72,10 +69,10 @@ class DefaultTestLauncher(connection: AsyncConsumerActionExecutor, parameters: C
         return this
     }
 
-    override fun withJvmTestClasses(testClasses: Iterable<String?>): TestLauncher {
-        val newRequests = collect<InternalJvmTestRequest?, String?>(testClasses, Function { testClass: String? -> DefaultInternalJvmTestRequest(testClass, null, null) })
+    override fun withJvmTestClasses(testClasses: Iterable<String?>?): TestLauncher {
+        val newRequests = collect<InternalJvmTestRequest?, String?>((testClasses ?: emptyList()), Function { testClass: String? -> DefaultInternalJvmTestRequest(testClass, null, null) })
         internalJvmTestRequests.addAll(newRequests)
-        testClassNames.addAll(toList<String?>(testClasses))
+        testClassNames.addAll((testClasses ?: emptyList()).toList())
         return this
     }
 
@@ -84,22 +81,22 @@ class DefaultTestLauncher(connection: AsyncConsumerActionExecutor, parameters: C
         return this
     }
 
-    override fun withJvmTestMethods(testClass: String?, methods: Iterable<String?>): TestLauncher {
-        val newRequests = collect<InternalJvmTestRequest?, String?>(methods, Function { methodName: String? -> DefaultInternalJvmTestRequest(testClass, methodName, null) })
+    override fun withJvmTestMethods(testClass: String?, methods: Iterable<String?>?): TestLauncher {
+        val newRequests = collect<InternalJvmTestRequest?, String?>((methods ?: emptyList()), Function { methodName: String? -> DefaultInternalJvmTestRequest(testClass, methodName, null) })
         this.internalJvmTestRequests.addAll(newRequests)
         this.testClassNames.add(testClass)
         return this
     }
 
-    override fun withTaskAndTestClasses(task: String?, testClasses: Iterable<String?>): TestLauncher {
-        val tests = collect<InternalJvmTestRequest?, String?>(testClasses, Function { testClass: String? -> DefaultInternalJvmTestRequest(testClass, null, null) })
+    override fun withTaskAndTestClasses(task: String?, testClasses: Iterable<String?>?): TestLauncher {
+        val tests = collect<InternalJvmTestRequest?, String?>((testClasses ?: emptyList()), Function { testClass: String? -> DefaultInternalJvmTestRequest(testClass, null, null) })
 
         addTests(task, tests)
         return this
     }
 
-    override fun withTaskAndTestMethods(task: String?, testClass: String?, methods: Iterable<String?>): TestLauncher {
-        val tests = collect<InternalJvmTestRequest?, String?>(methods, Function { methodName: String? -> DefaultInternalJvmTestRequest(testClass, methodName, null) })
+    override fun withTaskAndTestMethods(task: String?, testClass: String?, methods: Iterable<String?>?): TestLauncher {
+        val tests = collect<InternalJvmTestRequest?, String?>((methods ?: emptyList()), Function { methodName: String? -> DefaultInternalJvmTestRequest(testClass, methodName, null) })
         addTests(task, tests)
         return this
     }
@@ -128,7 +125,7 @@ class DefaultTestLauncher(connection: AsyncConsumerActionExecutor, parameters: C
     }
 
     override fun run() {
-        val handler = BlockingResultHandler<Void?>(Void::class.java)
+        val handler = BlockingResultHandler<Void>(Void::class.java as Class<Void?>)
         run(handler)
         handler.result
     }
@@ -142,21 +139,24 @@ class DefaultTestLauncher(connection: AsyncConsumerActionExecutor, parameters: C
                 throw TestExecutionException("No test for task " + entry.key + " declared for execution.")
             }
         }
-        val parameters = consumerOperationParameters
+        val operationParameters = consumerOperationParameters
         val testExecutionRequest = TestExecutionRequest(
             operationDescriptors,
-            ImmutableList.copyOf<String?>(testClassNames),
-            ImmutableSet.copyOf<InternalJvmTestRequest?>(internalJvmTestRequests),
-            debugOptions, ImmutableMap.copyOf<String?, MutableList<InternalJvmTestRequest?>?>(tasksAndTests),
+            ArrayList<String?>(testClassNames),
+            LinkedHashSet<InternalJvmTestRequest?>(internalJvmTestRequests),
+            debugOptions,
+            LinkedHashMap<String?, MutableList<InternalJvmTestRequest?>?>(tasksAndTests),
             isRunDefaultTasks,
             taskSpecs
         )
         connection.run<Void?>(object : ConsumerAction<Void?> {
+            override val parameters = operationParameters
+
             override fun run(connection: ConsumerConnection): Void? {
                 connection.runTests(testExecutionRequest, parameters)
                 return null
             }
-        }, DefaultTestLauncher.ResultHandlerAdapter(handler))
+        }, ResultHandlerAdapter(handler))
     }
 
     private inner class ResultHandlerAdapter(handler: ResultHandler<in Void?>?) : org.gradle.tooling.internal.consumer.ResultHandlerAdapter<Void?>(
@@ -168,10 +168,10 @@ class DefaultTestLauncher(connection: AsyncConsumerActionExecutor, parameters: C
         })
     )
 
-    override fun withTestsFor(testSpec: Action<TestSpecs?>): TestLauncher {
+    override fun withTestsFor(testSpec: Action<TestSpecs?>?): TestLauncher {
         val testSpecs = DefaultTestSpecs()
-        testSpec.execute(testSpecs)
-        taskSpecs.addAll(testSpecs.getTestSpecs())
+        testSpec!!.execute(testSpecs)
+        taskSpecs.addAll(testSpecs.testSpecs)
         return this
     }
 }

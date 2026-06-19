@@ -31,7 +31,7 @@ import java.util.stream.Collectors
 
 class ApacheDirectoryListingParser {
     @Throws(Exception::class)
-    fun parse(baseURI: URI, content: InputStream, contentType: String): MutableList<String?> {
+    fun parse(baseURI: URI, content: InputStream, contentType: String?): MutableList<String> {
         var baseURI = baseURI
         baseURI = addTrailingSlashes(baseURI)
         if (contentType == null || !contentType.startsWith("text/html")) {
@@ -41,7 +41,7 @@ class ApacheDirectoryListingParser {
         val document = Jsoup.parse(content, contentEncoding.name(), baseURI.toString())
         val elements = document.select("a[href]")
         val hrefs = elements.stream()
-            .map<String?> { it: Element? -> it!!.attr("href") }
+            .map<String> { it: Element? -> it!!.attr("href") }
             .collect(Collectors.toList())
         val uris = resolveURIs(baseURI, hrefs)
         return filterNonDirectChilds(baseURI, uris)
@@ -59,12 +59,12 @@ class ApacheDirectoryListingParser {
     }
 
     @Throws(MalformedURLException::class)
-    private fun filterNonDirectChilds(baseURI: URI, inputURIs: MutableList<URI>): MutableList<String?> {
+    private fun filterNonDirectChilds(baseURI: URI, inputURIs: MutableList<URI>): MutableList<String> {
         val baseURIPort = baseURI.getPort()
         val baseURIHost = baseURI.getHost()
         val baseURIScheme = baseURI.getScheme()
 
-        val uris: MutableList<String?> = ArrayList<String?>()
+        val uris: MutableList<String> = ArrayList<String>()
         val prefixPath = baseURI.getPath()
         for (parsedURI in inputURIs) {
             if (parsedURI.getHost() != null && parsedURI.getHost() != baseURIHost) {

@@ -20,22 +20,20 @@ import java.util.stream.Collectors
 import javax.inject.Inject
 
 class AutoInstalledInstallationSupplier @Inject constructor(private val configuration: ToolchainConfiguration, private val cacheDirProvider: JdkCacheDirectory) : InstallationSupplier {
-    override fun getSourceName(): String {
-        return "Auto-provisioned by Gradle"
-    }
+    override val sourceName: String = "Auto-provisioned by Gradle"
 
-    override fun get(): MutableSet<InstallationLocation?> {
-        if (configuration.isAutoDetectEnabled() || configuration.isDownloadEnabled()) {
-            return cacheDirProvider.listJavaHomes().stream()
-                .map<InstallationLocation?> { javaHome: File? -> this.asInstallation(javaHome) }
+    override fun get(): MutableSet<InstallationLocation> {
+        if (configuration.isAutoDetectEnabled || configuration.isDownloadEnabled) {
+            return (cacheDirProvider.listJavaHomes() ?: emptySet()).filterNotNull().stream()
+                .map<InstallationLocation> { javaHome: File -> this.asInstallation(javaHome) }
                 .collect(Collectors.toSet())
         } else {
-            return mutableSetOf<InstallationLocation?>()
+            return mutableSetOf()
         }
     }
 
-    private fun asInstallation(javaHome: File?): InstallationLocation {
-        return InstallationLocation.Companion.autoProvisioned(javaHome, getSourceName())
+    private fun asInstallation(javaHome: File): InstallationLocation {
+        return InstallationLocation.Companion.autoProvisioned(javaHome, sourceName)
     }
 
     companion object {

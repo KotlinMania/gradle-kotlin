@@ -15,17 +15,4 @@
  */
 package org.gradle.internal.enterprise.impl.legacy
 
-import org.gradle.StartParameter.isNoBuildScan
-import org.gradle.StartParameter.isBuildScan
-import org.gradle.internal.service.ServiceRegistration.add
-import org.gradle.internal.service.ServiceRegistry.find
-import org.gradle.api.internal.StartParameterInternal.isUseEmptySettings
-import org.gradle.internal.deprecation.DeprecationLogger.deprecateIndirectUsage
-import org.gradle.internal.deprecation.DeprecationMessageBuilder.withAdvice
-import org.gradle.internal.deprecation.DeprecationMessageBuilder.willBecomeAnErrorInGradle10
-import org.gradle.internal.deprecation.Documentation.AbstractBuilder.withUpgradeGuideSection
-import org.gradle.internal.deprecation.DeprecationMessageBuilder.WithDocumentation.nagUser
-import org.gradle.internal.cc.impl.InputTrackingState.disableForCurrentThread
-import org.gradle.internal.cc.impl.InputTrackingState.restoreForCurrentThread
-import org.gradle.process.internal.JavaForkOptionsFactory.newJavaForkOptions
 

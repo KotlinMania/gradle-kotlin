@@ -22,8 +22,8 @@ import org.gradle.internal.serialize.Encoder
 import org.gradle.internal.serialize.ListSerializer
 import org.gradle.internal.serialize.Serializer
 
-class SelectOptionPromptEventSerializer : Serializer<SelectOptionPromptEvent?> {
-    private val optionsSerializer: Serializer<MutableList<String?>?> = ListSerializer<String?>(BaseSerializerFactory.STRING_SERIALIZER)
+class SelectOptionPromptEventSerializer : Serializer<SelectOptionPromptEvent> {
+    private val optionsSerializer: Serializer<List<String>> = ListSerializer<String>(BaseSerializerFactory.STRING_SERIALIZER)
 
     @Throws(Exception::class)
     override fun write(encoder: Encoder, value: SelectOptionPromptEvent) {
@@ -35,6 +35,6 @@ class SelectOptionPromptEventSerializer : Serializer<SelectOptionPromptEvent?> {
 
     @Throws(Exception::class)
     override fun read(decoder: Decoder): SelectOptionPromptEvent {
-        return SelectOptionPromptEvent(decoder.readLong(), decoder.readString(), optionsSerializer.read(decoder), decoder.readSmallInt())
+        return SelectOptionPromptEvent(decoder.readLong(), decoder.readString(), optionsSerializer.read(decoder).toMutableList(), decoder.readSmallInt())
     }
 }

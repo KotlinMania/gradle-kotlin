@@ -22,15 +22,15 @@ import org.gradle.internal.resource.connector.ResourceConnectorSpecification
 import org.gradle.internal.resource.transfer.ExternalResourceConnector
 
 class GcsConnectorFactory : ResourceConnectorFactory {
-    override fun getSupportedProtocols(): MutableSet<String?> {
-        return mutableSetOf<String?>("gcs")
+    override fun getSupportedProtocols(): MutableSet<String> {
+        return mutableSetOf("gcs")
     }
 
-    override fun getSupportedAuthentication(): MutableSet<Class<out Authentication?>?> {
-        return mutableSetOf<Class<out Authentication?>?>()
+    override fun getSupportedAuthentication(): MutableSet<Class<out Authentication>> {
+        return mutableSetOf()
     }
 
-    override fun createResourceConnector(connectionDetails: ResourceConnectorSpecification?): ExternalResourceConnector {
+    override fun createResourceConnector(connectionDetails: ResourceConnectorSpecification): ExternalResourceConnector {
         try {
             return GcsResourceConnector(GcsClient.Companion.create(GcsConnectionProperties()))
         } catch (e: Exception) {

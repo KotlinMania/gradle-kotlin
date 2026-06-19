@@ -24,11 +24,9 @@ import org.gradle.tooling.events.task.TaskFailureResult
  */
 class DefaultTaskFailureResult(startTime: Long, endTime: Long, failures: MutableList<out Failure?>?, private val taskExecutionDetails: TaskExecutionDetails) :
     DefaultOperationFailureResult(startTime, endTime, failures), TaskFailureResult {
-    override fun isIncremental(): Boolean {
-        return taskExecutionDetails.isIncremental()
-    }
+    override val isIncremental: Boolean
+        get() = taskExecutionDetails.isIncremental
 
-    override fun getExecutionReasons(): MutableList<String?>? {
-        return taskExecutionDetails.getExecutionReasons()
-    }
+    override val executionReasons: MutableList<String?>?
+        get() = taskExecutionDetails.executionReasons
 }

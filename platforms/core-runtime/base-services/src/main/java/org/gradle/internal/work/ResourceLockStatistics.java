@@ -39,7 +39,7 @@ public interface ResourceLockStatistics {
         }
 
         @Override
-        public <T> T measure(String operation, Iterable<? extends Describable> locks, Factory<T> factory) {
+        public <T extends @Nullable Object> @Nullable T measure(String operation, Iterable<? extends Describable> locks, Factory<T> factory) {
             return factory.create();
         }
 
@@ -64,7 +64,7 @@ public interface ResourceLockStatistics {
      * @param locks the resources which the operation is performed on
      * @param factory a factory which performs the operation
      */
-    <T extends @Nullable Object> T measure(String operation, Iterable<? extends Describable> locks, Factory<T> factory);
+    <T extends @Nullable Object> @Nullable T measure(String operation, Iterable<? extends Describable> locks, Factory<T> factory);
 
     /**
      * Called when the statistics collection is complete and any results should be reported.

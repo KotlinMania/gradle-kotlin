@@ -19,6 +19,6 @@ import org.gradle.api.logging.LogLevel
 
 class StreamingStyledTextOutputFactory(private val target: Appendable?) : AbstractStyledTextOutputFactory() {
     override fun create(logCategory: String?, logLevel: LogLevel?): StyledTextOutput {
-        return StreamingStyledTextOutput(target)
+        return StreamingStyledTextOutput(target!!)
     }
 }

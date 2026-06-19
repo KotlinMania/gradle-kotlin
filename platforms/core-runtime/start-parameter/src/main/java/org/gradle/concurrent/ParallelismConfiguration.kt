@@ -34,7 +34,6 @@ interface ParallelismConfiguration {
      *
      * @see .isParallelProjectExecutionEnabled
      */
-    @JvmField
     var isParallelProjectExecutionEnabled: Boolean
 
     /**
@@ -59,6 +58,5 @@ interface ParallelismConfiguration {
      * @throws IllegalArgumentException if `maxWorkerCount` is &lt; 1
      * @see .getMaxWorkerCount
      */
-    @JvmField
     var maxWorkerCount: Int
 }

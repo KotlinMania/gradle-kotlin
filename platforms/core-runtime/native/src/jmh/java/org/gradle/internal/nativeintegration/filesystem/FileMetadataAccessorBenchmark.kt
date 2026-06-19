@@ -52,9 +52,9 @@ class FileMetadataAccessorBenchmark {
     @Param(
         "FallbackFileMetadataAccessor", "NativePlatformBackedFileMetadataAccessor", "Jdk7FileMetadataAccessor", "NioFileMetadataAccessor"
     )
-    var accessorClassName: String? = null
+    lateinit var accessorClassName: String
 
-    var accessor: FileMetadataAccessor? = null
+    lateinit var accessor: FileMetadataAccessor
     var missing: File? = null
     var missingPath: Path? = null
     var directory: File? = null
@@ -85,23 +85,23 @@ class FileMetadataAccessorBenchmark {
         realFile!!.delete()
     }
 
-    private fun getAccessor(name: String?): FileMetadataAccessor? {
-        return ACCESSORS.get(name)
+    private fun getAccessor(name: String): FileMetadataAccessor {
+        return ACCESSORS.getValue(name)
     }
 
     @Benchmark
     fun stat_missing_file(bh: Blackhole) {
-        bh.consume(getAccessor(accessorClassName)!!.stat(missing!!))
+        bh.consume(getAccessor(accessorClassName).stat(missing!!))
     }
 
     @Benchmark
     fun stat_directory(bh: Blackhole) {
-        bh.consume(getAccessor(accessorClassName)!!.stat(directory!!))
+        bh.consume(getAccessor(accessorClassName).stat(directory!!))
     }
 
     @Benchmark
     fun stat_existing(bh: Blackhole) {
-        bh.consume(getAccessor(accessorClassName)!!.stat(realFile!!))
+        bh.consume(getAccessor(accessorClassName).stat(realFile!!))
     }
 
     private class Jdk7FileMetadataAccessor : FileMetadataAccessor {
@@ -126,11 +126,11 @@ class FileMetadataAccessorBenchmark {
 
     companion object {
         private val NATIVE_INTEGRATION: Native = Native.init(File("build/tmp/jmh-benchmark"))
-        private val ACCESSORS: MutableMap<String?, FileMetadataAccessor?> = ImmutableMap.builder<String?, FileMetadataAccessor?>()
+        private val ACCESSORS: Map<String, FileMetadataAccessor> = ImmutableMap.builder<String, FileMetadataAccessor>()
             .put(FallbackFileMetadataAccessor::class.java.getSimpleName(), FallbackFileMetadataAccessor())
             .put(
                 NativePlatformBackedFileMetadataAccessor::class.java.getSimpleName(),
-                NativePlatformBackedFileMetadataAccessor(NATIVE_INTEGRATION.get<net.rubygrapefruit.platform.file.Files?>(net.rubygrapefruit.platform.file.Files::class.java))
+                NativePlatformBackedFileMetadataAccessor(NATIVE_INTEGRATION.get<net.rubygrapefruit.platform.file.Files>(net.rubygrapefruit.platform.file.Files::class.java)!!)
             )
             .put(Jdk7FileMetadataAccessor::class.java.getSimpleName(), Jdk7FileMetadataAccessor())
             .put(NioFileMetadataAccessor::class.java.getSimpleName(), NioFileMetadataAccessor())

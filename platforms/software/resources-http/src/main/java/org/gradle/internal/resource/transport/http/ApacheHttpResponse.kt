@@ -26,7 +26,7 @@ import java.net.URI
  * An HTTP response from an [ApacheCommonsHttpClient].
  */
 @NullMarked
-class ApacheHttpResponse internal constructor(private val method: String, private val effectiveUri: URI, private val httpResponse: CloseableHttpResponse) : HttpClient.Response {
+class ApacheHttpResponse internal constructor(override val method: String, override val effectiveUri: URI, private val httpResponse: CloseableHttpResponse) : HttpClient.Response {
     private var closed = false
 
     override fun getHeader(name: String): String? {
@@ -34,22 +34,21 @@ class ApacheHttpResponse internal constructor(private val method: String, privat
         return if (header == null) null else header.getValue()
     }
 
-    @Throws(IOException::class)
-    override fun getContent(): InputStream {
-        val entity = httpResponse.getEntity()
-        if (entity == null) {
-            throw IOException(String.format("Response %d: %s has no content!", getStatusCode(), getStatusReason()))
+    @get:Throws(IOException::class)
+    override val content: InputStream
+        get() {
+            val entity = httpResponse.getEntity()
+            if (entity == null) {
+                throw IOException(String.format("Response %d: %s has no content!", statusCode, statusReason))
+            }
+            return entity.getContent()
         }
-        return entity.getContent()
-    }
 
-    override fun getStatusCode(): Int {
-        return httpResponse.getStatusLine().getStatusCode()
-    }
+    override val statusCode: Int
+        get() = httpResponse.getStatusLine().getStatusCode()
 
-    override fun getStatusReason(): String {
-        return httpResponse.getStatusLine().getReasonPhrase()
-    }
+    override val statusReason: String
+        get() = httpResponse.getStatusLine().getReasonPhrase()
 
     override fun close() {
         if (!closed) {
@@ -58,11 +57,4 @@ class ApacheHttpResponse internal constructor(private val method: String, privat
         }
     }
 
-    override fun getMethod(): String {
-        return method
-    }
-
-    override fun getEffectiveUri(): URI {
-        return effectiveUri
-    }
 }

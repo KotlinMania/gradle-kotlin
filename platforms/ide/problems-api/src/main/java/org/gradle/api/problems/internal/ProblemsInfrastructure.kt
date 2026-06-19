@@ -21,10 +21,10 @@ import org.gradle.problems.buildtree.ProblemStream
 import org.gradle.tooling.internal.provider.serialization.PayloadSerializer
 
 class ProblemsInfrastructure(
-    @JvmField val additionalDataBuilderFactory: AdditionalDataBuilderFactory,
-    val instantiator: Instantiator,
-    val payloadSerializer: PayloadSerializer,
-    val isolatableFactory: IsolatableFactory,
-    val isolatableSerializer: IsolatableToBytesSerializer,
+    @JvmField val additionalDataBuilderFactory: AdditionalDataBuilderFactory?,
+    val instantiator: Instantiator?,
+    val payloadSerializer: PayloadSerializer?,
+    val isolatableFactory: IsolatableFactory?,
+    val isolatableSerializer: IsolatableToBytesSerializer?,
     val problemStream: ProblemStream?
 )

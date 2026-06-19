@@ -34,25 +34,25 @@ abstract class PromptOutputEvent(timestamp: Long) : RenderableOutputEvent(timest
     /**
      * Converts the given text into the response object, or returns a new prompt to display to the user.
      */
-    abstract fun convert(text: String): PromptResult<*>?
+    abstract fun convert(text: String): PromptResult<*>
 
     class PromptResult<T> private constructor(val response: T?, val newPrompt: String?) {
         companion object {
-            fun <T> response(response: T?): PromptResult<T?> {
-                return PromptResult<T?>(response, null)
+            fun <T> response(response: T): PromptResult<T> {
+                return PromptResult(response, null)
             }
 
             @JvmStatic
-            fun <T> newPrompt(newPrompt: String): PromptResult<T?> {
-                return PromptResult<T?>(null, newPrompt)
+            fun <T> newPrompt(newPrompt: String): PromptResult<T> {
+                return PromptResult(null, newPrompt)
             }
         }
     }
 
-    abstract val prompt: String?
+    abstract val prompt: String
 
     override fun toString(): String {
-        return "[" + getLogLevel() + "] [" + category + "] '" + this.prompt + "'"
+        return "[" + logLevel + "] [" + category + "] '" + this.prompt + "'"
     }
 
     override fun withBuildOperationId(buildOperationId: OperationIdentifier): RenderableOutputEvent? {

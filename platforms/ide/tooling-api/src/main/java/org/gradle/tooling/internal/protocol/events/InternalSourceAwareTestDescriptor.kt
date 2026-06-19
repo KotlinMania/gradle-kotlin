@@ -15,6 +15,7 @@
  */
 package org.gradle.tooling.internal.protocol.events
 
+import org.gradle.tooling.internal.protocol.test.source.InternalTestSource
 import org.jspecify.annotations.NullMarked
 
 /**
@@ -29,6 +30,5 @@ interface InternalSourceAwareTestDescriptor : InternalJvmTestDescriptor {
      *
      * @since 9.4.0
      */
-    @JvmField
     val source: InternalTestSource?
 }

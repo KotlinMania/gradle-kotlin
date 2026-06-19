@@ -13,15 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gradle.internal.nativeintegration.filesystem
+package org.gradle.internal.nativeintegration.filesystem.services
 
+import org.gradle.internal.file.FileCanonicalizer
+import org.gradle.internal.file.FileException
 import java.io.File
+import java.io.IOException
 
-interface Symlink {
-    val isSymlinkCreationSupported: Boolean
-
-    @Throws(Exception::class)
-    fun symlink(link: File?, target: File?)
-
-    fun isSymlink(suspect: File?): Boolean
+internal class FallbackFileCanonicalizer : FileCanonicalizer {
+    @Throws(FileException::class)
+    override fun canonicalize(file: File): File? {
+        try {
+            return file.canonicalFile
+        } catch (e: IOException) {
+            throw FileException(String.format("Could not canonicalize file '%s'.", file), e)
+        }
+    }
 }

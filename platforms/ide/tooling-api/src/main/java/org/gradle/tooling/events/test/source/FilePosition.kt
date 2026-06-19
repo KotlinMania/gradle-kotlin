@@ -15,6 +15,7 @@
  */
 package org.gradle.tooling.events.test.source
 
+import java.io.File
 import org.gradle.api.Incubating
 
 /**

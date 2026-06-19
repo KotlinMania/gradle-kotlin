@@ -15,6 +15,17 @@
  */
 package org.gradle.integtests.tooling.r940
 
+import org.gradle.tooling.*
+import org.gradle.tooling.model.*
+import org.gradle.tooling.model.build.*
+import org.gradle.tooling.model.eclipse.*
+import org.gradle.tooling.model.gradle.*
+import org.gradle.tooling.model.idea.*
+import org.gradle.tooling.model.kotlin.dsl.*
+import org.gradle.tooling.internal.adapter.ProtocolToModelAdapter
+import java.io.File
+import org.gradle.integtests.tooling.r48.*
+
 import org.gradle.tooling.BuildAction
 import java.io.Serializable
 import kotlin.collections.ArrayList
@@ -22,7 +33,7 @@ import kotlin.collections.MutableCollection
 import kotlin.collections.MutableList
 
 class ActionRunsNestedActions : BuildAction<ActionRunsNestedActions.Models?> {
-    public override fun execute(controller: BuildController): Models {
+    public override fun execute(controller: BuildController?): Models {
         val buildModel: GradleBuild = controller.getBuildModel()
         val projectActions: MutableList<NestedAction?> = ArrayList<NestedAction?>()
         for (project in buildModel.getProjects()) {
@@ -39,7 +50,7 @@ class ActionRunsNestedActions : BuildAction<ActionRunsNestedActions.Models?> {
             this.project = project
         }
 
-        public override fun execute(controller: BuildController): CustomModel {
+        public override fun execute(controller: BuildController?): CustomModel {
             return controller.getModel(project, CustomModel::class.java)
         }
     }

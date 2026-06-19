@@ -18,17 +18,11 @@ package org.gradle.tooling.events.task.internal.java
 import org.gradle.tooling.events.task.java.JavaCompileTaskOperationResult
 import java.time.Duration
 
-class DefaultAnnotationProcessorResult(private val className: String?, private val type: JavaCompileTaskOperationResult.AnnotationProcessorResult.Type?, private val duration: Duration?) :
+class DefaultAnnotationProcessorResult(override val className: String?, override val type: JavaCompileTaskOperationResult.AnnotationProcessorResult.Type?, override val duration: Duration?) :
     JavaCompileTaskOperationResult.AnnotationProcessorResult {
-    override fun getClassName(): String? {
-        return className
-    }
 
-    override fun getType(): JavaCompileTaskOperationResult.AnnotationProcessorResult.Type? {
-        return type
-    }
 
-    override fun getDuration(): Duration? {
-        return duration
-    }
+
+
+
 }

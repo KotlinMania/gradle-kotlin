@@ -18,17 +18,15 @@ package org.gradle.jvm.toolchain.internal
 import java.io.File
 
 class EnvironmentVariableJavaHomeInstallationSupplier(private val buildOptions: ToolchainConfiguration) : InstallationSupplier {
-    override fun getSourceName(): String {
-        return "environment variable 'JAVA_HOME'"
-    }
+    override val sourceName: String = "environment variable 'JAVA_HOME'"
 
-    override fun get(): MutableSet<InstallationLocation?> {
+    override fun get(): MutableSet<InstallationLocation> {
         val javaHomePath = buildOptions.getEnvironmentVariableValue("JAVA_HOME")
         if (javaHomePath == null || javaHomePath.isEmpty()) {
-            return mutableSetOf<InstallationLocation?>()
+            return mutableSetOf()
         }
         val javaHome = File(javaHomePath)
-        val installationLocation: InstallationLocation = InstallationLocation.Companion.userDefined(javaHome, getSourceName())
-        return mutableSetOf<InstallationLocation?>(installationLocation)
+        val installationLocation: InstallationLocation = InstallationLocation.Companion.userDefined(javaHome, sourceName)
+        return mutableSetOf(installationLocation)
     }
 }

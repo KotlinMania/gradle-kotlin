@@ -45,7 +45,7 @@ class AccessorBackedExternalResource(
     constructor(name: ExternalResourceName, connector: ExternalResourceConnector, revalidate: Boolean) : this(name, connector, connector, connector, revalidate)
 
     override fun getURI(): URI {
-        return name.getUri()
+        return name.uri
     }
 
     override fun getDisplayName(): String {
@@ -54,52 +54,52 @@ class AccessorBackedExternalResource(
 
     @Throws(ResourceException::class)
     override fun writeToIfPresent(destination: File): ExternalResourceReadResult<Void?>? {
-        return accessor.withContent<ExternalResourceReadResult<Void?>?>(name, revalidate, ExternalResource.ContentAction { inputStream: InputStream? ->
-            CountingInputStream(inputStream!!).use { input ->
+        return accessor.withContent<ExternalResourceReadResult<Void?>?>(name, revalidate, ExternalResource.ContentAction { inputStream: InputStream ->
+            CountingInputStream(inputStream).use { input ->
                 FileOutputStream(destination).use { output ->
                     IOUtils.copyLarge(input, output)
-                    return@withContent ExternalResourceReadResult.Companion.of(input.getCount())
                 }
+                ExternalResourceReadResult.Companion.of(input.getCount())
             }
         })
     }
 
     @Throws(ResourceException::class)
-    override fun writeTo(destination: OutputStream?): ExternalResourceReadResult<Void?>? {
+    override fun writeTo(destination: OutputStream): ExternalResourceReadResult<Void?> {
         throw UnsupportedOperationException()
     }
 
     @Throws(ResourceException::class)
     override fun <T> withContentIfPresent(readAction: ExternalResource.ContentAction<out T?>): ExternalResourceReadResult<T?>? {
-        return accessor.withContent<ExternalResourceReadResult<T?>?>(name, revalidate, ExternalResource.ContentAction { inputStream: InputStream? ->
+        return accessor.withContent<ExternalResourceReadResult<T?>?>(name, revalidate, ExternalResource.ContentAction { inputStream: InputStream ->
             CountingInputStream(BufferedInputStream(inputStream)).use { input ->
                 val value: T? = readAction.execute(input)
-                return@withContent ExternalResourceReadResult.Companion.of<T?>(input.getCount(), value)
+                ExternalResourceReadResult.Companion.of<T?>(input.getCount(), value)
             }
         })
     }
 
     @Throws(ResourceException::class)
     override fun <T> withContentIfPresent(readAction: ExternalResource.ContentAndMetadataAction<out T?>): ExternalResourceReadResult<T?>? {
-        return accessor.withContent<ExternalResourceReadResult<T?>?>(name, revalidate, ExternalResource.ContentAndMetadataAction { inputStream: InputStream?, metadata: ExternalResourceMetaData? ->
+        return accessor.withContent<ExternalResourceReadResult<T?>?>(name, revalidate, ExternalResource.ContentAndMetadataAction { inputStream: InputStream, metadata: ExternalResourceMetaData? ->
             CountingInputStream(
                 BufferedInputStream(inputStream)
             ).use { stream ->
                 val value: T? = readAction.execute(stream, metadata)
-                return@withContent ExternalResourceReadResult.Companion.of<T?>(stream.getCount(), value)
+                ExternalResourceReadResult.Companion.of<T?>(stream.getCount(), value)
             }
         })
     }
 
     @Throws(ResourceException::class)
-    override fun withContent(readAction: Action<in InputStream?>): ExternalResourceReadResult<Void?> {
-        val result = accessor.withContent<ExternalResourceReadResult<Void?>?>(name, revalidate, ExternalResource.ContentAction { inputStream: InputStream? ->
-            val input = CountingInputStream(inputStream!!)
+    override fun withContent(readAction: Action<in InputStream>): ExternalResourceReadResult<Void?> {
+        val result = accessor.withContent<ExternalResourceReadResult<Void?>?>(name, revalidate, ExternalResource.ContentAction { inputStream: InputStream ->
+            val input = CountingInputStream(inputStream)
             readAction.execute(input)
             ExternalResourceReadResult.Companion.of(input.getCount())
         })
         if (result == null) {
-            throw ResourceExceptions.getMissing(name.getUri())
+            throw ResourceExceptions.getMissing(name.uri)
         }
         return result
     }

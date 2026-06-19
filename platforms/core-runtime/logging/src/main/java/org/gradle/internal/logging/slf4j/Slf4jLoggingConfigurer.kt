@@ -45,6 +45,6 @@ class Slf4jLoggingConfigurer(private val outputEventListener: OutputEventListene
         }
 
         currentLevel = logLevel
-        context.setLevel(logLevel)
+        context.setLevel(logLevel ?: LogLevel.LIFECYCLE)
     }
 }

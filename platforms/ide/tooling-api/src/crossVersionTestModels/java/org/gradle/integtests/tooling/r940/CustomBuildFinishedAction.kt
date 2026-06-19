@@ -15,6 +15,17 @@
  */
 package org.gradle.integtests.tooling.r940
 
+import org.gradle.tooling.*
+import org.gradle.tooling.model.*
+import org.gradle.tooling.model.build.*
+import org.gradle.tooling.model.eclipse.*
+import org.gradle.tooling.model.gradle.*
+import org.gradle.tooling.model.idea.*
+import org.gradle.tooling.model.kotlin.dsl.*
+import org.gradle.tooling.internal.adapter.ProtocolToModelAdapter
+import java.io.File
+import org.gradle.integtests.tooling.r48.*
+
 import org.gradle.tooling.BuildAction
 import java.util.function.Supplier
 
@@ -25,7 +36,7 @@ internal class CustomBuildFinishedAction(val callType: CallType?) : BuildAction<
         FETCH
     }
 
-    public override fun execute(controller: BuildController): String? {
+    public override fun execute(controller: BuildController?): String? {
         println("Running CustomBuildFinishedAction")
         if (callType == CallType.GET_MODEL) {
             return tryGet(Supplier { controller.getModel(CustomBuildFinishedModel::class.java).toString() })

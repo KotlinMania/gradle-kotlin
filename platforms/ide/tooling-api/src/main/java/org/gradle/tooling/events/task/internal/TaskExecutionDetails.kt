@@ -25,24 +25,20 @@ abstract class TaskExecutionDetails {
 
     companion object {
         private val UNSUPPORTED: TaskExecutionDetails = object : TaskExecutionDetails() {
-            public override fun isIncremental(): Boolean {
-                throw Exceptions.unsupportedMethod(TaskExecutionResult::class.java.getSimpleName() + ".isIncremental()")
-            }
+            override val isIncremental: Boolean
+                get() = throw Exceptions.unsupportedMethod(TaskExecutionResult::class.java.getSimpleName() + ".isIncremental()")
 
-            public override fun getExecutionReasons(): MutableList<String?>? {
-                throw Exceptions.unsupportedMethod(TaskExecutionResult::class.java.getSimpleName() + ".getExecutionReasons()")
-            }
+            override val executionReasons: MutableList<String?>?
+                get() = throw Exceptions.unsupportedMethod(TaskExecutionResult::class.java.getSimpleName() + ".getExecutionReasons()")
         }
 
         fun of(incremental: Boolean, executionReasons: MutableList<String?>): TaskExecutionDetails {
             return object : TaskExecutionDetails() {
-                public override fun isIncremental(): Boolean {
-                    return incremental
-                }
+                override val isIncremental: Boolean
+                    get() = incremental
 
-                public override fun getExecutionReasons(): MutableList<String?> {
-                    return executionReasons
-                }
+                override val executionReasons: MutableList<String?>
+                    get() = executionReasons
             }
         }
 

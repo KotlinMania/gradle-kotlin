@@ -19,6 +19,7 @@ import com.google.common.base.MoreObjects
 import org.gradle.api.Describable
 import org.gradle.api.Incubating
 import org.gradle.api.Transformer
+import org.gradle.api.provider.Property
 import org.gradle.internal.HasInternalProtocol
 
 /**
@@ -54,8 +55,7 @@ interface JavaToolchainSpec : Describable {
     /**
      * The exact version of the Java language that the toolchain is required to support.
      */
-    @JvmField
-    val languageVersion: Property<JavaLanguageVersion>?
+    val languageVersion: Property<JavaLanguageVersion>
 
     /**
      * The vendor of the toolchain.
@@ -68,8 +68,7 @@ interface JavaToolchainSpec : Describable {
      *
      * @since 6.8
      */
-    @JvmField
-    val vendor: Property<JvmVendorSpec>?
+    val vendor: Property<JvmVendorSpec>
 
     /**
      * The virtual machine implementation of the toolchain.
@@ -82,19 +81,18 @@ interface JavaToolchainSpec : Describable {
      *
      * @since 6.8
      */
-    val implementation: Property<JvmImplementation>?
+    val implementation: Property<JvmImplementation>
 
-    @JvmField
     @get:Incubating
-    val nativeImageCapable: Property<Boolean>?
+    val nativeImageCapable: Property<Boolean>
 
     override fun getDisplayName(): String {
         val builder = MoreObjects.toStringHelper("")
         builder.omitNullValues()
-        builder.add("languageVersion", this.languageVersion.map<String>(Transformer { obj: JavaLanguageVersion? -> obj.toString() }).getOrElse("unspecified"))
-        builder.add("vendor", this.vendor.map<String>(Transformer { obj: JvmVendorSpec? -> obj.toString() }).getOrNull())
-        builder.add("implementation", this.implementation.map<String>(Transformer { obj: JvmImplementation? -> obj.toString() }).getOrNull())
-        builder.add("nativeImageCapable", this.nativeImageCapable.getOrElse(false))
+        builder.add("languageVersion", languageVersion.map<String>(Transformer { obj: JavaLanguageVersion -> obj.toString() }).getOrElse("unspecified"))
+        builder.add("vendor", vendor.map<String>(Transformer { obj: JvmVendorSpec -> obj.toString() }).getOrNull())
+        builder.add("implementation", implementation.map<String>(Transformer { obj: JvmImplementation -> obj.toString() }).getOrNull())
+        builder.add("nativeImageCapable", nativeImageCapable.getOrElse(false))
         return builder.toString()
     }
 }

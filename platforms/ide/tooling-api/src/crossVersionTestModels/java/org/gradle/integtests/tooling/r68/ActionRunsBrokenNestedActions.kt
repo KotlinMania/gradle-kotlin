@@ -15,12 +15,23 @@
  */
 package org.gradle.integtests.tooling.r68
 
+import org.gradle.tooling.*
+import org.gradle.tooling.model.*
+import org.gradle.tooling.model.build.*
+import org.gradle.tooling.model.eclipse.*
+import org.gradle.tooling.model.gradle.*
+import org.gradle.tooling.model.idea.*
+import org.gradle.tooling.model.kotlin.dsl.*
+import org.gradle.tooling.internal.adapter.ProtocolToModelAdapter
+import java.io.File
+import org.gradle.integtests.tooling.r48.*
+
 import org.gradle.tooling.BuildAction
 import java.util.Arrays
 
 class ActionRunsBrokenNestedActions : BuildAction<String?> {
-    public override fun execute(controller: BuildController): String? {
-        controller.run(Arrays.asList<T?>(BrokenAction("one"), BrokenAction("two")))
+    public override fun execute(controller: BuildController?): String? {
+        controller.run(listOf<BuildAction<Any?>>(BrokenAction("one"), BrokenAction("two")))
         throw IllegalStateException("Unexpected")
     }
 

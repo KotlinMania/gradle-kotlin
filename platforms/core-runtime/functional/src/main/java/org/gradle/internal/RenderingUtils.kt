@@ -20,6 +20,7 @@ import java.util.stream.Collector
 import java.util.stream.Collectors
 
 object RenderingUtils {
+    @JvmStatic
     fun quotedOxfordListOf(values: MutableCollection<String>, conjunction: String): String {
         return values.stream()
             .sorted()
@@ -27,11 +28,13 @@ object RenderingUtils {
             .collect(oxfordJoin(conjunction))
     }
 
+    @JvmStatic
     fun oxfordListOf(values: MutableCollection<String>, conjunction: String): String {
         return values.stream()
             .collect(oxfordJoin(conjunction))
     }
 
+    @JvmStatic
     fun oxfordJoin(conjunction: String): Collector<in String, *, String> {
         return Collectors.collectingAndThen(Collectors.toList(), Function { stringList: MutableList<String>? ->
             val list = stringList ?: return@Function("")

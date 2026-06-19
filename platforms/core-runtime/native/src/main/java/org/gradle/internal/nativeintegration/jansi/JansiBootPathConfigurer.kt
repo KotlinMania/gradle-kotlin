@@ -40,11 +40,11 @@ class JansiBootPathConfigurer {
         val jansiStorage = locator.locate(storageDir)
 
         if (jansiStorage != null) {
-            val libFile = jansiStorage.getTargetLibFile()
+            val libFile = jansiStorage.targetLibFile
             libFile.getParentFile().mkdirs()
 
             if (!libFile.exists()) {
-                val libraryInputStream = javaClass.getResourceAsStream(jansiStorage.getJansiLibrary().getResourcePath())
+                val libraryInputStream = javaClass.getResourceAsStream(jansiStorage.jansiLibrary.resourcePath)
                 try {
                     if (libraryInputStream != null) {
                         copyLibrary(libraryInputStream, libFile)

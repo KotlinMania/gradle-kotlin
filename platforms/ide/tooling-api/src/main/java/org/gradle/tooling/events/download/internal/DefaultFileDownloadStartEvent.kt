@@ -15,13 +15,11 @@
  */
 package org.gradle.tooling.events.download.internal
 
+import java.io.File
 import org.gradle.tooling.events.download.FileDownloadOperationDescriptor
 import org.gradle.tooling.events.download.FileDownloadStartEvent
 import org.gradle.tooling.events.internal.DefaultStartEvent
 
-class DefaultFileDownloadStartEvent(eventTime: Long, displayName: String?, descriptor: FileDownloadOperationDescriptor?) : DefaultStartEvent(eventTime, displayName, descriptor),
+class DefaultFileDownloadStartEvent(eventTime: Long, displayName: String?, descriptor: FileDownloadOperationDescriptor?) : DefaultStartEvent<FileDownloadOperationDescriptor?>(eventTime, displayName, descriptor),
     FileDownloadStartEvent {
-    override fun getDescriptor(): FileDownloadOperationDescriptor? {
-        return super.getDescriptor() as FileDownloadOperationDescriptor?
-    }
 }

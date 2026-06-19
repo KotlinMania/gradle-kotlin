@@ -15,8 +15,17 @@
  */
 package org.gradle.integtests.tooling.r940
 
+import org.gradle.tooling.*
+import org.gradle.tooling.model.*
+import org.gradle.tooling.model.build.*
+import org.gradle.tooling.model.eclipse.*
+import org.gradle.tooling.model.gradle.*
+import org.gradle.tooling.model.idea.*
+import org.gradle.tooling.model.kotlin.dsl.*
+
 import org.gradle.tooling.BuildAction
 import java.io.File
+import org.gradle.integtests.tooling.r48.*
 import java.io.Serializable
 import java.util.Optional
 import kotlin.collections.HashMap
@@ -28,10 +37,10 @@ internal class KotlinModelAction(val queryStrategy: QueryStrategy?, val resilien
         INCLUDED_BUILDS_FIRST
     }
 
-    public override fun execute(controller: BuildController): KotlinModel {
+    public override fun execute(controller: BuildController?): KotlinModel {
         val rootBuild: GradleBuild
         if (resilient) {
-            rootBuild = controller.fetch(GradleBuild::class.java).getModel()
+            rootBuild = checkNotNull(controller.fetch(GradleBuild::class.java).getModel())
         } else {
             rootBuild = controller.getModel(GradleBuild::class.java)
         }
@@ -53,7 +62,7 @@ internal class KotlinModelAction(val queryStrategy: QueryStrategy?, val resilien
         return KotlinModel(scriptModels, failures)
     }
 
-    private fun queryKotlinDslScriptsModel(controller: BuildController, build: GradleBuild, scriptModels: MutableMap<File?, KotlinDslScriptModel?>, failures: MutableMap<File?, Failure?>) {
+    private fun queryKotlinDslScriptsModel(controller: BuildController?, build: GradleBuild, scriptModels: MutableMap<File?, KotlinDslScriptModel?>, failures: MutableMap<File?, Failure?>) {
         if (resilient) {
             queryResilientKotlinDslScriptsModel(controller, build, build.getRootProject(), scriptModels, failures)
         } else {
@@ -63,7 +72,7 @@ internal class KotlinModelAction(val queryStrategy: QueryStrategy?, val resilien
 
     companion object {
         fun queryResilientKotlinDslScriptsModel(
-            controller: BuildController,
+            controller: BuildController?,
             build: GradleBuild,
             target: Model?,
             scriptModels: MutableMap<File?, KotlinDslScriptModel?>,
@@ -71,7 +80,7 @@ internal class KotlinModelAction(val queryStrategy: QueryStrategy?, val resilien
         ) {
             val modelResult: FetchModelResult<KotlinDslScriptsModel?> = controller.fetch(target, KotlinDslScriptsModel::class.java)
 
-            assert(modelResult.getFailures().size() <= 1) { "Expected a single failure, but got multiple ones" }
+            assert(modelResult.getFailures().size <= 1) { "Expected a single failure, but got multiple ones" }
             val failure: Optional<out Failure?> = modelResult.getFailures().stream().findAny()
             if (failure.isPresent()) {
                 failures.put(build.getBuildIdentifier().getRootDir(), failure.get())
@@ -82,7 +91,7 @@ internal class KotlinModelAction(val queryStrategy: QueryStrategy?, val resilien
             }
         }
 
-        private fun queryBasicKotlinDslScriptsModel(controller: BuildController, build: GradleBuild, scriptModels: MutableMap<File?, KotlinDslScriptModel?>) {
+        private fun queryBasicKotlinDslScriptsModel(controller: BuildController?, build: GradleBuild, scriptModels: MutableMap<File?, KotlinDslScriptModel?>) {
             val buildScriptModel: KotlinDslScriptsModel = controller.getModel(build.getRootProject(), KotlinDslScriptsModel::class.java)
             scriptModels.putAll(buildScriptModel.getScriptModels())
         }

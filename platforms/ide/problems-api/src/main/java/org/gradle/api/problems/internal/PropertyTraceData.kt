@@ -24,5 +24,5 @@ import org.gradle.api.problems.AdditionalData
  * These data classes are part of the concept used for adding structured additional data to problems.
  */
 interface PropertyTraceData : AdditionalData {
-    val trace: String?
+    fun getTrace(): String?
 }

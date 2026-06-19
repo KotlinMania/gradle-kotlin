@@ -23,19 +23,15 @@ import org.gradle.tooling.events.task.TaskSuccessResult
  */
 open class DefaultTaskSuccessResult(startTime: Long, endTime: Long, private val upToDate: Boolean, private val fromCache: Boolean, private val taskExecutionDetails: TaskExecutionDetails) :
     DefaultOperationSuccessResult(startTime, endTime), TaskSuccessResult {
-    override fun isUpToDate(): Boolean {
-        return this.upToDate
-    }
+    override val isUpToDate: Boolean
+        get() = this.upToDate
 
-    override fun isFromCache(): Boolean {
-        return fromCache
-    }
+    override val isFromCache: Boolean
+        get() = fromCache
 
-    override fun isIncremental(): Boolean {
-        return taskExecutionDetails.isIncremental()
-    }
+    override val isIncremental: Boolean
+        get() = taskExecutionDetails.isIncremental
 
-    override fun getExecutionReasons(): MutableList<String?>? {
-        return taskExecutionDetails.getExecutionReasons()
-    }
+    override val executionReasons: MutableList<String?>?
+        get() = taskExecutionDetails.executionReasons
 }

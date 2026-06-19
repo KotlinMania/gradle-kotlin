@@ -33,7 +33,7 @@ open class ExceptionReplacingObjectInputStream(inputSteam: InputStream?, classLo
         enableResolveObject(true)
     }
 
-    val objectInputStreamCreator: Function<InputStream?, ExceptionReplacingObjectInputStream?>
+    val objectInputStreamCreator: Function<InputStream?, ExceptionReplacingObjectInputStream>
         get() = Function { inputStream: InputStream? ->
             try {
                 return@Function createNewInstance(inputStream)
@@ -43,7 +43,7 @@ open class ExceptionReplacingObjectInputStream(inputSteam: InputStream?, classLo
         }
 
     @Throws(IOException::class)
-    protected open fun createNewInstance(inputStream: InputStream?): ExceptionReplacingObjectInputStream? {
+    protected open fun createNewInstance(inputStream: InputStream?): ExceptionReplacingObjectInputStream {
         return ExceptionReplacingObjectInputStream(inputStream, classLoader)
     }
 
@@ -60,8 +60,8 @@ open class ExceptionReplacingObjectInputStream(inputSteam: InputStream?, classLo
         return obj
     }
 
-    protected val classNameTransformer: Function<String?, Class<*>?>
-        get() = Function { type: String? ->
+    protected val classNameTransformer: Function<String, Class<*>?>
+        get() = Function { type: String ->
             try {
                 return@Function lookupClass(type)
             } catch (e: ClassNotFoundException) {
@@ -70,7 +70,7 @@ open class ExceptionReplacingObjectInputStream(inputSteam: InputStream?, classLo
         }
 
     @Throws(ClassNotFoundException::class)
-    protected open fun lookupClass(type: String?): Class<*>? {
+    protected open fun lookupClass(type: String): Class<*> {
         return classLoader.loadClass(type)
     }
 }

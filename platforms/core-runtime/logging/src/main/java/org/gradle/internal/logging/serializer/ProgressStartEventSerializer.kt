@@ -29,7 +29,7 @@ import org.gradle.internal.serialize.Serializer
  * It also encodes the [BuildOperationCategory] in this byte, since that enum only has 3 values
  * for the forseeable future.
  */
-class ProgressStartEventSerializer : Serializer<ProgressStartEvent?> {
+class ProgressStartEventSerializer : Serializer<ProgressStartEvent> {
     init {
         val maxCategory = BuildOperationCategory.entries[BuildOperationCategory.entries.size - 1]
         require((BUILD_OP_CATEGORY_MASK.toInt() and maxCategory.ordinal) == maxCategory.ordinal) { "Too many categories to fit into flags." }
@@ -99,7 +99,7 @@ class ProgressStartEventSerializer : Serializer<ProgressStartEvent?> {
         }
         encoder.writeString(description)
         if ((flags and LOGGING_HEADER.toInt()) != 0) {
-            encoder.writeString(loggingHeader)
+            encoder.writeString(loggingHeader!!)
         } else if ((flags and LOGGING_HEADER_IS_SUB_DESCRIPTION.toInt()) != 0) {
             encoder.writeSmallInt(loggingHeader!!.length)
         }

@@ -15,22 +15,4 @@
  */
 package org.gradle.plugin.use.internal
 
-import org.gradle.internal.Cast.uncheckedCast
-import org.gradle.internal.Cast.uncheckedNonnullCast
-import org.gradle.internal.service.ServiceLookup.find
-import org.gradle.internal.logging.text.TreeFormatter.node
-import org.gradle.internal.logging.text.TreeFormatter.startChildren
-import org.gradle.internal.logging.text.TreeFormatter.appendType
-import org.gradle.internal.logging.text.TreeFormatter.endChildren
-import org.gradle.internal.logging.text.TreeFormatter.toString
-import org.gradle.features.internal.binding.TargetTypeInformationChecks.isOverlappingBindingType
-import org.gradle.internal.lazy.Lazy.Companion.locking
-import org.gradle.internal.lazy.Lazy.Factory.of
-import org.gradle.internal.Factory.create
-import org.gradle.api.internal.DocumentationRegistry.getDocumentationRecommendationFor
-import org.gradle.internal.event.ListenerManager.getBroadcaster
-import org.gradle.internal.service.ServiceRegistration.addProvider
-import org.gradle.internal.service.ServiceRegistration.add
-import org.gradle.api.internal.StartParameterInternal.isUseEmptySettings
-import org.gradle.internal.event.ListenerManager.addListener
 

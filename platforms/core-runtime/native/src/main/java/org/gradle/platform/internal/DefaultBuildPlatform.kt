@@ -21,16 +21,8 @@ import org.gradle.platform.OperatingSystem
 import java.io.Serializable
 import java.util.Objects
 
-class DefaultBuildPlatform(private val architecture: Architecture, private val operatingSystem: OperatingSystem) : BuildPlatform, Serializable {
-    override fun getArchitecture(): Architecture {
-        return architecture
-    }
-
-    override fun getOperatingSystem(): OperatingSystem {
-        return operatingSystem
-    }
-
-    override fun equals(o: Any): Boolean {
+class DefaultBuildPlatform(override val architecture: Architecture, override val operatingSystem: OperatingSystem) : BuildPlatform, Serializable {
+    override fun equals(o: Any?): Boolean {
         if (this === o) {
             return true
         }
@@ -38,11 +30,11 @@ class DefaultBuildPlatform(private val architecture: Architecture, private val o
             return false
         }
         val that = o
-        return getArchitecture() == that.getArchitecture() && getOperatingSystem() == that.getOperatingSystem()
+        return architecture == that.architecture && operatingSystem == that.operatingSystem
     }
 
     override fun hashCode(): Int {
-        return Objects.hash(getArchitecture(), getOperatingSystem())
+        return Objects.hash(architecture, operatingSystem)
     }
 
     override fun toString(): String {

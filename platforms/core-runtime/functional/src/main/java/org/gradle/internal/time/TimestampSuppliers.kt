@@ -29,6 +29,7 @@ object TimestampSuppliers {
      * Returns a supplier that calculates a timestamp exactly the given amount of time
      * prior to the current time, or 0 if the amount of time extends beyond the epoch.
      */
+    @JvmStatic
     fun inThePast(value: Int, timeUnit: TimeUnit): Supplier<Long?> {
         // This needs to be an anonymous inner class instead of a lambda for configuration cache compatibility
         return object : Supplier<Long?> {

@@ -204,7 +204,8 @@ class BindingsBuilder(initialBindings: List<Binding>) {
         require(bindings.all { it.encodingForType(type) == null }) {
             "There's already an encoding for type '$type'"
         }
-        val codecForAny = codec.uncheckedCast<Codec<Any>>()
+        @Suppress("UNCHECKED_CAST")
+        val codecForAny = codec as Codec<Any>
         val encodingProducer = producerForSubtypesOf(type, codecForAny)
         bind(encodingProducer, codecForAny)
     }

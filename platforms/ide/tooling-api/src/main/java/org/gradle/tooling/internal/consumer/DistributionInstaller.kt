@@ -15,9 +15,14 @@
  */
 package org.gradle.tooling.internal.consumer
 
+import java.io.File
+import java.net.URI
+import java.util.concurrent.CancellationException
+import java.util.concurrent.atomic.AtomicReference
 import org.gradle.internal.UncheckedException.Companion.throwAsUncheckedException
 import org.gradle.internal.logging.progress.ProgressLoggerFactory
 import org.gradle.internal.time.Clock
+import org.gradle.tooling.Failure
 import org.gradle.tooling.events.OperationDescriptor
 import org.gradle.tooling.events.StatusEvent
 import org.gradle.tooling.events.download.FileDownloadOperationDescriptor
@@ -37,10 +42,6 @@ import org.gradle.wrapper.Install
 import org.gradle.wrapper.Logger
 import org.gradle.wrapper.PathAssembler
 import org.gradle.wrapper.WrapperConfiguration
-import java.io.File
-import java.net.URI
-import java.util.concurrent.CancellationException
-import java.util.concurrent.atomic.AtomicReference
 
 class DistributionInstaller(private val progressLoggerFactory: ProgressLoggerFactory, buildProgressListener: InternalBuildProgressListener, clock: Clock, timeout: Int) {
     private val buildProgressListener: InternalBuildProgressListener
@@ -61,7 +62,7 @@ class DistributionInstaller(private val progressLoggerFactory: ProgressLoggerFac
     }
 
     private fun getListener(buildProgressListener: InternalBuildProgressListener): InternalBuildProgressListener {
-        if (buildProgressListener.subscribedOperations.contains(InternalBuildProgressListener.FILE_DOWNLOAD)) {
+        if (buildProgressListener.subscribedOperations?.contains(InternalBuildProgressListener.FILE_DOWNLOAD) == true) {
             return buildProgressListener
         } else {
             return NO_OP
@@ -72,8 +73,8 @@ class DistributionInstaller(private val progressLoggerFactory: ProgressLoggerFac
      * Installs the distribution and returns the result.
      */
     @Throws(Exception::class)
-    fun install(userHomeDir: File?, projectDir: File?, wrapperConfiguration: WrapperConfiguration, systemProperties: MutableMap<String?, String?>): File? {
-        val install = Install(Logger(false), DistributionInstaller.AsyncDownload(systemProperties), PathAssembler(userHomeDir, projectDir))
+    fun install(userHomeDir: File?, projectDir: File?, wrapperConfiguration: WrapperConfiguration, systemProperties: MutableMap<String, String>): File? {
+        val install = Install(Logger(false), AsyncDownload(systemProperties), PathAssembler(userHomeDir, projectDir))
         return install.createDist(wrapperConfiguration)
     }
 
@@ -91,13 +92,13 @@ class DistributionInstaller(private val progressLoggerFactory: ProgressLoggerFac
         override fun onEvent(event: Any?) {
         }
 
-        override fun getSubscribedOperations(): MutableList<String?> {
-            return mutableListOf<String?>()
-        }
+        override val subscribedOperations: MutableList<String?>
+            get() = mutableListOf<String?>()
     }
 
     private inner class ForwardingDownloadProgressListener(private val descriptor: OperationDescriptor) : DownloadProgressListener {
-        private var downloaded: Long = 0
+        var downloaded: Long = 0
+            private set
 
         override fun downloadStatusChanged(address: URI?, contentLength: Long, downloaded: Long) {
             this.downloaded = downloaded
@@ -107,7 +108,7 @@ class DistributionInstaller(private val progressLoggerFactory: ProgressLoggerFac
         }
     }
 
-    private inner class AsyncDownload(private val systemProperties: MutableMap<String?, String?>) : IDownload {
+    private inner class AsyncDownload(private val systemProperties: MutableMap<String, String>) : IDownload {
         @Throws(Exception::class)
         override fun download(address: URI, destination: File) {
             synchronized(lock) {
@@ -139,7 +140,7 @@ class DistributionInstaller(private val progressLoggerFactory: ProgressLoggerFac
             buildProgressListener.onEvent(DefaultFileDownloadFinishEvent(endTime, displayName + " finished", descriptor, result))
             if (failure != null) {
                 if (failure is Exception) {
-                    throw failure
+                    throw failure!!
                 }
                 throw throwAsUncheckedException(failure)
             }
@@ -159,14 +160,14 @@ class DistributionInstaller(private val progressLoggerFactory: ProgressLoggerFac
 
         @Throws(Throwable::class)
         fun withAsyncDownload(address: URI, destination: File, operationDescriptor: OperationDescriptor): Long {
-            val listener: ForwardingDownloadProgressListener = DistributionInstaller.ForwardingDownloadProgressListener(operationDescriptor)
+                val listener: ForwardingDownloadProgressListener = ForwardingDownloadProgressListener(operationDescriptor)
             currentListener.set(buildProgressListener)
             try {
                 // Start the download in another thread and wait for the result
                 val thread: Thread = object : Thread("Distribution download") {
                     override fun run() {
                         try {
-                            Download(Logger(false), listener, APP_NAME, GradleVersion.current().getVersion(), systemProperties, timeout).download(address, destination)
+                            Download(Logger(false), listener, APP_NAME, GradleVersion.current().getVersion(), systemProperties as MutableMap<String?, String?>, timeout).download(address, destination)
                         } catch (t: Throwable) {
                             synchronized(lock) {
                                 failure = t
@@ -190,7 +191,7 @@ class DistributionInstaller(private val progressLoggerFactory: ProgressLoggerFac
                         }
                     }
                     if (failure != null) {
-                        throw failure
+                        throw failure!!
                     }
                     if (cancelled) {
                         // When cancelled, try to stop the download thread but don't attempt to wait for it to complete

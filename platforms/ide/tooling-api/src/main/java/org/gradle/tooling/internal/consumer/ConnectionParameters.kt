@@ -15,6 +15,8 @@
  */
 package org.gradle.tooling.internal.consumer
 
+import java.io.File
+import java.util.concurrent.TimeUnit
 import org.gradle.tooling.internal.protocol.ConnectionParameters
 
 interface ConnectionParameters : ConnectionParameters {

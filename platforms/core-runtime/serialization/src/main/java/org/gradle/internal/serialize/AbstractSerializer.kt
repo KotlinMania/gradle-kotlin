@@ -22,7 +22,7 @@ import com.google.common.base.Objects
  * implementation is required to enable cache instance reuse within the same Gradle runtime. Serializers are used
  * as cache parameter which need to be compared to determine compatible cache.
  */
-abstract class AbstractSerializer<T> : Serializer<T?> {
+abstract class AbstractSerializer<T> : Serializer<T> {
     override fun equals(obj: Any?): Boolean {
         if (obj == null) {
             return false

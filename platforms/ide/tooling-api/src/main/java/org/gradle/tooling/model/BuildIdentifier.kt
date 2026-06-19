@@ -15,6 +15,8 @@
  */
 package org.gradle.tooling.model
 
+import java.io.File
+
 /**
  * Identifies a Gradle build.
  *

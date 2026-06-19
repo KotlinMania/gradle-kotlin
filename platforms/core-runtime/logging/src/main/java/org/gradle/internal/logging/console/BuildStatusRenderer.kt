@@ -51,7 +51,7 @@ class BuildStatusRenderer(private val listener: OutputEventListener, private val
     override fun onOutput(event: OutputEvent) {
         if (event is ProgressStartEvent) {
             val startEvent = event
-            if (startEvent.isBuildOperationStart()) {
+            if (startEvent.isBuildOperationStart) {
                 if (buildStartTimestamp == 0L && startEvent.parentProgressOperationId == null) {
                     // The very first event starts the Initializing phase
                     // TODO - should use BuildRequestMetaData to determine the build start time
@@ -119,7 +119,7 @@ class BuildStatusRenderer(private val listener: OutputEventListener, private val
 
     private fun phaseProgressed(progressEvent: ProgressCompleteEvent) {
         if (progressBar != null) {
-            progressBar!!.update(progressEvent.isFailed())
+            progressBar!!.update(progressEvent.isFailed)
         }
     }
 

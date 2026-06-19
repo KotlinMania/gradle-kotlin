@@ -15,13 +15,4 @@
  */
 package org.gradle.launcher.cli
 
-import org.gradle.launcher.cli.converter.InitialPropertiesConverter.convert
-import org.gradle.launcher.cli.converter.BuildLayoutConverter.convert
-import org.gradle.launcher.cli.converter.LayoutToPropertiesConverter.convert
-import org.gradle.launcher.cli.converter.StartParameterConverter.convert
-import org.gradle.launcher.cli.converter.BuildOptionBackedConverter.convert
-import org.gradle.launcher.cli.converter.InitialPropertiesConverter.configure
-import org.gradle.launcher.cli.converter.BuildLayoutConverter.configure
-import org.gradle.launcher.cli.converter.StartParameterConverter.configure
-import org.gradle.launcher.cli.converter.BuildOptionBackedConverter.configure
 

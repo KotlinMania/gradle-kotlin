@@ -60,7 +60,7 @@ open class UriTextResource : TextResource {
         this.resolver = resolver
     }
 
-    override fun getDisplayName(): String? {
+    override fun getDisplayName(): String {
         return getLongDisplayName().getDisplayName()
     }
 
@@ -205,7 +205,7 @@ open class UriTextResource : TextResource {
     }
 
     override fun getLocation(): ResourceLocation {
-        return UriTextResource.UriResourceLocation()
+        return UriResourceLocation()
     }
 
     private inner class UriResourceLocation : ResourceLocation {
@@ -224,7 +224,7 @@ open class UriTextResource : TextResource {
 
     companion object {
         private val SIGNATURE = Hashing.signature(UriTextResource::class.java)
-        protected val DEFAULT_ENCODING: Charset = Charset.forName("utf-8")
+        val DEFAULT_ENCODING: Charset = Charset.forName("utf-8")
         val userAgentString: String
 
         init {

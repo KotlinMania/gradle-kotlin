@@ -15,6 +15,8 @@
  */
 package org.gradle.tooling.model.idea
 
+import java.io.File
+
 /**
  * IDEA compiler output settings.
  */

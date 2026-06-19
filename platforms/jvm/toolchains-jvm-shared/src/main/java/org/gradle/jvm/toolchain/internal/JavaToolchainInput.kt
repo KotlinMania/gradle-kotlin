@@ -32,8 +32,8 @@ class JavaToolchainInput(spec: JavaToolchainSpec) {
     val implementation: String
 
     init {
-        this.languageVersion = spec.getLanguageVersion().getOrNull()
-        this.vendor = spec.getVendor().get().toString()
-        this.implementation = spec.getImplementation().get().toString()
+        this.languageVersion = spec.languageVersion.getOrNull()
+        this.vendor = spec.vendor.get().toString()
+        this.implementation = spec.implementation.get().toString()
     }
 }

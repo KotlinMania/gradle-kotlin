@@ -22,8 +22,8 @@ import org.gradle.internal.logging.text.StyledTextOutput
 import org.gradle.internal.logging.text.StyledTextOutputFactory
 import org.gradle.internal.time.Clock
 
-class DefaultStyledTextOutputFactory(private val outputEventListener: OutputEventListener?, private val clock: Clock?) : AbstractStyledTextOutputFactory(), StyledTextOutputFactory {
+class DefaultStyledTextOutputFactory(private val outputEventListener: OutputEventListener, private val clock: Clock) : AbstractStyledTextOutputFactory(), StyledTextOutputFactory {
     override fun create(logCategory: String?, logLevel: LogLevel?): StyledTextOutput {
-        return LoggingBackedStyledTextOutput(outputEventListener, logCategory, logLevel, clock)
+        return LoggingBackedStyledTextOutput(outputEventListener, logCategory ?: "", logLevel ?: LogLevel.LIFECYCLE, clock)
     }
 }

@@ -15,6 +15,7 @@
  */
 package org.gradle.tooling.events.download
 
+import java.io.File
 import org.gradle.tooling.events.OperationResult
 
 /**

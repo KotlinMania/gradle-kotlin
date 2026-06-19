@@ -40,12 +40,12 @@ object ToolchainBuildOptions {
             private val options: MutableList<out BuildOption<in ToolchainConfiguration>> = Arrays.asList<AbstractBuildOption<ToolchainConfiguration, out CommandLineOptionConfiguration>>(
                 object : JavaInstallationPathsOption<ToolchainConfiguration>() {
                     override fun applyTo(value: String, settings: ToolchainConfiguration, origin: Origin) {
-                        settings.setInstallationsFromPaths(Arrays.asList<String>(*value.split(",".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()))
+                        settings.installationsFromPaths = Arrays.asList<String>(*value.split(",".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray())
                     }
                 },
                 object : JavaInstallationEnvironmentPathsOption<ToolchainConfiguration>() {
                     override fun applyTo(value: String, settings: ToolchainConfiguration, origin: Origin) {
-                        settings.setJavaInstallationsFromEnvironment(Arrays.asList<String>(*value.split(",".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()))
+                        settings.javaInstallationsFromEnvironment = Arrays.asList<String>(*value.split(",".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray())
                     }
                 },
                 object : AutoDetectionOption<ToolchainConfiguration>() {

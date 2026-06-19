@@ -88,20 +88,24 @@ class WrapperCredentials private constructor(private val token: String?, private
     }
 
     companion object {
+        @JvmStatic
         fun fromToken(token: String): WrapperCredentials {
             return WrapperCredentials(Objects.requireNonNull<String>(token, "token"), null)
         }
 
+        @JvmStatic
         fun fromBasicUserInfo(basicUserInfo: String): WrapperCredentials {
             return WrapperCredentials(null, Objects.requireNonNull<String>(basicUserInfo, "basicUserInfo"))
         }
 
+        @JvmStatic
         fun fromUsernamePassword(username: String, password: String): WrapperCredentials {
             Objects.requireNonNull<String>(username, "username")
             Objects.requireNonNull<String>(password, "password")
             return fromBasicUserInfo(username + ':' + password)
         }
 
+        @JvmStatic
         fun findCredentials(
             distributionUrl: URI,
             propertyProvider: Function<in String, out String?>

@@ -21,8 +21,8 @@ import org.gradle.internal.remote.MessagingClient
 import org.gradle.internal.remote.ObjectConnection
 import org.gradle.internal.remote.internal.OutgoingConnector
 
-class MessageHubBackedClient(private val connector: OutgoingConnector, private val executorFactory: ExecutorFactory?) : MessagingClient {
-    override fun getConnection(address: Address?): ObjectConnection {
+class MessageHubBackedClient(private val connector: OutgoingConnector, private val executorFactory: ExecutorFactory) : MessagingClient {
+    override fun getConnection(address: Address): ObjectConnection {
         return MessageHubBackedObjectConnection(executorFactory, connector.connect(address))
     }
 }

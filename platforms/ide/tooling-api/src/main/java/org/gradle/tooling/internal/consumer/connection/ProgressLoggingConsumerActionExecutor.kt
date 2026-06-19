@@ -30,18 +30,17 @@ class ProgressLoggingConsumerActionExecutor(private val actionExecutor: Consumer
         actionExecutor.stop()
     }
 
-    override fun getDisplayName(): String {
-        return actionExecutor.getDisplayName()
-    }
+    override val displayName: String?
+        get() = actionExecutor.displayName
 
     @Throws(UnsupportedOperationException::class, IllegalStateException::class)
     override fun <T> run(action: ConsumerAction<T?>): T? {
-        val parameters = action.getParameters()
+        val parameters = action.parameters!!
         val listener = ProgressListenerAdapter(parameters.getProgressListener())
-        val listenerManager = loggingProvider.listenerManager
+        val listenerManager = loggingProvider.listenerManager!!
         listenerManager.addListener(listener)
         try {
-            val progressLogger = loggingProvider.progressLoggerFactory.newOperation(ProgressLoggingConsumerActionExecutor::class.java)
+            val progressLogger = loggingProvider.progressLoggerFactory!!.newOperation(ProgressLoggingConsumerActionExecutor::class.java)
             progressLogger!!.setDescription("Build")
             progressLogger.started()
             try {
@@ -60,7 +59,7 @@ class ProgressLoggingConsumerActionExecutor(private val actionExecutor: Consumer
 
     private class ProgressListenerAdapter(private val progressListener: ProgressListenerVersion1) : ProgressListener {
         override fun started(event: ProgressStartEvent) {
-            progressListener.onOperationStart(event.getDescription())
+            progressListener.onOperationStart(event.description)
         }
 
         override fun progress(event: ProgressEvent) {

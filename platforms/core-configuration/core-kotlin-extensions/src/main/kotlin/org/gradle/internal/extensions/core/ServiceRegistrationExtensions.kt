@@ -24,6 +24,10 @@ import org.gradle.internal.service.ServiceRegistration
  * @param ImplementationType The implementation type of the service.
  * @see [ServiceRegistration.add]
  */
+@Suppress("UNCHECKED_CAST")
 inline fun <reified ServiceType : Any, reified ImplementationType : ServiceType> ServiceRegistration.add() {
-    add(ServiceType::class.java, ImplementationType::class.java)
+    add(
+        ServiceType::class.java as Class<in ImplementationType?>,
+        ImplementationType::class.java as Class<ImplementationType?>
+    )
 }

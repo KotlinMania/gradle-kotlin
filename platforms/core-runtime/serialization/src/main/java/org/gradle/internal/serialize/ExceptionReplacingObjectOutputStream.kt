@@ -34,7 +34,7 @@ open class ExceptionReplacingObjectOutputStream(outputSteam: OutputStream?) : Ob
         enableReplaceObject(true)
     }
 
-    val objectOutputStreamCreator: Function<OutputStream?, ExceptionReplacingObjectOutputStream?>
+    val objectOutputStreamCreator: Function<OutputStream?, ExceptionReplacingObjectOutputStream>
         get() = Function { outputStream: OutputStream? ->
             try {
                 return@Function createNewInstance(outputStream)
@@ -44,7 +44,7 @@ open class ExceptionReplacingObjectOutputStream(outputSteam: OutputStream?) : Ob
         }
 
     @Throws(IOException::class)
-    protected open fun createNewInstance(outputStream: OutputStream?): ExceptionReplacingObjectOutputStream? {
+    protected open fun createNewInstance(outputStream: OutputStream?): ExceptionReplacingObjectOutputStream {
         return ExceptionReplacingObjectOutputStream(outputStream)
     }
 

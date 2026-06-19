@@ -64,6 +64,7 @@ class Pair<L, R> private constructor(@JvmField val left: L?, @JvmField val right
     }
 
     companion object {
+        @JvmStatic
         fun <L, R> of(left: L?, right: R?): Pair<L?, R?> {
             return Pair<L?, R?>(left, right)
         }

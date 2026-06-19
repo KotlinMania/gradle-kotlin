@@ -25,10 +25,10 @@ import java.util.Objects
 import javax.inject.Inject
 
 open class DefaultToolchainSpec @Inject constructor(propertyFactory: PropertyFactory) : JavaToolchainSpecInternal {
-    private val version: Property<JavaLanguageVersion?>
-    private val vendor: Property<JvmVendorSpec?>
-    private val implementation: Property<JvmImplementation?>
-    private val nativeImageCapable: Property<Boolean?>
+    private val version: Property<JavaLanguageVersion> = propertyFactory.property<JavaLanguageVersion>(JavaLanguageVersion::class.java)
+    final override val vendor: Property<JvmVendorSpec> = propertyFactory.property<JvmVendorSpec>(JvmVendorSpec::class.java)
+    final override val implementation: Property<JvmImplementation> = propertyFactory.property<JvmImplementation>(JvmImplementation::class.java)
+    final override val nativeImageCapable: Property<Boolean> = propertyFactory.property<Boolean>(Boolean::class.java)
 
     class Key(languageVersion: JavaLanguageVersion?, vendor: JvmVendorSpec?, implementation: JvmImplementation?, nativeImageCapable: Boolean) : JavaToolchainSpecInternal.Key {
         private val languageVersion: JavaLanguageVersion?
@@ -72,47 +72,27 @@ open class DefaultToolchainSpec @Inject constructor(propertyFactory: PropertyFac
     }
 
     init {
-        version = propertyFactory.property<JavaLanguageVersion?>(JavaLanguageVersion::class.java)
-        vendor = propertyFactory.property<JvmVendorSpec?>(JvmVendorSpec::class.java)
-        implementation = propertyFactory.property<JvmImplementation?>(JvmImplementation::class.java)
-        nativeImageCapable = propertyFactory.property<Boolean?>(Boolean::class.java)
-
-        getVendor().convention(conventionVendor)
-        getImplementation().convention(conventionImplementation)
+        vendor.convention(conventionVendor)
+        implementation.convention(conventionImplementation)
     }
 
-    override fun getLanguageVersion(): Property<JavaLanguageVersion?> {
-        return version
-    }
-
-    override fun getVendor(): Property<JvmVendorSpec?> {
-        return vendor
-    }
-
-    override fun getImplementation(): Property<JvmImplementation?> {
-        return implementation
-    }
-
-    override fun getNativeImageCapable(): Property<Boolean?> {
-        return nativeImageCapable
-    }
+    final override val languageVersion: Property<JavaLanguageVersion>
+        get() = version
 
     override fun toKey(): JavaToolchainSpecInternal.Key? {
-        return DefaultToolchainSpec.Key(getLanguageVersion().getOrNull(), getVendor().getOrNull(), getImplementation().getOrNull(), nativeImageCapable.getOrElse(false)!!)
+        return DefaultToolchainSpec.Key(languageVersion.getOrNull(), vendor.getOrNull(), implementation.getOrNull(), nativeImageCapable.getOrElse(false))
     }
 
-    override fun isConfigured(): Boolean {
-        return getLanguageVersion().isPresent()
-    }
+    override val isConfigured: Boolean
+        get() = languageVersion.isPresent()
 
     @Suppress("deprecation")
-    override fun isValid(): Boolean {
-        return (getLanguageVersion().isPresent() || this.isSecondaryPropertiesUnchanged) && getLanguageVersion().getOrNull() !== DefaultJavaLanguageVersion.UNKNOWN
-    }
+    override val isValid: Boolean
+        get() = (languageVersion.isPresent() || this.isSecondaryPropertiesUnchanged) && languageVersion.getOrNull() !== DefaultJavaLanguageVersion.UNKNOWN
 
     private val isSecondaryPropertiesUnchanged: Boolean
-        get() = conventionVendor == getVendor().getOrNull() &&
-                conventionImplementation == getImplementation().getOrNull()
+        get() = conventionVendor == vendor.getOrNull() &&
+                conventionImplementation == implementation.getOrNull()
 
     override fun toString(): String {
         return getDisplayName()

@@ -124,7 +124,7 @@ class LocalFileStandInExternalResource @JvmOverloads constructor(
         }
     }
 
-    override fun withContent(readAction: Action<in InputStream?>): ExternalResourceReadResult<Void?> {
+    override fun withContent(readAction: Action<in InputStream>): ExternalResourceReadResult<Void?> {
         if (!localFile.exists()) {
             throw ResourceExceptions.getMissing(getURI())
         }

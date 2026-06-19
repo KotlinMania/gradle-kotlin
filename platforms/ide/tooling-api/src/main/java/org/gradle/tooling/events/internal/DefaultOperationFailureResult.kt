@@ -21,16 +21,10 @@ import org.gradle.tooling.events.FailureResult
 /**
  * Implementation of the `BuildFailureResult` interface.
  */
-open class DefaultOperationFailureResult(private val startTime: Long, private val endTime: Long, private val failures: MutableList<out Failure?>?) : FailureResult {
-    override fun getStartTime(): Long {
-        return startTime
-    }
+open class DefaultOperationFailureResult(override val startTime: Long, override val endTime: Long, override val failures: MutableList<out Failure?>?) : FailureResult {
 
-    override fun getEndTime(): Long {
-        return endTime
-    }
 
-    override fun getFailures(): MutableList<out Failure?>? {
-        return failures
-    }
+
+
+
 }

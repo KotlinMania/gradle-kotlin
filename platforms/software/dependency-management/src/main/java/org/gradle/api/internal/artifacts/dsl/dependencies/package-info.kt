@@ -15,18 +15,4 @@
  */
 package org.gradle.api.internal.artifacts.dsl.dependencies
 
-import org.gradle.internal.component.resolution.failure.type.AbstractVariantSelectionByAttributesFailure.getRequestedAttributes
-import org.gradle.api.JavaVersion.Companion.toVersion
-import org.gradle.internal.Cast.uncheckedCast
-import org.gradle.api.internal.artifacts.query.ArtifactResolutionQueryFactory.createArtifactResolutionQuery
-import org.gradle.api.internal.artifacts.type.ArtifactTypeRegistry.artifactTypeContainer
-import org.gradle.api.internal.artifacts.VariantTransformRegistry.registerTransform
-import org.gradle.util.internal.CollectionUtils.flattenCollections
-import org.gradle.internal.component.resolution.failure.ResolutionFailureHandler.addFailureDescriber
-import org.gradle.internal.component.resolution.failure.type.AbstractVariantSelectionByAttributesFailure.describeRequestTarget
-import org.gradle.internal.component.resolution.failure.describer.AbstractResolutionFailureDescriber.buildResolutions
-import org.gradle.internal.component.resolution.failure.describer.AbstractResolutionFailureDescriber.getDocumentationRegistry
-import org.gradle.api.internal.DocumentationRegistry.getDocumentationFor
-import org.gradle.api.JavaVersion.majorVersion
-import org.gradle.api.JavaVersion.Companion.current
 

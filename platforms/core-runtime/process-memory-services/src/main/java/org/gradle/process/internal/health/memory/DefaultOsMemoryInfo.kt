@@ -22,11 +22,11 @@ class DefaultOsMemoryInfo : OsMemoryInfo {
 
     init {
         val operatingSystem = OperatingSystem.current()
-        if (operatingSystem.isMacOsX()) {
+        if (operatingSystem.isMacOsX) {
             delegate = NativeOsMemoryInfo()
-        } else if (operatingSystem.isLinux()) {
+        } else if (operatingSystem.isLinux) {
             delegate = this.linuxDelegate
-        } else if (operatingSystem.isWindows()) {
+        } else if (operatingSystem.isWindows) {
             delegate = WindowsOsMemoryInfo()
         } else {
             delegate = MBeanOsMemoryInfo(DefaultMBeanAttributeProvider())

@@ -53,7 +53,7 @@ open class BuildFlowScope @Inject internal constructor(
         open fun store(): Pair<Any, State> = illegalState()
 
         open fun load(memento: Any): State {
-            return Loaded(memento.uncheckedCast())
+            return Loaded(memento.uncheckedCast<List<RegisteredFlowAction>>()!!)
         }
 
         protected
@@ -124,14 +124,14 @@ open class BuildFlowScope @Inject internal constructor(
         configure: Action<in FlowActionSpec<P>>
     ): FlowScope.Registration<P> {
         val parameters = configureParametersFor(action, configure)
-        val registeredFlowAction = RegisteredFlowAction(action.uncheckedCast(), parameters)
+        val registeredFlowAction = RegisteredFlowAction(action.uncheckedCast<Class<out FlowAction<FlowParameters>>>()!!, parameters)
         state.add(registeredFlowAction)
         return DefaultFlowScopeRegistration()
     }
 
     private
     fun setBuildWorkResult(failure: Throwable?) {
-        flowProviders.buildWorkResult.uncheckedCast<BuildWorkResultProvider>().apply {
+        flowProviders.buildWorkResult.uncheckedCast<BuildWorkResultProvider>()!!.apply {
             set { Optional.ofNullable(failure) }
         }
     }
@@ -149,7 +149,7 @@ open class BuildFlowScope @Inject internal constructor(
         val parametersType: Class<P> = isolationScheme.parameterTypeFor(action)
         return flowParametersInstantiator.newInstance(parametersType) { parameters ->
             val spec = specInstantiator.newInstance(DefaultFlowActionSpec::class.java, parameters)
-            configure.execute(spec.uncheckedCast())
+            configure.execute(spec.uncheckedCast<FlowActionSpec<P>>()!!)
         }
     }
 }

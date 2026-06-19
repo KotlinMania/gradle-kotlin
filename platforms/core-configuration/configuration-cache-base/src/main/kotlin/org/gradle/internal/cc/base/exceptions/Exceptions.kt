@@ -18,6 +18,7 @@ package org.gradle.internal.cc.base.exceptions
 
 import org.gradle.internal.exceptions.Contextual
 import org.gradle.internal.exceptions.DefaultMultiCauseException
+import org.gradle.internal.Factory
 
 /**
  * Marker interface for exception handling.
@@ -37,5 +38,9 @@ class ConfigurationCacheError(
 open class ConfigurationCacheException(
     message: () -> String,
     causes: Iterable<Throwable>
-) : DefaultMultiCauseException(message, causes), ConfigurationCacheThrowable
-
+) : DefaultMultiCauseException(
+    object : Factory<String?> {
+        override fun create(): String = message()
+    },
+    causes
+), ConfigurationCacheThrowable

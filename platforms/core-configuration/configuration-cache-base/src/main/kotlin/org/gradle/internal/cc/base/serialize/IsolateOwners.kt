@@ -37,11 +37,13 @@ sealed class IsolateOwners : IsolateOwner {
     class OwnerTask(
         override val delegate: Task,
     ) : IsolateOwners() {
-        override fun <T : Any> service(type: Class<T>): T = (delegate.project as ProjectInternal).services.get(type)
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : Any> service(type: Class<T>): T = (delegate.project as ProjectInternal).services.get(type as Class<T?>)!!
     }
 
     class OwnerGradle(override val delegate: Gradle) : IsolateOwners() {
-        override fun <T : Any> service(type: Class<T>): T = (delegate as GradleInternal).services.get(type)
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : Any> service(type: Class<T>): T = (delegate as GradleInternal).services.get(type as Class<T?>)!!
     }
 
     class OwnerHost(override val delegate: HostServiceProvider) : IsolateOwners() {
@@ -49,7 +51,8 @@ sealed class IsolateOwners : IsolateOwner {
     }
 
     class OwnerFlowScope(override val delegate: Gradle) : IsolateOwners() {
-        override fun <T : Any> service(type: Class<T>): T = (delegate as GradleInternal).services.get(type)
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : Any> service(type: Class<T>): T = (delegate as GradleInternal).services.get(type as Class<T?>)!!
     }
 
     class OwnerFlowAction(override val delegate: OwnerFlowScope) : IsolateOwners() {

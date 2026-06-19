@@ -15,6 +15,7 @@
  */
 package org.gradle.tooling.model.kotlin.dsl
 
+import java.io.File
 import org.gradle.tooling.model.kotlin.dsl.KotlinDslScriptsModel.Companion.SCRIPTS_GRADLE_PROPERTY_NAME
 
 /**

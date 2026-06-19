@@ -27,11 +27,12 @@ internal class ProblemHeaderWriter : PartialProblemWriter {
     }
 
     private fun headerFor(options: RenderOptions, problem: ProblemInternal): String {
-        val result = StringBuilder(options.getPrefix())
-        result.append(problem.definition.getId().getDisplayName())
-        if (options.isRenderId()) {
+        val problemId = problem.getDefinition()!!.getId()!!
+        val result = StringBuilder(options.prefix)
+        result.append(problemId.getDisplayName())
+        if (options.isRenderId) {
             result.append(" (id: ")
-            result.append(problem.definition.getId())
+            result.append(problemId)
             result.append(")")
         }
         return result.toString()

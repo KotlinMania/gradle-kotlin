@@ -48,7 +48,7 @@ class DefaultIsolatedAntBuilder : IsolatedAntBuilder, Stoppable {
     private val classPathRegistry: ClassPathRegistry?
     private val classLoaderFactory: ClassLoaderFactory?
     private val moduleRegistry: ModuleRegistry?
-    val classLoaderCache: ClassPathToClassLoaderCache
+    private val classLoaderCache: ClassPathToClassLoaderCache
     private val gradleApiGroovyLoader: GroovySystemLoader
     private val antAdapterGroovyLoader: GroovySystemLoader
 
@@ -61,7 +61,7 @@ class DefaultIsolatedAntBuilder : IsolatedAntBuilder, Stoppable {
         val groovySystemLoaderFactory = GroovySystemLoaderFactory()
         this.classLoaderCache = ClassPathToClassLoaderCache(groovySystemLoaderFactory)
 
-        val antClasspath: MutableList<File?> = Lists.newArrayList<File?>(classPathRegistry.getClassPath("ANT").getAsFiles())
+        val antClasspath: MutableList<File> = Lists.newArrayList<File>(classPathRegistry.getClassPath("ANT").getAsFiles())
         // Need tools.jar for compile tasks
         val toolsJar = Jvm.current().getToolsJar()
         if (toolsJar != null) {
@@ -102,14 +102,14 @@ class DefaultIsolatedAntBuilder : IsolatedAntBuilder, Stoppable {
         antAdapterGroovyLoader = groovySystemLoaderFactory.forClassLoader(antAdapterLoader)
     }
 
-    protected constructor(copy: DefaultIsolatedAntBuilder, libClasspath: Iterable<File?>?) {
+    protected constructor(copy: DefaultIsolatedAntBuilder, libClasspath: Iterable<File>?) {
         this.classPathRegistry = copy.classPathRegistry
         this.classLoaderFactory = copy.classLoaderFactory
         this.moduleRegistry = copy.moduleRegistry
         this.antLoader = copy.antLoader
         this.baseAntLoader = copy.baseAntLoader
         this.antAdapterLoader = copy.antAdapterLoader
-        this.libClasspath = DefaultClassPath.of(libClasspath)
+        this.libClasspath = DefaultClassPath.of(libClasspath ?: emptyList())
         this.gradleApiGroovyLoader = copy.gradleApiGroovyLoader
         this.antAdapterGroovyLoader = copy.antAdapterGroovyLoader
         this.classLoaderCache = copy.classLoaderCache
@@ -119,15 +119,19 @@ class DefaultIsolatedAntBuilder : IsolatedAntBuilder, Stoppable {
         if (LOG!!.isDebugEnabled()) {
             LOG.debug("Forking a new isolated ant builder for classpath : {}", classpath)
         }
-        return DefaultIsolatedAntBuilder(this, classpath)
+        return DefaultIsolatedAntBuilder(this, classpath?.filterNotNull())
     }
 
-    override fun execute(antBuilderAction: Action<AntBuilderDelegate?>) {
+    override fun execute(antBuilderAction: Action<AntBuilderDelegate>) {
         classLoaderCache.withCachedClassLoader(
             libClasspath, gradleApiGroovyLoader, antAdapterGroovyLoader,
-            org.gradle.internal.Factory { VisitableURLClassLoader("ant-lib-loader", baseAntLoader, libClasspath.getAsURLs()) },
-            Action { cachedClassLoader: CachedClassLoader? ->
-                val classLoader = cachedClassLoader!!.getClassLoader()
+            object : org.gradle.internal.Factory<ClassLoader> {
+                override fun create(): ClassLoader {
+                    return VisitableURLClassLoader("ant-lib-loader", baseAntLoader, libClasspath.getAsURLs())
+                }
+            },
+            Action { cachedClassLoader: CachedClassLoader ->
+                val classLoader = cachedClassLoader.classLoader!!
                 val antBuilder = newInstanceOf("org.gradle.api.internal.project.ant.BasicAntBuilder")
                 val antLogger = newInstanceOf("org.gradle.api.internal.project.ant.AntLoggingAdapter")
 
@@ -148,7 +152,7 @@ class DefaultIsolatedAntBuilder : IsolatedAntBuilder, Stoppable {
             })
     }
 
-    private fun newInstanceOf(className: String?): Any {
+    private fun newInstanceOf(className: String): Any {
         // we must use a String literal here, otherwise using things like Foo.class.name will trigger unnecessary
         // loading of classes in the classloader of the DefaultIsolatedAntBuilder, which is not what we want.
         try {

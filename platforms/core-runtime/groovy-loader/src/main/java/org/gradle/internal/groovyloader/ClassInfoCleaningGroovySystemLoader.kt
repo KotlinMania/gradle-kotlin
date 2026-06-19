@@ -30,8 +30,8 @@ class ClassInfoCleaningGroovySystemLoader(private val leakingLoader: ClassLoader
     private val globalClassSetIteratorMethod: Method
     private val globalClassValue: Any
     private val globalClassSetItems: Any
-    private val clazzField: Field? = null
-    private val classRefField: Field? = null
+    private var clazzField: Field? = null
+    private var classRefField: Field? = null
 
     init {
         // this work has to be done before classes are loaded, otherwise there are risks that
@@ -53,10 +53,10 @@ class ClassInfoCleaningGroovySystemLoader(private val leakingLoader: ClassLoader
 
         try {
             classRefField = classInfoClass.getDeclaredField("classRef")
-            classRefField.setAccessible(true)
+            classRefField!!.setAccessible(true)
         } catch (e: Exception) {
             clazzField = classInfoClass.getDeclaredField("klazz")
-            clazzField.setAccessible(true)
+            clazzField!!.setAccessible(true)
         }
     }
 
@@ -104,10 +104,11 @@ class ClassInfoCleaningGroovySystemLoader(private val leakingLoader: ClassLoader
 
     @Throws(IllegalAccessException::class)
     private fun getClazz(classInfo: Any): Class<*>? {
+        val classRefField = classRefField
         if (classRefField != null) {
             return Cast.uncheckedNonnullCast<WeakReference<Class<*>>>(classRefField.get(classInfo)).get()
         } else {
-            return Objects.requireNonNull<Field?>(clazzField).get(classInfo) as Class<*>?
+            return requireNotNull(clazzField).get(classInfo) as Class<*>?
         }
     }
 

@@ -84,11 +84,8 @@ fun configureDependenciesForCrossVersionTests(sourceSet: SourceSet, modelsSource
         // make sure dependency versions are pinned to current desired versions
         project.configurations[modelsSourceSet.compileOnlyConfigurationName](platform(project(":distributions-dependencies")))
         // compile cross version test models using the current TAPI in the form available to our users later
-        project.configurations[modelsSourceSet.compileOnlyConfigurationName](project(":tooling-api")) {
-            attributes {
-                attribute(Bundling.BUNDLING_ATTRIBUTE, objects.named(Bundling.SHADOWED))
-            }
-        }
+        project.configurations[modelsSourceSet.compileOnlyConfigurationName](project(":tooling-api"))
+        project.configurations[modelsSourceSet.compileOnlyConfigurationName](project.dependencies.kotlin("stdlib"))
 
         project.configurations[sourceSet.implementationConfigurationName](crossVersionTestModels(project(path)))
         project.configurations[sourceSet.implementationConfigurationName](testFixtures(project(":tooling-api")))

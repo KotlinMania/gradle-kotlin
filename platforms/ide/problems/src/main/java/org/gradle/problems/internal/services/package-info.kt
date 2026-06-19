@@ -18,8 +18,4 @@
  */
 package org.gradle.problems.internal.services
 
-import org.gradle.internal.service.ServiceRegistration.addProvider
-import org.gradle.StartParameter.warningMode
-import org.gradle.api.internal.StartParameterInternal.isProblemReportGenerationEnabled
-import org.gradle.api.internal.DocumentationRegistry.getDocumentationRecommendationFor
 

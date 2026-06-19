@@ -18,24 +18,4 @@
  */
 package org.gradle.api.tasks.testing.junit
 
-import org.gradle.internal.serialization.Cached.get
-import org.gradle.process.internal.JavaForkOptionsFactory.newDecoratedJavaForkOptions
-import org.gradle.api.JavaVersion.Companion.toVersion
-import org.gradle.jvm.toolchain.JavaLanguageVersion.asInt
-import org.gradle.process.internal.JavaForkOptionsFactory.newJavaForkOptions
-import org.gradle.internal.UncheckedException.Companion.throwAsUncheckedException
-import org.gradle.api.JavaVersion.isCompatibleWith
-import org.gradle.internal.service.ServiceRegistry.get
-import org.gradle.StartParameter.maxWorkerCount
-import org.gradle.internal.deprecation.DeprecationLogger.deprecateMethod
-import org.gradle.internal.deprecation.DeprecationMessageBuilder.willBeRemovedInGradle10
-import org.gradle.internal.deprecation.Documentation.AbstractBuilder.withUpgradeGuideSection
-import org.gradle.internal.deprecation.DeprecationMessageBuilder.WithDocumentation.nagUser
-import org.gradle.internal.Cast.cast
-import org.gradle.api.logging.Logging.getLogger
-import org.gradle.internal.Factory.create
-import org.gradle.internal.Cast.uncheckedNonnullCast
-import org.gradle.util.internal.IncubationLogger.incubatingFeatureUsed
-import org.gradle.api.logging.Logger.info
-import org.gradle.util.internal.CollectionUtils.flattenCollections
 

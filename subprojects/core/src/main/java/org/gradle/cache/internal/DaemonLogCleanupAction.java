@@ -66,7 +66,7 @@ public class DaemonLogCleanupAction implements MonitoredCleanupAction {
     public boolean execute(CleanupProgressMonitor progressMonitor) {
         Timer timer = Time.startTimer();
         performCleanup(progressMonitor);
-        LOGGER.debug("Processed daemon logs at {} for cleanup in {}", daemonBaseDir, timer.elapsed);
+        LOGGER.debug("Processed daemon logs at {} for cleanup in {}", daemonBaseDir, timer.getElapsed());
         return true;
     }
 

@@ -18,32 +18,4 @@
  */
 package org.gradle.language.objectivec.tasks
 
-import org.gradle.internal.Cast.uncheckedCast
-import org.gradle.internal.Cast.cast
-import org.gradle.internal.service.ServiceRegistry.get
-import org.gradle.api.specs.Spec.isSatisfiedBy
-import org.gradle.internal.os.OperatingSystem.Companion.current
-import org.gradle.internal.os.OperatingSystem.isWindows
-import org.gradle.internal.UncheckedException.Companion.throwAsUncheckedException
-import org.gradle.internal.os.OperatingSystem.isMacOsX
-import org.gradle.internal.os.OperatingSystem.isLinux
-import org.gradle.internal.service.ServiceRegistration.add
-import org.gradle.util.internal.CollectionUtils.filter
-import org.gradle.internal.serialize.BaseSerializerFactory.getSerializerFor
-import org.gradle.internal.serialize.ListSerializer.read
-import org.gradle.internal.serialize.AbstractCollectionSerializer.read
-import org.gradle.internal.serialize.ListSerializer.write
-import org.gradle.internal.serialize.AbstractCollectionSerializer.write
-import org.gradle.internal.serialize.Decoder.readByte
-import org.gradle.internal.serialize.Decoder.readNullableString
-import org.gradle.internal.serialize.Serializer.read
-import org.gradle.internal.serialize.Encoder.writeByte
-import org.gradle.internal.serialize.Encoder.writeNullableString
-import org.gradle.internal.serialize.Serializer.write
-import org.gradle.internal.serialize.Decoder.readString
-import org.gradle.internal.serialize.Decoder.readBoolean
-import org.gradle.internal.serialize.Decoder.readSmallInt
-import org.gradle.internal.serialize.Encoder.writeString
-import org.gradle.internal.serialize.Encoder.writeBoolean
-import org.gradle.internal.serialize.Encoder.writeSmallInt
 

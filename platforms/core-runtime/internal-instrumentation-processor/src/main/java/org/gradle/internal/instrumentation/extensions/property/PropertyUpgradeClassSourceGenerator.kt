@@ -249,7 +249,7 @@ class PropertyUpgradeClassSourceGenerator : RequestGroupingInstrumentationClassS
                                 newPropertyName
                             )
                         )
-                        .add(".willBecomeAnErrorInGradle10()\\n")
+                        .add(".willBecomeAnErrorInGradle10()\n")
                 }
                 ReplacedDeprecation.RemovedIn.UNSPECIFIED -> {
                     val builder = CodeBlock.builder()
@@ -274,9 +274,9 @@ class PropertyUpgradeClassSourceGenerator : RequestGroupingInstrumentationClassS
             if (deprecationSpec.withUpgradeGuideVersion != -1) {
                 deprecationBuilder.add(".withUpgradeGuideSection(\$L, \$S)\n", deprecationSpec.withUpgradeGuideVersion, deprecationSpec.withUpgradeGuideSection)
             } else if (deprecationSpec.isWithDslReference) {
-                deprecationBuilder.add(".withDslReference()\\n")
+                deprecationBuilder.add(".withDslReference()\n")
             } else {
-                deprecationBuilder.add(".undocumented()\\n")
+                deprecationBuilder.add(".undocumented()\n")
             }
 
             return deprecationBuilder.add(".nagUser()").build()

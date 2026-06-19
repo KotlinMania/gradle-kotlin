@@ -34,24 +34,24 @@ class UrlExternalResource : AbstractExternalResourceAccessor(), ExternalResource
     @Throws(ResourceException::class)
     override fun getMetaData(location: ExternalResourceName, revalidate: Boolean): ExternalResourceMetaData? {
         try {
-            val url = location.getUri().toURL()
+            val url = location.uri.toURL()
             val connection = url.openConnection()
             try {
-                return DefaultExternalResourceMetaData(location.getUri(), connection.getLastModified(), connection.getContentLength().toLong(), connection.getContentType(), null, null)
+                return DefaultExternalResourceMetaData(location.uri, connection.getLastModified(), connection.getContentLength().toLong(), connection.getContentType(), null, null)
             } finally {
                 connection.getInputStream().close()
             }
         } catch (e: FileNotFoundException) {
             return null
         } catch (e: Exception) {
-            throw ResourceExceptions.getFailed(location.getUri(), e)
+            throw ResourceExceptions.getFailed(location.uri, e)
         }
     }
 
     @Throws(ResourceException::class)
     public override fun openResource(location: ExternalResourceName, revalidate: Boolean): ExternalResourceReadResponse? {
         try {
-            val url = location.getUri().toURL()
+            val url = location.uri.toURL()
             val connection = url.openConnection()
             val inputStream = connection.getInputStream()
             return object : ExternalResourceReadResponse {
@@ -60,7 +60,7 @@ class UrlExternalResource : AbstractExternalResourceAccessor(), ExternalResource
                 }
 
                 override fun getMetaData(): ExternalResourceMetaData {
-                    return DefaultExternalResourceMetaData(location.getUri(), connection.getLastModified(), connection.getContentLength().toLong(), connection.getContentType(), null, null)
+                    return DefaultExternalResourceMetaData(location.uri, connection.getLastModified(), connection.getContentLength().toLong(), connection.getContentType(), null, null)
                 }
 
                 @Throws(IOException::class)
@@ -71,17 +71,17 @@ class UrlExternalResource : AbstractExternalResourceAccessor(), ExternalResource
         } catch (e: FileNotFoundException) {
             return null
         } catch (e: Exception) {
-            throw ResourceExceptions.getFailed(location.getUri(), e)
+            throw ResourceExceptions.getFailed(location.uri, e)
         }
     }
 
     @Throws(ResourceException::class)
-    override fun list(parent: ExternalResourceName?): MutableList<String?>? {
+    override fun list(parent: ExternalResourceName): MutableList<String?>? {
         throw UnsupportedOperationException()
     }
 
     @Throws(IOException::class)
-    override fun upload(resource: ReadableContent?, destination: ExternalResourceName?) {
+    override fun upload(resource: ReadableContent, destination: ExternalResourceName) {
         throw UnsupportedOperationException()
     }
 

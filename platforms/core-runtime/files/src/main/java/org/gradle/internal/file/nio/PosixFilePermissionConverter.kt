@@ -19,6 +19,7 @@ import java.nio.file.attribute.PosixFilePermission
 import java.util.EnumSet
 
 object PosixFilePermissionConverter {
+    @JvmStatic
     fun convertToPermissionsSet(mode: Int): MutableSet<PosixFilePermission> {
         val result: MutableSet<PosixFilePermission> = EnumSet.noneOf<PosixFilePermission>(PosixFilePermission::class.java)
 
@@ -57,6 +58,7 @@ object PosixFilePermissionConverter {
         return (mode and testbit) == testbit
     }
 
+    @JvmStatic
     fun convertToInt(permissions: MutableSet<PosixFilePermission>): Int {
         var result = 0
         if (permissions.contains(PosixFilePermission.OWNER_READ)) {

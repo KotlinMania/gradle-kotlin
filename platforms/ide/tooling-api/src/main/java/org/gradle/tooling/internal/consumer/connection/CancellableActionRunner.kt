@@ -17,6 +17,7 @@ package org.gradle.tooling.internal.consumer.connection
 
 import org.gradle.tooling.BuildAction
 import org.gradle.tooling.BuildActionFailureException
+import org.gradle.tooling.Failure
 import org.gradle.tooling.internal.consumer.parameters.BuildCancellationTokenAdapter
 import org.gradle.tooling.internal.consumer.parameters.ConsumerOperationParameters
 import org.gradle.tooling.internal.consumer.versioning.VersionDetails
@@ -27,28 +28,28 @@ import org.gradle.tooling.internal.protocol.InternalCancellableConnection
 import org.gradle.tooling.internal.protocol.InternalCancellationToken
 
 internal open class CancellableActionRunner(
-    private val executor: InternalCancellableConnection,
+    private val executor: InternalCancellableConnection?,
     private val exceptionTransformer: CancellationExceptionTransformer,
     private val versionDetails: VersionDetails
 ) : ActionRunner {
     @Throws(UnsupportedOperationException::class, IllegalStateException::class)
     override fun <T> run(action: BuildAction<T?>, operationParameters: ConsumerOperationParameters): T? {
-        val rootDir = operationParameters.getProjectDir()
+        val rootDir = operationParameters.projectDir
         val result: BuildResult<T?>?
         try {
             try {
                 result = execute<T?>(InternalBuildActionAdapter<T?>(action, rootDir, versionDetails), BuildCancellationTokenAdapter(operationParameters.getCancellationToken()), operationParameters)
             } catch (e: RuntimeException) {
-                throw exceptionTransformer.transform(e)
+                throw exceptionTransformer.transform(e)!!
             }
         } catch (e: InternalBuildActionFailureException) {
             throw BuildActionFailureException("The supplied build action failed with an exception.", e.cause)
         }
-        return result.model
+        return result!!.model
     }
 
     @Suppress("deprecation")
     protected open fun <T> execute(buildActionAdapter: InternalBuildActionAdapter<T?>, cancellationTokenAdapter: InternalCancellationToken, operationParameters: BuildParameters): BuildResult<T?> {
-        return executor.run<T?>(buildActionAdapter, cancellationTokenAdapter, operationParameters)
+        return executor!!.run<T?>(buildActionAdapter, cancellationTokenAdapter, operationParameters)!!
     }
 }

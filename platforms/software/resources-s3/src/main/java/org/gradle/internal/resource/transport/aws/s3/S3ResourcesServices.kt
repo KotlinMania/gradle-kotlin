@@ -25,12 +25,12 @@ import org.gradle.internal.service.ServiceRegistrationProvider
 import org.gradle.internal.service.scopes.AbstractGradleModuleServices
 
 class S3ResourcesServices : AbstractGradleModuleServices() {
-    public override fun registerGlobalServices(registration: ServiceRegistration) {
-        registration.addProvider(GlobalScopeServices())
+    public override fun registerGlobalServices(registration: ServiceRegistration?) {
+        registration!!.addProvider(GlobalScopeServices())
     }
 
-    public override fun registerBuildServices(registration: ServiceRegistration) {
-        registration.addProvider(AuthenticationSchemeAction())
+    public override fun registerBuildServices(registration: ServiceRegistration?) {
+        registration!!.addProvider(AuthenticationSchemeAction())
     }
 
     private class GlobalScopeServices : ServiceRegistrationProvider {
@@ -43,7 +43,7 @@ class S3ResourcesServices : AbstractGradleModuleServices() {
     private class AuthenticationSchemeAction : ServiceRegistrationProvider {
         @Provides
         fun configure(registration: ServiceRegistration?, authenticationSchemeRegistry: AuthenticationSchemeRegistry) {
-            authenticationSchemeRegistry.registerScheme<AwsImAuthentication?>(AwsImAuthentication::class.java, DefaultAwsImAuthentication::class.java)
+            authenticationSchemeRegistry.registerScheme(AwsImAuthentication::class.java, DefaultAwsImAuthentication::class.java)
         }
     }
 }

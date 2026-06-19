@@ -15,14 +15,23 @@
  */
 package org.gradle.integtests.tooling.r940
 
+import org.gradle.tooling.*
+import org.gradle.tooling.model.*
+import org.gradle.tooling.model.build.*
+import org.gradle.tooling.model.eclipse.*
+import org.gradle.tooling.model.gradle.*
+import org.gradle.tooling.model.idea.*
+import org.gradle.tooling.model.kotlin.dsl.*
+
 import org.gradle.tooling.BuildAction
 import java.io.File
+import org.gradle.integtests.tooling.r48.*
 import java.io.Serializable
 import kotlin.collections.HashMap
 import kotlin.collections.MutableMap
 
 internal class KotlinModelOnNullTargetAction : BuildAction<KotlinModel?>, Serializable {
-    public override fun execute(controller: BuildController): KotlinModel {
+    public override fun execute(controller: BuildController?): KotlinModel {
         val build: GradleBuild = checkNotNull(controller.fetch(GradleBuild::class.java).getModel())
         val scriptModels: MutableMap<File?, KotlinDslScriptModel?> = HashMap<File?, KotlinDslScriptModel?>()
         val failures: MutableMap<File?, Failure?> = HashMap<File?, Failure?>()

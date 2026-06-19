@@ -33,6 +33,5 @@ interface DocLink {
      *
      * @since 8.13
      */
-    @JvmField
-    val url: String?
+    fun getUrl(): String?
 }

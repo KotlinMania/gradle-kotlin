@@ -20,20 +20,16 @@ import org.gradle.tooling.events.OperationDescriptor
 /**
  * Implementation of the [OperationDescriptor] interface, for those operations which are performed by the consumer.
  */
-class ConsumerOperationDescriptor(private val displayName: String?) : OperationDescriptor {
-    override fun getName(): String? {
-        return displayName
-    }
+class ConsumerOperationDescriptor(override val displayName: String?) : OperationDescriptor {
+    override val name: String?
+        get() = displayName
 
     override fun toString(): String {
         return displayName!!
     }
 
-    override fun getDisplayName(): String? {
-        return displayName
-    }
 
-    override fun getParent(): OperationDescriptor? {
-        return null
-    }
+
+    override val parent: OperationDescriptor?
+        get() = null
 }

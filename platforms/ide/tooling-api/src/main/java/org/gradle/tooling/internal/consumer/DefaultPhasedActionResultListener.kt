@@ -15,7 +15,6 @@
  */
 package org.gradle.tooling.internal.consumer
 
-import org.gradle.internal.Cast.uncheckedNonnullCast
 import org.gradle.tooling.IntermediateResultHandler
 import org.gradle.tooling.internal.protocol.PhasedActionResult
 import org.gradle.tooling.internal.protocol.PhasedActionResultListener
@@ -27,8 +26,8 @@ class DefaultPhasedActionResultListener(
     private val projectsLoadedHandler: IntermediateResultHandler<*>?,
     private val buildFinishedHandler: IntermediateResultHandler<*>?
 ) : PhasedActionResultListener {
-    override fun onResult(result: PhasedActionResult<*>) {
-        val model: Any? = result.result
+    override fun onResult(result: PhasedActionResult<*>?) {
+        val model: Any? = result!!.result
         val type = result.phase
         if (type == PhasedActionResult.Phase.PROJECTS_LOADED) {
             onComplete(model, projectsLoadedHandler)
@@ -37,9 +36,10 @@ class DefaultPhasedActionResultListener(
         }
     }
 
-    private fun <T> onComplete(result: Any?, handler: IntermediateResultHandler<T?>?) {
+    @Suppress("UNCHECKED_CAST")
+    private fun onComplete(result: Any?, handler: IntermediateResultHandler<*>?) {
         if (handler != null) {
-            handler.onComplete(uncheckedNonnullCast<T?>(result))
+            (handler as IntermediateResultHandler<Any?>).onComplete(result)
         }
     }
 }

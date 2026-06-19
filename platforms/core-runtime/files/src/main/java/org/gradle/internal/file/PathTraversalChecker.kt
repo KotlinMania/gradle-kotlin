@@ -37,6 +37,7 @@ object PathTraversalChecker {
         return name
     }
 
+    @JvmStatic
     fun isUnsafePathName(name: String): Boolean {
         if (name.isEmpty()) {
             return true

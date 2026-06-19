@@ -20,5 +20,5 @@ import org.gradle.internal.service.scopes.ServiceScope
 
 @ServiceScope(Scope.Global::class)
 interface JvmMemoryInfo {
-    val jvmSnapshot: JvmMemoryStatus?
+    fun getJvmSnapshot(): JvmMemoryStatus
 }

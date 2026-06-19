@@ -22,18 +22,22 @@ import java.io.FileNotFoundException
 import java.net.URI
 
 object ResourceExceptions {
+    @JvmStatic
     fun readFolder(location: File): ResourceIsAFolderException {
         return ResourceIsAFolderException(location.toURI(), String.format("Cannot read '%s' because it is a folder.", location))
     }
 
+    @JvmStatic
     fun readFailed(location: File, failure: Throwable?): ResourceException {
         return failure(location.toURI(), String.format("Could not read '%s'.", location), failure)
     }
 
+    @JvmStatic
     fun readFailed(displayName: String?, failure: Throwable?): ResourceException {
         return ResourceException(String.format("Could not read %s.", displayName), failure)
     }
 
+    @JvmStatic
     fun readMissing(location: File, failure: Throwable?): MissingResourceException {
         return MissingResourceException(
             location.toURI(),
@@ -42,6 +46,7 @@ object ResourceExceptions {
         )
     }
 
+    @JvmStatic
     fun getMissing(location: URI?, failure: Throwable?): MissingResourceException {
         return MissingResourceException(
             location,
@@ -50,6 +55,7 @@ object ResourceExceptions {
         )
     }
 
+    @JvmStatic
     fun getMissing(location: URI?): MissingResourceException {
         return MissingResourceException(
             location,
@@ -57,10 +63,12 @@ object ResourceExceptions {
         )
     }
 
+    @JvmStatic
     fun getFailed(location: URI, failure: Throwable?): ResourceException {
         return failure(location, String.format("Could not get resource '%s'.", location), failure)
     }
 
+    @JvmStatic
     fun putFailed(location: URI, failure: Throwable?): ResourceException {
         return failure(location, String.format("Could not write to resource '%s'.", location), failure)
     }
@@ -68,6 +76,7 @@ object ResourceExceptions {
     /**
      * Wraps the given failure, unless it is a ResourceException with the specified location.
      */
+    @JvmStatic
     fun failure(location: URI, message: String?, failure: Throwable?): ResourceException {
         if (failure is ResourceException) {
             val resourceException = failure

@@ -23,8 +23,8 @@ import org.gradle.internal.service.scopes.AbstractGradleModuleServices
 
 
 class SftpResourcesServices : AbstractGradleModuleServices() {
-    public override fun registerGlobalServices(registration: ServiceRegistration) {
-        registration.addProvider(GlobalScopeServices())
+    override fun registerGlobalServices(registration: ServiceRegistration?) {
+        registration!!.addProvider(GlobalScopeServices())
     }
 
     private class GlobalScopeServices : ServiceRegistrationProvider {
@@ -34,7 +34,7 @@ class SftpResourcesServices : AbstractGradleModuleServices() {
         }
 
         @Provides
-        fun createSftpConnectorFactory(clientFactory: SftpClientFactory?): ResourceConnectorFactory {
+        fun createSftpConnectorFactory(clientFactory: SftpClientFactory): ResourceConnectorFactory {
             return SftpConnectorFactory(clientFactory)
         }
     }

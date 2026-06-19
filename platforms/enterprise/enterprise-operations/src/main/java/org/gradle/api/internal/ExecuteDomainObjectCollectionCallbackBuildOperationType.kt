@@ -24,6 +24,7 @@ import org.gradle.internal.operations.BuildOperationType
  */
 object ExecuteDomainObjectCollectionCallbackBuildOperationType :
     BuildOperationType<ExecuteDomainObjectCollectionCallbackBuildOperationType.Details, ExecuteDomainObjectCollectionCallbackBuildOperationType.Result> {
+    @JvmField
     val RESULT: Result = object : Result {
     }
 
@@ -39,4 +40,3 @@ object ExecuteDomainObjectCollectionCallbackBuildOperationType :
 
     interface Result
 }
-

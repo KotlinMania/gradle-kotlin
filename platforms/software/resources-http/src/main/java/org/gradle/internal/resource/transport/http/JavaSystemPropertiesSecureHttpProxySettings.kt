@@ -15,7 +15,4 @@
  */
 package org.gradle.internal.resource.transport.http
 
-object JavaSystemPropertiesSecureHttpProxySettings : JavaSystemPropertiesProxySettings() {
-    private const val DEFAULT_PROXY_PORT = 443
-    private const val PROPERTY_PREFIX = "https"
-}
+class JavaSystemPropertiesSecureHttpProxySettings : JavaSystemPropertiesProxySettings("https", 443)

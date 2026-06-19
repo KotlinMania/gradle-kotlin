@@ -16,17 +16,19 @@
 package org.gradle.internal.serialize
 
 object Serializers {
+    @JvmStatic
     fun <T> stateful(serializer: Serializer<T?>): StatefulSerializer<T?> {
         return StatefulSerializerAdapter<T?>(serializer)
     }
 
+    @JvmStatic
     fun <T> constant(instance: T?): Serializer<T?> {
         return object : Serializer<T?> {
-            override fun read(decoder: Decoder?): T? {
+            override fun read(decoder: Decoder): T? {
                 return instance
             }
 
-            override fun write(encoder: Encoder?, value: T?) {
+            override fun write(encoder: Encoder, value: T?) {
                 require(value === instance) { "Cannot serialize constant value: " + value }
             }
         }
@@ -37,7 +39,7 @@ object Serializers {
             return object : ObjectReader<T?> {
                 @Throws(Exception::class)
                 override fun read(): T? {
-                    return serializer.read(decoder)
+                    return serializer.read(decoder!!)
                 }
             }
         }
@@ -46,7 +48,7 @@ object Serializers {
             return object : ObjectWriter<T?> {
                 @Throws(Exception::class)
                 override fun write(value: T?) {
-                    serializer.write(encoder, value)
+                    serializer.write(encoder!!, value)
                 }
             }
         }

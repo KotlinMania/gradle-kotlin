@@ -17,11 +17,11 @@ package org.gradle.internal.serialize
 
 import com.google.common.base.Objects
 
-class MapSerializer<U, V>(private val keySerializer: Serializer<U?>, private val valueSerializer: Serializer<V?>) : AbstractSerializer<MutableMap<U?, V?>?>() {
+class MapSerializer<U : Any, V : Any>(private val keySerializer: Serializer<U>, private val valueSerializer: Serializer<V>) : AbstractSerializer<Map<U, V>>() {
     @Throws(Exception::class)
-    override fun read(decoder: Decoder): MutableMap<U?, V?> {
+    override fun read(decoder: Decoder): MutableMap<U, V> {
         val size = decoder.readInt()
-        val valueMap: MutableMap<U?, V?> = LinkedHashMap<U?, V?>(size)
+        val valueMap: MutableMap<U, V> = LinkedHashMap<U, V>(size)
         for (i in 0..<size) {
             val key = keySerializer.read(decoder)
             val value = valueSerializer.read(decoder)
@@ -31,7 +31,7 @@ class MapSerializer<U, V>(private val keySerializer: Serializer<U?>, private val
     }
 
     @Throws(Exception::class)
-    override fun write(encoder: Encoder, value: MutableMap<U?, V?>) {
+    override fun write(encoder: Encoder, value: Map<U, V>) {
         encoder.writeInt(value.size)
         for (entry in value.entries) {
             keySerializer.write(encoder, entry.key)

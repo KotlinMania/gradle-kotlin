@@ -41,34 +41,34 @@ class ConsumerTargetTypeProvider : TargetTypeProvider {
         configuredTargetTypes.put(IdeaModuleDependency::class.java.getCanonicalName(), BackwardsCompatibleIdeaModuleDependency::class.java)
     }
 
-    override fun <T> getTargetType(initialTargetType: Class<T?>, protocolObject: Any): Class<out T?>? {
+    override fun <T> getTargetType(initialTargetType: Class<T?>, protocolObject: Any): Class<out T> {
         val interfaces = protocolObject.javaClass.getInterfaces()
         for (i in interfaces) {
             if (configuredTargetTypes.containsKey(i.getName())) {
-                return configuredTargetTypes.get(i.getName())!!.asSubclass<T?>(initialTargetType)
+                return configuredTargetTypes.get(i.getName())!!.asSubclass(initialTargetType) as Class<out T>
             }
         }
         if (initialTargetType.isAssignableFrom(CppComponent::class.java)) {
             if (protocolObject is InternalCppApplication) {
-                return CppApplication::class.java.asSubclass<T?>(initialTargetType)
+                return CppApplication::class.java.asSubclass(initialTargetType) as Class<out T>
             }
             if (protocolObject is InternalCppLibrary) {
-                return CppLibrary::class.java.asSubclass<T?>(initialTargetType)
+                return CppLibrary::class.java.asSubclass(initialTargetType) as Class<out T>
             }
             if (protocolObject is InternalCppTestSuite) {
-                return CppTestSuite::class.java.asSubclass<T?>(initialTargetType)
+                return CppTestSuite::class.java.asSubclass(initialTargetType) as Class<out T>
             }
         } else if (initialTargetType.isAssignableFrom(CppBinary::class.java)) {
             if (protocolObject is InternalCppExecutable) {
-                return CppExecutable::class.java.asSubclass<T?>(initialTargetType)
+                return CppExecutable::class.java.asSubclass(initialTargetType) as Class<out T>
             }
             if (protocolObject is InternalCppSharedLibrary) {
-                return CppSharedLibrary::class.java.asSubclass<T?>(initialTargetType)
+                return CppSharedLibrary::class.java.asSubclass(initialTargetType) as Class<out T>
             }
             if (protocolObject is InternalCppStaticLibrary) {
-                return CppStaticLibrary::class.java.asSubclass<T?>(initialTargetType)
+                return CppStaticLibrary::class.java.asSubclass(initialTargetType) as Class<out T>
             }
         }
-        return initialTargetType
+        return initialTargetType as Class<out T>
     }
 }

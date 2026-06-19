@@ -16,7 +16,7 @@
 package org.gradle.internal.logging.events
 
 class TextQuestionPromptEvent(timestamp: Long, @JvmField val question: String?, @JvmField val defaultValue: String?) : PromptOutputEvent(timestamp) {
-    val prompt: String?
+    override val prompt: String
         get() {
             val builder = StringBuilder()
             builder.append(question)

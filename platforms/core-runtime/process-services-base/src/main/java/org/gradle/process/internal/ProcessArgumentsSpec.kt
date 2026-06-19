@@ -21,19 +21,20 @@ import org.gradle.process.CommandLineArgumentProvider
 import org.gradle.util.internal.CollectionUtils
 import org.gradle.util.internal.GUtil
 import java.util.Arrays
+import java.util.Objects
 
 class ProcessArgumentsSpec(private val hasExecutable: HasExecutable) {
-    internal interface HasExecutable {
+    interface HasExecutable {
         var executable: String?
     }
 
-    private val arguments: MutableList<Any> = ArrayList<Any>()
+    private val arguments: MutableList<Any?> = ArrayList<Any?>()
     val argumentProviders: MutableList<CommandLineArgumentProvider> = ArrayList<CommandLineArgumentProvider>()
 
-    val commandLine: MutableList<String?>
+    val commandLine: MutableList<String>
         get() {
-            val commandLine: MutableList<String?> = ArrayList<String?>()
-            commandLine.add(hasExecutable.executable)
+            val commandLine: MutableList<String> = ArrayList<String>()
+            commandLine.add(hasExecutable.executable!!)
             commandLine.addAll(this.allArguments)
             return commandLine
         }
@@ -45,22 +46,18 @@ class ProcessArgumentsSpec(private val hasExecutable: HasExecutable) {
 
     fun commandLine(args: Iterable<*>): ProcessArgumentsSpec {
         val argsList: MutableList<Any?> = Lists.newArrayList<Any?>(args)
-        hasExecutable.executable = argsList.get(0)
+        hasExecutable.executable = Objects.toString(argsList.get(0))
         setArgs(argsList.subList(1, argsList.size))
         return this
     }
 
-    val allArguments: MutableList<String?>
+    val allArguments: MutableList<String>
         get() {
-            val allArgs: MutableList<String?>
+            val allArgs: MutableList<String>
             val args = this.args
-            if (args == null) {
-                allArgs = ArrayList<String?>()
-            } else {
-                allArgs = ArrayList<String?>(args)
-            }
+            allArgs = ArrayList<String>(args)
             for (argumentProvider in argumentProviders) {
-                Iterables.addAll<String?>(allArgs, CollectionUtils.toStringList(argumentProvider.asArguments()))
+                Iterables.addAll<String>(allArgs, CollectionUtils.toStringList(argumentProvider.asArguments() ?: emptyList<Any>()).filterNotNull())
             }
             return allArgs
         }
@@ -76,7 +73,7 @@ class ProcessArgumentsSpec(private val hasExecutable: HasExecutable) {
         return this
     }
 
-    fun setArgs(arguments: MutableList<String?>): ProcessArgumentsSpec {
+    fun setArgs(arguments: MutableList<String>): ProcessArgumentsSpec {
         this.arguments.clear()
         args(arguments)
         return this
@@ -88,9 +85,9 @@ class ProcessArgumentsSpec(private val hasExecutable: HasExecutable) {
         return this
     }
 
-    val args: MutableList<String?>
+    val args: MutableList<String>
         get() {
-            val args: MutableList<String?> = ArrayList<String?>()
+            val args: MutableList<String> = ArrayList<String>()
             for (argument in arguments) {
                 args.add(argument.toString())
             }

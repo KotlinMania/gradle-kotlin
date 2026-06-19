@@ -22,10 +22,10 @@ import org.gradle.internal.nativeintegration.console.ConsoleMetaData
 class DefaultWorkInProgressFormatter(private val consoleMetaData: ConsoleMetaData) {
     fun format(op: ProgressOperation): MutableList<StyledTextOutputEvent.Span> {
         val builder = StringBuilder()
-        var current = op
-        while (current != null && "org.gradle.internal.progress.BuildProgressLogger" != current.getCategory()) {
-            val message = current.getMessage()
-            current = current.getParent()
+        var current: ProgressOperation? = op
+        while (current != null && "org.gradle.internal.progress.BuildProgressLogger" != current.category) {
+            val message = current.message
+            current = current.parent
 
             if (message == null) {
                 continue
@@ -50,7 +50,7 @@ class DefaultWorkInProgressFormatter(private val consoleMetaData: ConsoleMetaDat
         // Don't write to the right-most column, as on some consoles the cursor will wrap to the next line and currently wrapping causes
         // layout weirdness
         val maxWidth: Int
-        val cols = consoleMetaData.cols
+        val cols = consoleMetaData.getCols()
         if (cols > 0) {
             maxWidth = cols - 1
         } else {

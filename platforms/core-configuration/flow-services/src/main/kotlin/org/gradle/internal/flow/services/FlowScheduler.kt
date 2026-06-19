@@ -20,6 +20,8 @@ import org.gradle.api.file.ArchiveOperations
 import org.gradle.api.file.FileSystemOperations
 import org.gradle.internal.build.BuildState
 import org.gradle.internal.instantiation.InstantiatorFactory
+import org.gradle.internal.service.ServiceRegistration
+import org.gradle.internal.service.ServiceRegistrationAction
 import org.gradle.internal.service.ServiceRegistry
 import org.gradle.internal.service.ServiceRegistryBuilder
 import org.gradle.internal.service.scopes.Scope
@@ -70,11 +72,15 @@ class FlowScheduler(
     fun injectableServicesOf(serviceRegistry: ServiceRegistry): ServiceRegistry {
         return ServiceRegistryBuilder.builder()
             .displayName("flow services")
-            .provider { registration ->
-                registration.add(ArchiveOperations::class.java, serviceRegistry.get(ArchiveOperations::class.java))
-                registration.add(ExecOperations::class.java, serviceRegistry.get(ExecOperations::class.java))
-                registration.add(FileSystemOperations::class.java, serviceRegistry.get(FileSystemOperations::class.java))
-            }
+            .provider(object : ServiceRegistrationAction {
+                @Suppress("UNCHECKED_CAST")
+                override fun registerServices(registration: ServiceRegistration?) {
+                    val services = registration!!
+                    services.add(ArchiveOperations::class.java as Class<ArchiveOperations?>, serviceRegistry.get(ArchiveOperations::class.java as Class<ArchiveOperations?>))
+                    services.add(ExecOperations::class.java as Class<ExecOperations?>, serviceRegistry.get(ExecOperations::class.java as Class<ExecOperations?>))
+                    services.add(FileSystemOperations::class.java as Class<FileSystemOperations?>, serviceRegistry.get(FileSystemOperations::class.java as Class<FileSystemOperations?>))
+                }
+            })
             .build()
     }
 }

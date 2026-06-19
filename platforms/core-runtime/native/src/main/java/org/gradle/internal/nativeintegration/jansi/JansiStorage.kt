@@ -17,4 +17,4 @@ package org.gradle.internal.nativeintegration.jansi
 
 import java.io.File
 
-class JansiStorage(val jansiLibrary: JansiLibrary?, val targetLibFile: File?)
+class JansiStorage(val jansiLibrary: JansiLibrary, val targetLibFile: File)

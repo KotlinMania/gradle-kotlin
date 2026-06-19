@@ -26,16 +26,16 @@ import org.gradle.internal.time.ExponentialBackoff.Companion.of
 import java.io.File
 import java.io.IOException
 
-class KeyringFilePublicKeyService(private val keyRingFile: File?) : PublicKeyService {
+class KeyringFilePublicKeyService(private val keyRingFile: File) : PublicKeyService {
     private var keys: LoadedKeys? = null
 
-    private fun load(): LoadedKeys? {
+    private fun load(): LoadedKeys {
         synchronized(this) {
             if (keys == null) {
                 try {
                     val keyrings = SecuritySupport.loadKeyRingFile(keyRingFile)
-                    val keyToKeyringBuilder: MutableMap<Fingerprint?, PGPPublicKeyRing?> = HashMap<Fingerprint?, PGPPublicKeyRing?>()
-                    val longIdLongPGPPublicKeyBuilder: ImmutableMultimap.Builder<Long?, PGPPublicKeyRing?> = ImmutableListMultimap.builder<Long?, PGPPublicKeyRing?>()
+                    val keyToKeyringBuilder: MutableMap<Fingerprint, PGPPublicKeyRing> = HashMap()
+                    val longIdLongPGPPublicKeyBuilder: ImmutableMultimap.Builder<Long, PGPPublicKeyRing> = ImmutableListMultimap.builder()
 
                     for (keyring in keyrings) {
                         val it = keyring.getPublicKeys()
@@ -46,13 +46,13 @@ class KeyringFilePublicKeyService(private val keyRingFile: File?) : PublicKeySer
                             longIdLongPGPPublicKeyBuilder.put(key.getKeyID(), keyring)
                         }
                     }
-                    keys = KeyringFilePublicKeyService.LoadedKeys(ImmutableMap.copyOf<Fingerprint?, PGPPublicKeyRing?>(keyToKeyringBuilder), longIdLongPGPPublicKeyBuilder.build())
-                    LOGGER!!.info("Loaded {} keys from {}", keys.keyToKeyring.size, keyRingFile)
+                    keys = LoadedKeys(ImmutableMap.copyOf(keyToKeyringBuilder), longIdLongPGPPublicKeyBuilder.build())
+                    LOGGER!!.info("Loaded {} keys from {}", keys!!.keyToKeyring.size, keyRingFile)
                 } catch (e: IOException) {
                     throw throwAsUncheckedException(e)
                 }
             }
-            return keys
+            return keys!!
         }
     }
 
@@ -72,8 +72,8 @@ class KeyringFilePublicKeyService(private val keyRingFile: File?) : PublicKeySer
         }
     }
 
-    override fun findByFingerprint(bytes: ByteArray?, builder: PublicKeyResultBuilder) {
-        val fingerprint: Fingerprint = Fingerprint.Companion.wrap(bytes)
+    override fun findByFingerprint(bytes: ByteArray, builder: PublicKeyResultBuilder) {
+        val fingerprint: Fingerprint = Fingerprint.wrap(bytes)
         val keyring = load().keyToKeyring.get(fingerprint)
         if (keyring != null) {
             builder.keyRing(keyring)
@@ -87,7 +87,7 @@ class KeyringFilePublicKeyService(private val keyRingFile: File?) : PublicKeySer
         }
     }
 
-    private class LoadedKeys(private val keyToKeyring: MutableMap<Fingerprint?, PGPPublicKeyRing?>, private val longIdToPublicKeys: Multimap<Long?, PGPPublicKeyRing>)
+    private class LoadedKeys(val keyToKeyring: Map<Fingerprint, PGPPublicKeyRing>, val longIdToPublicKeys: Multimap<Long, PGPPublicKeyRing>)
     companion object {
         private val LOGGER = getLogger(KeyringFilePublicKeyService::class.java)
     }

@@ -26,12 +26,12 @@ import java.lang.reflect.Method
  * These proxies do not support any kind of nesting.
  */
 class ToolingParameterProxy : InvocationHandler {
-    private val properties: MutableMap<String, Any> = HashMap<String, Any>()
+    private val properties: MutableMap<String, Any?> = HashMap<String, Any?>()
 
     @Throws(Throwable::class)
-    override fun invoke(proxy: Any, method: Method, args: Array<Any>): Any {
+    override fun invoke(proxy: Any?, method: Method, args: Array<Any?>?): Any? {
         if (isSetter(method)) {
-            properties.put(getPropertyName(method.getName()), args[0])
+            properties.put(getPropertyName(method.getName()), args!![0])
         } else if (isGetter(method)) {
             return properties.get(getPropertyName(method.getName()))!!
         }
@@ -106,7 +106,7 @@ class ToolingParameterProxy : InvocationHandler {
             } else if (methodName.startsWith("set")) {
                 return getPropertyName(methodName, "set")
             }
-            return null
+            throw IllegalArgumentException("Method name '$methodName' is not a getter or setter.")
         }
 
         private fun getPropertyName(methodName: String, prefix: String): String {

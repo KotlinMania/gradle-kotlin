@@ -28,14 +28,14 @@ class DefaultTextArea(private val ansiExecutor: AnsiExecutor) : AbstractLineChop
         writePosition.row++
     }
 
-    override fun doLineText(text: CharSequence) {
-        if (text.length == 0) {
+    override fun doLineText(text: CharSequence?) {
+        if (text == null || text.length == 0) {
             return
         }
 
         ansiExecutor.writeAt(this.writePosition, object : Action<AnsiContext> {
             override fun execute(ansi: AnsiContext) {
-                ansi.withStyle(getStyle(), object : Action<AnsiContext> {
+                ansi.withStyle(style!!, object : Action<AnsiContext> {
                     override fun execute(ansi: AnsiContext) {
                         val textStr = text.toString()
                         var pos = 0
@@ -61,7 +61,7 @@ class DefaultTextArea(private val ansiExecutor: AnsiExecutor) : AbstractLineChop
         })
     }
 
-    override fun doEndLine(endOfLine: CharSequence) {
+    override fun doEndLine(endOfLine: CharSequence?) {
         ansiExecutor.writeAt(this.writePosition, NEW_LINE_ACTION)
     }
 

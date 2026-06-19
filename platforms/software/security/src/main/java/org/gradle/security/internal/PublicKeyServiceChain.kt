@@ -31,7 +31,7 @@ class PublicKeyServiceChain private constructor(private val services: MutableLis
         }
     }
 
-    override fun findByFingerprint(fingerprint: ByteArray?, builder: PublicKeyResultBuilder) {
+    override fun findByFingerprint(fingerprint: ByteArray, builder: PublicKeyResultBuilder) {
         val fmb = FirstMatchBuilder(builder)
         for (service in services) {
             service.findByFingerprint(fingerprint, fmb)
@@ -54,12 +54,12 @@ class PublicKeyServiceChain private constructor(private val services: MutableLis
     private class FirstMatchBuilder(private val delegate: PublicKeyResultBuilder) : PublicKeyResultBuilder {
         var hasResult: Boolean = false
 
-        override fun keyRing(keyring: PGPPublicKeyRing?) {
+        override fun keyRing(keyring: PGPPublicKeyRing) {
             delegate.keyRing(keyring)
             hasResult = true
         }
 
-        override fun publicKey(publicKey: PGPPublicKey?) {
+        override fun publicKey(publicKey: PGPPublicKey) {
             delegate.publicKey(publicKey)
             hasResult = true
         }
@@ -69,8 +69,8 @@ class PublicKeyServiceChain private constructor(private val services: MutableLis
         private val LOGGER = getLogger(PublicKeyServiceChain::class.java)
 
         @JvmStatic
-        fun of(vararg delegates: PublicKeyService?): PublicKeyService {
-            return PublicKeyServiceChain(ImmutableList.copyOf<PublicKeyService?>(delegates))
+        fun of(vararg delegates: PublicKeyService): PublicKeyService {
+            return PublicKeyServiceChain(ImmutableList.copyOf(delegates))
         }
     }
 }

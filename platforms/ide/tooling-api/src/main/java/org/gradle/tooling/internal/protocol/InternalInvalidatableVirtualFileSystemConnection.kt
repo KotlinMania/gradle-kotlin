@@ -15,6 +15,8 @@
  */
 package org.gradle.tooling.internal.protocol
 
+import java.io.File
+
 /**
  * Mixed into a provider connection, to allow notifying the daemon about changed paths.
  *

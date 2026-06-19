@@ -20,15 +20,13 @@ import java.util.function.BiFunction
 import javax.inject.Inject
 
 class IntellijInstallationSupplier @Inject constructor(private val toolchainConfiguration: ToolchainConfiguration) : InstallationSupplier {
-    override fun getSourceName(): String {
-        return "IntelliJ"
-    }
+    override val sourceName: String = "IntelliJ"
 
-    override fun get(): MutableSet<InstallationLocation?>? {
+    override fun get(): MutableSet<InstallationLocation> {
         return FileBasedInstallationFactory.fromDirectory(
-            toolchainConfiguration.getIntelliJdkDirectory(),
-            getSourceName(),
-            BiFunction { location: File?, source: String? -> InstallationLocation.Companion.autoDetected(location, source) })
+            toolchainConfiguration.intelliJdkDirectory,
+            sourceName,
+            BiFunction { location: File, source: String -> InstallationLocation.Companion.autoDetected(location, source) })
     }
 
     companion object {

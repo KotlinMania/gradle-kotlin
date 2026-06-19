@@ -21,7 +21,6 @@ import org.gradle.api.logging.LogLevel
  * Notifies output consumer tof the end of the output event stream.
  */
 class EndOutputEvent : OutputEvent() {
-    override fun getLogLevel(): LogLevel? {
-        return null
-    }
+    override val logLevel: LogLevel?
+        get() = null
 }

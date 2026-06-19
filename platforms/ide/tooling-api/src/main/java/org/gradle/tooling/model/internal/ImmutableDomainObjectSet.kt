@@ -32,18 +32,16 @@ class ImmutableDomainObjectSet<T>(elements: Iterable<out T?>) : AbstractSet<T?>(
         return elements.iterator()
     }
 
-    override fun size(): Int {
-        return elements.size
-    }
+    override val size: Int
+        get() = elements.size
 
     @Throws(IndexOutOfBoundsException::class)
     override fun getAt(index: Int): T? {
-        return getAll().get(index)
+        return all.get(index)
     }
 
-    override fun getAll(): MutableList<T?> {
-        return ArrayList<T?>(elements)
-    }
+    override val all: MutableList<T?>
+        get() = ArrayList<T?>(elements)
 
     companion object {
         fun <T> of(elements: Iterable<out T?>): ImmutableDomainObjectSet<T?> {

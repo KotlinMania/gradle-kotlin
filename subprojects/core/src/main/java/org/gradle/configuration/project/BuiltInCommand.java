@@ -67,6 +67,6 @@ public interface BuiltInCommand extends Describable {
      * {@code true} if so; {@code false} otherwise
      */
     default boolean wasInvoked(StartParameter startParameter) {
-        return commandLineMatches(startParameter.getTaskNames());
+        return commandLineMatches(com.google.common.collect.ImmutableList.copyOf(startParameter.getTaskNames()));
     }
 }

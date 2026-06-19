@@ -17,4 +17,4 @@ package org.gradle.tooling.internal.provider.serialization
 
 import java.io.Serializable
 
-class SerializedPayload(@JvmField val header: Any?, @JvmField val serializedModel: MutableList<ByteArray?>?) : Serializable
+class SerializedPayload(@JvmField val header: Any?, @JvmField val serializedModel: MutableList<ByteArray>) : Serializable

@@ -21,7 +21,6 @@ import org.gradle.internal.logging.progress.ProgressLoggerFactory
 import org.gradle.tooling.internal.protocol.InternalBuildProgressListener
 
 interface Distribution {
-    @JvmField
     val displayName: String?
 
     fun getToolingImplementationClasspath(

@@ -22,6 +22,7 @@ import java.io.File
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
+import java.net.URI
 
 /**
  * Represents a binary resource and provides access to the content and meta-data of the resource. The resource may or may not exist, and may change over time.
@@ -30,7 +31,7 @@ interface ExternalResource : Resource {
     /**
      * Get the URI of the resource.
      */
-    val uRI: URI?
+    fun getURI(): URI
 
     /**
      * Copies the contents of this resource to the given file.
@@ -39,7 +40,7 @@ interface ExternalResource : Resource {
      * @throws org.gradle.api.resources.MissingResourceException when the resource does not exist
      */
     @Throws(ResourceException::class)
-    fun writeTo(destination: File?): ExternalResourceReadResult<Void?>?
+    fun writeTo(destination: File): ExternalResourceReadResult<Void?>
 
     /**
      * Copies the contents of this resource to the given file, if the resource exists.
@@ -48,7 +49,7 @@ interface ExternalResource : Resource {
      * @throws ResourceException on failure to copy the content.
      */
     @Throws(ResourceException::class)
-    fun writeToIfPresent(destination: File?): ExternalResourceReadResult<Void?>?
+    fun writeToIfPresent(destination: File): ExternalResourceReadResult<Void?>?
 
     /**
      * Copies the binary contents of this resource to the given stream. Does not close the provided stream.
@@ -57,7 +58,7 @@ interface ExternalResource : Resource {
      * @throws org.gradle.api.resources.MissingResourceException when the resource does not exist
      */
     @Throws(ResourceException::class)
-    fun writeTo(destination: OutputStream?): ExternalResourceReadResult<Void?>?
+    fun writeTo(destination: OutputStream): ExternalResourceReadResult<Void?>
 
     /**
      * Executes the given action against the binary contents of this resource.
@@ -66,7 +67,7 @@ interface ExternalResource : Resource {
      * @throws org.gradle.api.resources.MissingResourceException when the resource does not exist
      */
     @Throws(ResourceException::class)
-    fun withContent(readAction: Action<in InputStream?>?): ExternalResourceReadResult<Void?>?
+    fun withContent(readAction: Action<in InputStream>): ExternalResourceReadResult<Void?>
 
     /**
      * Executes the given action against the binary contents of this resource.
@@ -75,7 +76,7 @@ interface ExternalResource : Resource {
      * @throws org.gradle.api.resources.MissingResourceException when the resource does not exist
      */
     @Throws(ResourceException::class)
-    fun <T> withContent(readAction: ContentAction<out T?>?): ExternalResourceReadResult<T?>?
+    fun <T> withContent(readAction: ContentAction<out T?>): ExternalResourceReadResult<T?>
 
     /**
      * Executes the given action against the binary contents of this resource, if the resource exists.
@@ -84,7 +85,7 @@ interface ExternalResource : Resource {
      * @throws ResourceException on failure to read the content.
      */
     @Throws(ResourceException::class)
-    fun <T> withContentIfPresent(readAction: ContentAction<out T?>?): ExternalResourceReadResult<T?>?
+    fun <T> withContentIfPresent(readAction: ContentAction<out T?>): ExternalResourceReadResult<T?>?
 
     /**
      * Executes the given action against the binary contents and meta-data of this resource.
@@ -95,7 +96,7 @@ interface ExternalResource : Resource {
      * @throws org.gradle.api.resources.MissingResourceException when the resource does not exist
      */
     @Throws(ResourceException::class)
-    fun <T> withContent(readAction: ContentAndMetadataAction<out T?>?): ExternalResourceReadResult<T?>?
+    fun <T> withContent(readAction: ContentAndMetadataAction<out T?>): ExternalResourceReadResult<T?>
 
     /**
      * Executes the given action against the binary contents and meta-data of this resource.
@@ -106,7 +107,7 @@ interface ExternalResource : Resource {
      * @throws ResourceException on failure to read the content.
      */
     @Throws(ResourceException::class)
-    fun <T> withContentIfPresent(readAction: ContentAndMetadataAction<out T?>?): ExternalResourceReadResult<T?>?
+    fun <T> withContentIfPresent(readAction: ContentAndMetadataAction<out T?>): ExternalResourceReadResult<T?>?
 
     /**
      * Copies the given content to this resource.
@@ -115,7 +116,7 @@ interface ExternalResource : Resource {
      * @throws ResourceException On failure to write the content.
      */
     @Throws(ResourceException::class)
-    fun put(source: ReadableContent?): ExternalResourceWriteResult?
+    fun put(source: ReadableContent): ExternalResourceWriteResult
 
     /**
      * Return a listing of child resources names.
@@ -131,15 +132,15 @@ interface ExternalResource : Resource {
      *
      * @return null when the resource does not exist.
      */
-    val metaData: ExternalResourceMetaData?
+    fun getMetaData(): ExternalResourceMetaData?
 
-    interface ContentAndMetadataAction<T> {
+    fun interface ContentAndMetadataAction<T> {
         @Throws(IOException::class)
-        fun execute(inputStream: InputStream?, metaData: ExternalResourceMetaData?): T?
+        fun execute(inputStream: InputStream, metaData: ExternalResourceMetaData?): T?
     }
 
-    interface ContentAction<T> {
+    fun interface ContentAction<T> {
         @Throws(IOException::class)
-        fun execute(inputStream: InputStream?): T?
+        fun execute(inputStream: InputStream): T?
     }
 }

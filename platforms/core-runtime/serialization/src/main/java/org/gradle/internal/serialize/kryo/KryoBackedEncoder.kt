@@ -36,7 +36,7 @@ class KryoBackedEncoder @JvmOverloads constructor(outputStream: OutputStream, bu
         output.writeByte(value)
     }
 
-    override fun writeBytes(bytes: ByteArray?, offset: Int, count: Int) {
+    override fun writeBytes(bytes: ByteArray, offset: Int, count: Int) {
         output.writeBytes(bytes, offset, count)
     }
 
@@ -75,7 +75,7 @@ class KryoBackedEncoder @JvmOverloads constructor(outputStream: OutputStream, bu
         output.writeBoolean(value)
     }
 
-    override fun writeString(value: CharSequence) {
+    override fun writeString(value: CharSequence?) {
         requireNotNull(value) { "Cannot encode a null string." }
         output.writeString(value)
     }
@@ -85,10 +85,10 @@ class KryoBackedEncoder @JvmOverloads constructor(outputStream: OutputStream, bu
     }
 
     @Throws(Exception::class)
-    override fun encodeChunked(writeAction: Encoder.EncodeAction<Encoder?>) {
+    override fun encodeChunked(writeAction: Encoder.EncodeAction<Encoder>) {
         if (nested == null) {
             nested = KryoBackedEncoder(object : OutputStream() {
-                override fun write(buffer: ByteArray?, offset: Int, length: Int) {
+                override fun write(buffer: ByteArray, offset: Int, length: Int) {
                     if (length == 0) {
                         return
                     }
@@ -106,7 +106,7 @@ class KryoBackedEncoder @JvmOverloads constructor(outputStream: OutputStream, bu
                 }
             })
         }
-        writeAction.write(nested)
+        writeAction.write(nested!!)
         nested!!.flush()
         writeSmallInt(0)
     }
@@ -114,9 +114,8 @@ class KryoBackedEncoder @JvmOverloads constructor(outputStream: OutputStream, bu
     /**
      * Returns the total number of bytes written by this encoder, some of which may still be buffered.
      */
-    override fun getWritePosition(): Long {
-        return output.total()
-    }
+    override val writePosition: Long
+        get() = output.total()
 
     override fun flush() {
         output.flush()

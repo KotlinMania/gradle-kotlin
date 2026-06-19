@@ -18,8 +18,4 @@
  */
 package org.gradle.language.cpp.plugins
 
-import org.gradle.internal.logging.text.TreeFormatter.node
-import org.gradle.internal.logging.text.TreeFormatter.startChildren
-import org.gradle.internal.logging.text.TreeFormatter.endChildren
-import org.gradle.internal.logging.text.TreeFormatter.toString
 

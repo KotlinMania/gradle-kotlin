@@ -25,10 +25,10 @@ import javax.annotation.CheckReturnValue
 object DocumentedFailure {
     @JvmStatic
     fun builder(): Builder {
-        return DocumentedFailure.Builder()
+        return Builder()
     }
 
-    class Builder private constructor() : Documentation.AbstractBuilder<Builder?>() {
+    class Builder : Documentation.AbstractBuilder<Builder>() {
         private var summary: String? = null
         private var advice: String? = null
         private var contextualAdvice: String? = null
@@ -53,7 +53,7 @@ object DocumentedFailure {
         }
 
         @CheckReturnValue
-        override fun withDocumentation(documentation: DocLink): Builder {
+        override fun withDocumentation(documentation: DocLink?): Builder {
             this.documentation = documentation
             return this
         }
@@ -68,7 +68,9 @@ object DocumentedFailure {
             val outputBuilder = StringBuilder(summary)
             append(outputBuilder, contextualAdvice)
             append(outputBuilder, advice)
-            append(outputBuilder, (documentation as DocLinkInternal).consultDocumentationMessage)
+            if (documentation != null) {
+                append(outputBuilder, (documentation as DocLinkInternal).getConsultDocumentationMessage())
+            }
             return if (cause == null)
                 GradleException(outputBuilder.toString())
             else

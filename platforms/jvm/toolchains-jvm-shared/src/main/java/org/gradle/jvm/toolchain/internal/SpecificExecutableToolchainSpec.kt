@@ -59,13 +59,11 @@ class SpecificExecutableToolchainSpec @Inject constructor(propertyFactory: Prope
         return SpecificInstallationToolchainSpec.Key(javaExecutable)
     }
 
-    override fun isConfigured(): Boolean {
-        return true
-    }
+    override val isConfigured: Boolean
+        get() = true
 
-    override fun isValid(): Boolean {
-        return true
-    }
+    override val isValid: Boolean
+        get() = true
 
     val javaHome: File?
         get() =// This allows for a "normal" JDK layout where the 'java' executable is in JAVA_HOME/bin/java.

@@ -79,7 +79,7 @@ class CurrentBuildPlatform @Inject constructor(systemInfo: SystemInfo, operating
             } else if (OperatingSystem.FREE_BSD === operatingSystem) {
                 return org.gradle.platform.OperatingSystem.FREE_BSD
             } else {
-                throw GradleException("Unhandled operating system: " + operatingSystem.getName())
+                throw GradleException("Unhandled operating system: " + operatingSystem.name)
             }
         }
     }

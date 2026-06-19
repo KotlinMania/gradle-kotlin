@@ -18,8 +18,12 @@ package org.gradle.internal.logging.slf4j
 import org.gradle.api.logging.LogLevel
 import org.gradle.internal.operations.OperationIdentifier
 
-internal class MessageRewritingBuildOperationAwareLogger(private val delegate: BuildOperationAwareLogger, val messageRewriter: ContextAwareTaskLogger.MessageRewriter) : BuildOperationAwareLogger() {
+internal class MessageRewritingBuildOperationAwareLogger(private val delegate: BuildOperationAwareLogger, val messageRewriter: ContextAwareTaskLogger.MessageRewriter?) : BuildOperationAwareLogger() {
     override fun log(logLevel: LogLevel?, throwable: Throwable?, message: String?, operationIdentifier: OperationIdentifier?) {
+        if (messageRewriter == null) {
+            delegate.log(logLevel, throwable, message, operationIdentifier)
+            return
+        }
         val rewrittenMessage = messageRewriter.rewrite(logLevel, message)
         if (rewrittenMessage == null) {
             return

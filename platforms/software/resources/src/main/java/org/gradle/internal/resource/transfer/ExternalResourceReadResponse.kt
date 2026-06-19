@@ -18,13 +18,14 @@ package org.gradle.internal.resource.transfer
 import java.io.Closeable
 import java.io.IOException
 import java.io.InputStream
+import org.gradle.internal.resource.metadata.ExternalResourceMetaData
 
 /**
  * A single use read of some resource. Don't use this class directly - use the [org.gradle.internal.resource.ExternalResource] wrapper instead.
  */
 interface ExternalResourceReadResponse : Closeable {
     @Throws(IOException::class)
-    fun openStream(): InputStream?
+    fun openStream(): InputStream
 
-    val metaData: ExternalResourceMetaData?
+    fun getMetaData(): ExternalResourceMetaData?
 }

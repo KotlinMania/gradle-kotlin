@@ -15,6 +15,7 @@
  */
 package org.gradle.tooling.model.build
 
+import java.io.File
 import org.gradle.api.Incubating
 import org.gradle.tooling.model.BuildIdentifier
 import org.gradle.tooling.model.BuildModel
@@ -48,7 +49,7 @@ interface BuildEnvironment : Model, BuildModel {
      *
      * @since 2.13
      */
-    override fun getBuildIdentifier(): BuildIdentifier?
+    override val buildIdentifier: BuildIdentifier?
 
     /**
      * Returns information about the Gradle environment, for example the Gradle version.

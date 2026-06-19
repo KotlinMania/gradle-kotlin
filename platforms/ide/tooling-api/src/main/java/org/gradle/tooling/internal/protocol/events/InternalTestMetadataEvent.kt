@@ -27,7 +27,7 @@ import org.jspecify.annotations.NullMarked
  */
 @NullMarked
 interface InternalTestMetadataEvent : InternalProgressEvent {
-    val descriptor: InternalTestMetadataDescriptor?
+    override val descriptor: InternalTestMetadataDescriptor?
 
     val values: MutableMap<String, Any>?
 }

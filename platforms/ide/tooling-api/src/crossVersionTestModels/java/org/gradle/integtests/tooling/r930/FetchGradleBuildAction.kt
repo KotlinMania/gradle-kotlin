@@ -15,25 +15,36 @@
  */
 package org.gradle.integtests.tooling.r930
 
+import org.gradle.tooling.*
+import org.gradle.tooling.model.*
+import org.gradle.tooling.model.build.*
+import org.gradle.tooling.model.eclipse.*
+import org.gradle.tooling.model.gradle.*
+import org.gradle.tooling.model.idea.*
+import org.gradle.tooling.model.kotlin.dsl.*
+import org.gradle.tooling.internal.adapter.ProtocolToModelAdapter
+import java.io.File
+import org.gradle.integtests.tooling.r48.*
+
 import org.gradle.tooling.BuildAction
 import java.util.stream.Collectors
 
 class FetchGradleBuildAction : BuildAction<Result<MutableList<String?>?>?> {
-    public override fun execute(controller: BuildController): Result<MutableList<String?>?> {
-        val result: FetchModelResult<GradleBuild?> = controller.fetch(null, GradleBuild::class.java, null, null)
+    public override fun execute(controller: BuildController?): Result<MutableList<String?>?> {
+        val result: FetchModelResult<GradleBuild?> = controller.fetch(null, GradleBuild::class.java)
         var projectNames: MutableList<String?>? = null
         if (result.getModel() != null) {
             assert(result.getModel() is GradleBuild)
             projectNames = result.getModel().getProjects().stream()
-                .map(BasicGradleProject::getName)
+                .map { it.getName() }
                 .collect(Collectors.toList())
         }
         val failures: MutableList<String?>? = result.getFailures().stream()
-            .map(Failure::getMessage)
+            .map { it.getMessage() }
             .collect(Collectors.toList())
         val causes: MutableList<String?>? = result.getFailures().stream()
             .flatMap({ f -> f.getCauses().stream() })
-            .map(Failure::getMessage)
+            .map { it.getMessage() }
             .collect(Collectors.toList())
         return Result<MutableList<String?>?>(projectNames, failures, causes)
     }

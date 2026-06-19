@@ -23,4 +23,4 @@ import org.gradle.api.logging.Logging
 /**
  * Configuration Cache logger.
  */
-val logger: Logger = Logging.getLogger("org.gradle.configurationcache")
+val logger: Logger = Logging.getLogger("org.gradle.configurationcache")!!

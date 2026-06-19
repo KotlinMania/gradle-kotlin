@@ -40,7 +40,7 @@ import java.util.concurrent.Callable
  *
  * @see [Base plugin reference](https://docs.gradle.org/current/userguide/base_plugin.html)
  */
-abstract class BasePlugin : Plugin<Project?> {
+abstract class BasePlugin : Plugin<Project> {
     override fun apply(project: Project) {
         project.getPluginManager().apply(LifecycleBasePlugin::class.java)
         val baseExtension = project.getExtensions().create<BasePluginExtension>("base", BasePluginExtension::class.java)
@@ -51,18 +51,18 @@ abstract class BasePlugin : Plugin<Project?> {
     }
 
     private fun configureExtension(project: Project, extension: BasePluginExtension) {
-        extension.getArchivesName().convention(project.getName())
-        extension.getLibsDirectory().convention(project.getLayout().getBuildDirectory().dir("libs"))
-        extension.getDistsDirectory().convention(project.getLayout().getBuildDirectory().dir("distributions"))
+        extension.archivesName.convention(project.getName())
+        extension.libsDirectory.convention(project.getLayout().getBuildDirectory().dir("libs"))
+        extension.distsDirectory.convention(project.getLayout().getBuildDirectory().dir("distributions"))
     }
 
     private fun configureArchiveDefaults(project: Project, extension: BasePluginExtension) {
-        project.getTasks().withType<AbstractArchiveTask?>(AbstractArchiveTask::class.java).configureEach(Action { task: AbstractArchiveTask? ->
-            task!!.getDestinationDirectory().convention(extension.getDistsDirectory())
+        project.getTasks().withType(AbstractArchiveTask::class.java).configureEach(Action { task: AbstractArchiveTask ->
+            task.getDestinationDirectory().convention(extension.distsDirectory)
             task.getArchiveVersion().convention(
-                project.provider<String?>(Callable { if (project.getVersion() === Project.DEFAULT_VERSION) null else project.getVersion().toString() })
+                project.provider<String>(Callable { if (project.getVersion() === Project.DEFAULT_VERSION) null else project.getVersion().toString() })
             )
-            task.getArchiveBaseName().convention(extension.getArchivesName())
+            task.getArchiveBaseName().convention(extension.archivesName)
         })
     }
 
@@ -74,9 +74,9 @@ abstract class BasePlugin : Plugin<Project?> {
         val configurations = project.getConfigurations() as RoleBasedConfigurationContainerInternal
         (project as ProjectInternal).getInternalStatus().convention("integration")
 
-        val archivesConfiguration = configurations.migratingLocked(Dependency.ARCHIVES_CONFIGURATION, ConfigurationRolesForMigration.CONSUMABLE_TO_RETIRED, Action { conf: Configuration? ->
-            conf!!.setDescription("Configuration for archive artifacts.")
-            val artifacts: DomainObjectCollectionInternal<PublishArtifact?> = uncheckedCast<DomainObjectCollectionInternal<PublishArtifact?>?>(conf.getArtifacts())!!
+        val archivesConfiguration = configurations.migratingLocked(Dependency.ARCHIVES_CONFIGURATION, ConfigurationRolesForMigration.CONSUMABLE_TO_RETIRED, Action { conf: Configuration ->
+            conf.setDescription("Configuration for archive artifacts.")
+            val artifacts: DomainObjectCollectionInternal<PublishArtifact> = uncheckedCast<DomainObjectCollectionInternal<PublishArtifact>>(conf.getArtifacts())!!
             artifacts.beforeCollectionChanges(Action { artifact: String? ->
                 deprecateConfiguration(Dependency.ARCHIVES_CONFIGURATION)
                     .forArtifactDeclaration()
@@ -87,11 +87,11 @@ abstract class BasePlugin : Plugin<Project?> {
             })
         })
 
-        configurations.consumable(Dependency.DEFAULT_CONFIGURATION, Action { conf: ConsumableConfiguration? ->
-            conf!!.setDescription("Configuration for default artifacts.")
+        configurations.consumable(Dependency.DEFAULT_CONFIGURATION, Action { conf: ConsumableConfiguration ->
+            conf.setDescription("Configuration for default artifacts.")
         })
 
-        project.getTasks().named(ASSEMBLE_TASK_NAME, Action { task: Task? -> task!!.dependsOn(archivesConfiguration.getAllArtifacts().getBuildDependencies()) }
+        project.getTasks().named(ASSEMBLE_TASK_NAME, Action { task: Task -> task.dependsOn(archivesConfiguration.getAllArtifacts().getBuildDependencies()) }
         )
     }
 

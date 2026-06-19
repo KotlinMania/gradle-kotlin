@@ -19,7 +19,6 @@ import org.jspecify.annotations.NullMarked
 
 @NullMarked
 interface LoggingManagerFactory {
-    @JvmField
     val root: LoggingManagerInternal?
 
     fun createLoggingManager(): LoggingManagerInternal?

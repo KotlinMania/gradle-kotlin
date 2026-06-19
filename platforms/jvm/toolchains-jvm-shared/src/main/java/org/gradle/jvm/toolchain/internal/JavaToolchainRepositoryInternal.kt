@@ -15,8 +15,9 @@
  */
 package org.gradle.jvm.toolchain.internal
 
+import org.gradle.authentication.Authentication
 import org.gradle.jvm.toolchain.JavaToolchainRepository
 
 interface JavaToolchainRepositoryInternal : JavaToolchainRepository {
-    val configuredAuthentication: MutableCollection<Authentication?>?
+    val configuredAuthentication: MutableCollection<Authentication>
 }

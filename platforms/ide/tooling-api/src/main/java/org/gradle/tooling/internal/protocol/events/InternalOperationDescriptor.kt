@@ -26,7 +26,6 @@ interface InternalOperationDescriptor : InternalProtocolInterface {
     /**
      * Returns an id that uniquely identifies the operation.
      */
-    @JvmField
     val id: Any?
 
     /**
@@ -41,7 +40,6 @@ interface InternalOperationDescriptor : InternalProtocolInterface {
      *
      * @return The display name of the operation
      */
-    @JvmField
     val displayName: String?
 
     /**

@@ -15,6 +15,7 @@
  */
 package org.gradle.tooling.events.download.internal
 
+import java.io.File
 import org.gradle.tooling.events.download.FileDownloadNotFoundResult
 
 class NotFoundFileDownloadSuccessResult(startTime: Long, endTime: Long) : DefaultFileDownloadSuccessResult(startTime, endTime, 0), FileDownloadNotFoundResult

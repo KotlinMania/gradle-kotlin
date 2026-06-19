@@ -59,7 +59,7 @@ class BeanPropertyWriter(
     private
     fun conventionValueOf(bean: Any, field: Field, isExplicitValue: Field) =
         field.get(bean).let { fieldValue ->
-            if (isExplicitValue.get(bean).uncheckedCast()) {
+            if (isExplicitValue.get(bean).uncheckedCast<Boolean>() == true) {
                 fieldValue
             } else {
                 getConventionValue(bean, field, fieldValue)
@@ -73,7 +73,7 @@ class BeanPropertyWriter(
 
     private
     fun getConventionValue(bean: Any, field: Field, fieldValue: Any?): Any? =
-        bean.uncheckedCast<IConventionAware>()
+        bean.uncheckedCast<IConventionAware>()!!
             .conventionMapping
             .getConventionValue(fieldValue, field.name, false)
 

@@ -26,6 +26,5 @@ interface InternalTaskDescriptor : InternalOperationDescriptor {
      *
      * @return The path of the task
      */
-    @JvmField
     val taskPath: String?
 }

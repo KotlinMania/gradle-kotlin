@@ -48,7 +48,7 @@ class ExceptionProblemRegistry {
      */
     private class DefaultProblemLocator(problemsForThrowables: Multimap<Throwable, ProblemInternal>) : ProblemLocator {
         private val problemsForThrowables: Multimap<Throwable, ProblemInternal>
-        private var exceptionLookup: Multimap<String, Throwable> = null
+        private var exceptionLookup: Multimap<String, Throwable>? = null
 
         init {
             this.problemsForThrowables = ImmutableMultimap.copyOf<Throwable, ProblemInternal>(problemsForThrowables)
@@ -58,7 +58,7 @@ class ExceptionProblemRegistry {
             if (exceptionLookup == null) {
                 exceptionLookup = initLookup(this.problemsForThrowables.keySet())
             }
-            return exceptionLookup
+            return exceptionLookup!!
         }
 
         override fun findAll(t: Throwable): MutableCollection<ProblemInternal> {

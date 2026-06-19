@@ -27,6 +27,7 @@ dependencies {
 
     compileOnly(libs.jspecify)
     implementation(kotlin("stdlib-jdk8"))
+    testFixturesCompileOnly(kotlin("stdlib"))
 }
 
 gradleModule {

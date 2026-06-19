@@ -17,14 +17,13 @@ package org.gradle.internal.logging.format
 
 import org.gradle.internal.logging.events.StyledTextOutputEvent
 import org.gradle.internal.logging.text.StyledTextOutput
-import java.util.Arrays
 
 class PrettyPrefixedLogHeaderFormatter : LogHeaderFormatter {
-    override fun format(description: String?, status: String, failed: Boolean): MutableList<StyledTextOutputEvent.Span?> {
+    override fun format(description: String?, status: String, failed: Boolean): MutableList<StyledTextOutputEvent.Span> {
         if (status.isEmpty()) {
-            return Arrays.asList<StyledTextOutputEvent.Span?>(header(description, failed), StyledTextOutputEvent.EOL)
+            return mutableListOf(header(description, failed), StyledTextOutputEvent.EOL)
         } else {
-            return Arrays.asList<StyledTextOutputEvent.Span?>(header(description, failed), status(status, failed), StyledTextOutputEvent.EOL)
+            return mutableListOf(header(description, failed), status(status, failed), StyledTextOutputEvent.EOL)
         }
     }
 

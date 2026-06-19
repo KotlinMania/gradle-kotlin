@@ -21,7 +21,7 @@ import org.gradle.internal.serialize.Decoder
 import org.gradle.internal.serialize.Encoder
 import org.gradle.internal.serialize.Serializer
 
-class SpanSerializer(private val styleSerializer: Serializer<StyledTextOutput.Style?>) : Serializer<StyledTextOutputEvent.Span?> {
+class SpanSerializer(private val styleSerializer: Serializer<StyledTextOutput.Style>) : Serializer<StyledTextOutputEvent.Span> {
     @Throws(Exception::class)
     override fun write(encoder: Encoder, value: StyledTextOutputEvent.Span) {
         styleSerializer.write(encoder, value.style)
@@ -30,6 +30,6 @@ class SpanSerializer(private val styleSerializer: Serializer<StyledTextOutput.St
 
     @Throws(Exception::class)
     override fun read(decoder: Decoder): StyledTextOutputEvent.Span {
-        return StyledTextOutputEvent.Span(styleSerializer.read(decoder)!!, decoder.readString())
+        return StyledTextOutputEvent.Span(styleSerializer.read(decoder), decoder.readString())
     }
 }

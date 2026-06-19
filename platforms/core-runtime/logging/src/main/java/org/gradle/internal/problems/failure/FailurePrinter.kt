@@ -55,7 +55,7 @@ object FailurePrinter {
         fun printRecursively(caption: String, prefix: String, parent: Failure?, failure: Failure) {
             builder.append(prefix)
                 .append(caption)
-                .append(failure.header)
+                .append(failure.getHeader())
                 .append(lineSeparator)
 
             listener.beforeFrames()
@@ -68,14 +68,14 @@ object FailurePrinter {
 
         @Throws(IOException::class)
         fun appendSuppressed(prefix: String, failure: Failure) {
-            for (suppressed in failure.suppressed) {
+            for (suppressed in failure.getSuppressed() ?: mutableListOf()) {
                 printRecursively("Suppressed: ", prefix + "\t", failure, suppressed)
             }
         }
 
         @Throws(IOException::class)
         fun appendCauses(prefix: String, failure: Failure) {
-            val causes = failure.causes
+            val causes = failure.getCauses() ?: mutableListOf()
             if (causes.size == 1) {
                 printRecursively("Caused by: ", prefix, failure, causes.get(0))
             } else {
@@ -87,14 +87,14 @@ object FailurePrinter {
 
         @Throws(IOException::class)
         fun appendFrames(prefix: String, parent: Failure?, failure: Failure) {
-            val stackTrace = failure.stackTrace
+            val stackTrace = failure.getStackTrace() ?: mutableListOf()
 
-            val commonTailSize = if (parent == null) 0 else countCommonTailFrames(stackTrace, parent.stackTrace)
+            val commonTailSize = if (parent == null) 0 else countCommonTailFrames(stackTrace, parent.getStackTrace() ?: mutableListOf())
             val end = stackTrace.size - commonTailSize
 
             for (i in 0..<end) {
                 val stackTraceElement = stackTrace.get(i)
-                val rel = failure.getStackTraceRelevance(i)
+                val rel = failure.getStackTraceRelevance(i) ?: StackTraceRelevance.USER_CODE
                 appendFrame(prefix, stackTraceElement, rel)
             }
 

@@ -134,7 +134,7 @@ public class DefaultFileWatcherRegistry implements FileWatcherRegistry {
 
     @Override
     public boolean isWatchingAnyLocations() {
-        return !fileWatcherUpdater.getWatchedFiles().isEmpty;
+        return !fileWatcherUpdater.getWatchedFiles().isEmpty();
     }
 
     @Override

@@ -17,11 +17,11 @@ package org.gradle.internal.serialize
 
 import com.google.common.collect.ImmutableList
 
-class ListSerializer<T>(private val entrySerializer: Serializer<T?>) : AbstractSerializer<MutableList<T?>?>() {
+class ListSerializer<T : Any>(private val entrySerializer: Serializer<T>) : AbstractSerializer<List<@JvmSuppressWildcards T>>() {
     @Throws(Exception::class)
-    override fun read(decoder: Decoder): ImmutableList<T?> {
+    override fun read(decoder: Decoder): ImmutableList<T> {
         val size = decoder.readInt()
-        val values = ImmutableList.builderWithExpectedSize<T?>(size)
+        val values = ImmutableList.builderWithExpectedSize<T>(size)
         for (i in 0..<size) {
             values.add(entrySerializer.read(decoder))
         }
@@ -29,7 +29,7 @@ class ListSerializer<T>(private val entrySerializer: Serializer<T?>) : AbstractS
     }
 
     @Throws(Exception::class)
-    override fun write(encoder: Encoder, value: MutableList<T?>) {
+    override fun write(encoder: Encoder, value: List<@JvmSuppressWildcards T>) {
         encoder.writeInt(value.size)
         for (t in value) {
             entrySerializer.write(encoder, t)

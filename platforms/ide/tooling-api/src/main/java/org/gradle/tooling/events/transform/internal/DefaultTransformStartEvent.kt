@@ -19,8 +19,5 @@ import org.gradle.tooling.events.internal.DefaultStartEvent
 import org.gradle.tooling.events.transform.TransformOperationDescriptor
 import org.gradle.tooling.events.transform.TransformStartEvent
 
-class DefaultTransformStartEvent(eventTime: Long, displayName: String?, descriptor: TransformOperationDescriptor?) : DefaultStartEvent(eventTime, displayName, descriptor), TransformStartEvent {
-    override fun getDescriptor(): TransformOperationDescriptor? {
-        return super.getDescriptor() as TransformOperationDescriptor?
-    }
+class DefaultTransformStartEvent(eventTime: Long, displayName: String?, descriptor: TransformOperationDescriptor?) : DefaultStartEvent<TransformOperationDescriptor?>(eventTime, displayName, descriptor), TransformStartEvent {
 }

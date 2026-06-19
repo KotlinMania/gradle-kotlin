@@ -55,7 +55,7 @@ interface IdeaProject : HierarchicalElement {
      * @return The modules of this IDEA project.
      * @since 1.0-milestone-5
      */
-    override fun getChildren(): DomainObjectSet<out IdeaModule?>?
+    override val children: DomainObjectSet<out IdeaModule?>?
 
     /**
      * Returns the modules of this IDEA project. Most projects have at least one module.

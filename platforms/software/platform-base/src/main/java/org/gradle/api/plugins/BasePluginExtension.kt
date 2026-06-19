@@ -15,6 +15,9 @@
  */
 package org.gradle.api.plugins
 
+import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.provider.Property
+
 /**
  * An extension used for [BasePlugin].
  *
@@ -26,17 +29,17 @@ interface BasePluginExtension {
      *
      * @return The directory. Never returns null.
      */
-    val distsDirectory: DirectoryProperty?
+    val distsDirectory: DirectoryProperty
 
     /**
      * Returns the directory to generate JAR and WAR archives into.
      *
      * @return The directory. Never returns null.
      */
-    val libsDirectory: DirectoryProperty?
+    val libsDirectory: DirectoryProperty
 
     /**
      * The base name to use for archive files.
      */
-    val archivesName: Property<String?>?
+    val archivesName: Property<String>
 }

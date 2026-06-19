@@ -27,12 +27,12 @@ import org.gradle.internal.serialize.StatefulSerializer
 import java.io.IOException
 
 class InterHubMessageSerializer(private val payloadSerializer: StatefulSerializer<Any?>) : StatefulSerializer<InterHubMessage?> {
-    override fun newReader(decoder: Decoder): ObjectReader<InterHubMessage?> {
-        return MessageReader(decoder, payloadSerializer.newReader(decoder))
+    override fun newReader(decoder: Decoder?): ObjectReader<InterHubMessage?> {
+        return MessageReader(decoder!!, payloadSerializer.newReader(decoder)!!)
     }
 
-    override fun newWriter(encoder: Encoder): ObjectWriter<InterHubMessage?> {
-        return MessageWriter(encoder, payloadSerializer.newWriter(encoder))
+    override fun newWriter(encoder: Encoder?): ObjectWriter<InterHubMessage?> {
+        return MessageWriter(encoder!!, payloadSerializer.newWriter(encoder)!!)
     }
 
     private class MessageReader(private val decoder: Decoder, private val payloadReader: ObjectReader<*>) : ObjectReader<InterHubMessage?> {

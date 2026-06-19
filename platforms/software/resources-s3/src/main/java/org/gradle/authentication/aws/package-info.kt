@@ -20,7 +20,5 @@
  */
 package org.gradle.authentication.aws
 
-import org.gradle.internal.service.ServiceRegistration.addProvider
-import org.gradle.internal.authentication.AuthenticationSchemeRegistry.registerScheme
 
 

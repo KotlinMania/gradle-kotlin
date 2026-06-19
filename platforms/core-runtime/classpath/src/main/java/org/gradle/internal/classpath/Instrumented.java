@@ -501,7 +501,7 @@ public class Instrumented {
 
         @Override
         protected Object interceptSafe(Invocation invocation, String consumer) throws Throwable {
-            switch (invocation.argsCount) {
+            switch (invocation.getArgsCount()) {
                 case 1:
                     return getInteger(invocation.getArgument(0).toString(), consumer);
                 case 2:
@@ -521,7 +521,7 @@ public class Instrumented {
 
         @Override
         protected Object interceptSafe(Invocation invocation, String consumer) throws Throwable {
-            switch (invocation.argsCount) {
+            switch (invocation.getArgsCount()) {
                 case 1:
                     return getLong(invocation.getArgument(0).toString(), consumer);
                 case 2:
@@ -541,7 +541,7 @@ public class Instrumented {
 
         @Override
         protected Object interceptSafe(Invocation invocation, String consumer) throws Throwable {
-            if (invocation.argsCount == 1) {
+            if (invocation.getArgsCount() == 1) {
                 return getBoolean(invocation.getArgument(0).toString(), consumer);
             }
             return invocation.callNext();
@@ -558,7 +558,7 @@ public class Instrumented {
 
         @Override
         protected Object interceptSafe(Invocation invocation, String consumer) throws Throwable {
-            switch (invocation.argsCount) {
+            switch (invocation.getArgsCount()) {
                 case 1:
                     return systemProperty(invocation.getArgument(0).toString(), consumer);
                 case 2:
@@ -578,7 +578,7 @@ public class Instrumented {
 
         @Override
         protected Object interceptSafe(Invocation invocation, String consumer) throws Throwable {
-            if (invocation.argsCount == 2) {
+            if (invocation.getArgsCount() == 2) {
                 return setSystemProperty(convertToString(invocation.getArgument(0)), convertToString(invocation.getArgument(1)), consumer);
             }
             return invocation.callNext();
@@ -597,7 +597,7 @@ public class Instrumented {
 
         @Override
         protected Object interceptSafe(Invocation invocation, String consumer) throws Throwable {
-            if (invocation.argsCount == 0) {
+            if (invocation.getArgsCount() == 0) {
                 return systemProperties(consumer);
             }
             return invocation.callNext();
@@ -614,7 +614,7 @@ public class Instrumented {
 
         @Override
         protected Object interceptSafe(Invocation invocation, String consumer) throws Throwable {
-            if (invocation.argsCount == 1) {
+            if (invocation.getArgsCount() == 1) {
                 setSystemProperties((Properties) invocation.getArgument(0), consumer);
                 return null;
             }
@@ -632,7 +632,7 @@ public class Instrumented {
 
         @Override
         protected Object interceptSafe(Invocation invocation, String consumer) throws Throwable {
-            if (invocation.argsCount == 1) {
+            if (invocation.getArgsCount() == 1) {
                 return clearSystemProperty(convertToString(invocation.getArgument(0)), consumer);
             }
             return invocation.callNext();
@@ -649,7 +649,7 @@ public class Instrumented {
 
         @Override
         protected Object interceptSafe(Invocation invocation, String consumer) throws Throwable {
-            switch (invocation.argsCount) {
+            switch (invocation.getArgsCount()) {
                 case 0:
                     return getenv(consumer);
                 case 1:
@@ -669,9 +669,9 @@ public class Instrumented {
 
         @Override
         public Object intercept(Invocation invocation, String consumer) throws Throwable {
-            int argsCount = invocation.argsCount;
+            int argsCount = invocation.getArgsCount();
             if (1 <= argsCount && argsCount <= 3) {
-                Object runtimeArg = invocation.receiver;
+                Object runtimeArg = invocation.getReceiver();
                 Object commandArg = invocation.getArgument(0);
                 if (runtimeArg != null && commandArg != null) {
                     Optional<Process> result = tryCallExec(runtimeArg, commandArg, invocation.getOptionalArgument(1), invocation.getOptionalArgument(2), consumer);
@@ -719,8 +719,8 @@ public class Instrumented {
         public Object intercept(Invocation invocation, String consumer) throws Throwable {
             // Static calls have Class<ProcessGroovyMethods> as a receiver, command as a first argument, optional arguments follow.
             // "Extension" calls have command as a receiver and optional arguments as arguments.
-            boolean isStaticCall = ProcessGroovyMethods.class.equals(invocation.receiver);
-            int argsCount = invocation.argsCount;
+            boolean isStaticCall = ProcessGroovyMethods.class.equals(invocation.getReceiver());
+            int argsCount = invocation.getArgsCount();
             // Offset accounts for the command being in the list of arguments.
             int nonCommandArgsOffset = isStaticCall ? 1 : 0;
             int nonCommandArgsCount = argsCount - nonCommandArgsOffset;
@@ -730,7 +730,7 @@ public class Instrumented {
                 return invocation.callNext();
             }
 
-            Object commandArg = isStaticCall ? invocation.getArgument(0) : invocation.receiver;
+            Object commandArg = isStaticCall ? invocation.getArgument(0) : invocation.getReceiver();
             if (commandArg != null) {
                 Object envpArg = invocation.getOptionalArgument(nonCommandArgsOffset);
                 Object fileArg = invocation.getOptionalArgument(nonCommandArgsOffset + 1);
@@ -786,7 +786,7 @@ public class Instrumented {
 
         @Override
         public Object intercept(Invocation invocation, String consumer) throws Throwable {
-            Object receiver = invocation.receiver;
+            Object receiver = invocation.getReceiver();
             if (receiver instanceof ProcessBuilder) {
                 return start((ProcessBuilder) receiver, consumer);
             }
@@ -805,7 +805,7 @@ public class Instrumented {
         @SuppressWarnings("unchecked")
         @Override
         protected Object interceptSafe(Invocation invocation, String consumer) throws Throwable {
-            if (invocation.argsCount == 1 && invocation.getArgument(0) instanceof List) {
+            if (invocation.getArgsCount() == 1 && invocation.getArgument(0) instanceof List) {
                 return startPipeline((List<ProcessBuilder>) invocation.getArgument(0), consumer);
             }
             return invocation.callNext();

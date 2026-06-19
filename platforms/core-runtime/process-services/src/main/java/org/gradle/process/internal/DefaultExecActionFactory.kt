@@ -15,8 +15,8 @@
  */
 package org.gradle.process.internal
 
-import com.google.common.collect.ImmutableList
 import com.google.common.collect.ImmutableMap
+import org.gradle.api.file.FileCollection
 import org.gradle.process.JavaForkOptions
 import org.gradle.process.internal.util.MergeOptionsUtil
 import org.jspecify.annotations.NullMarked
@@ -56,8 +56,8 @@ class EffectiveJavaForkOptions(@JvmField val executable: String, @JvmField val w
                 forkOptions.jvmOptions.jvmArgs
             )
         )
-                && MergeOptionsUtil.containsAll(jvmOptions.mutableSystemProperties, forkOptions.jvmOptions.mutableSystemProperties)
-                && MergeOptionsUtil.containsAll(environment, forkOptions.environment)
+                && MergeOptionsUtil.containsAll(jvmOptions.mutableSystemProperties as MutableMap<String?, Any?>, forkOptions.jvmOptions.mutableSystemProperties as MutableMap<String?, Any?>)
+                && MergeOptionsUtil.containsAll(environment as MutableMap<String?, Any?>, forkOptions.environment as MutableMap<String?, Any?>)
                 && jvmOptions.bootstrapClasspath.getFiles().containsAll(forkOptions.jvmOptions.bootstrapClasspath.getFiles())
     }
 
@@ -79,31 +79,33 @@ class EffectiveJavaForkOptions(@JvmField val executable: String, @JvmField val w
 
     class ReadOnlyJvmOptions(private val delegate: JvmOptions) {
         val minHeapSize: String
-            get() = delegate.getMinHeapSize()
+            get() = delegate.minHeapSize!!
 
         val maxHeapSize: String
-            get() = delegate.getMaxHeapSize()
+            get() = delegate.maxHeapSize!!
 
         val debug: Boolean
-            get() = delegate.getDebug()
+            get() = delegate.debug
 
         val enableAssertions: Boolean
-            get() = delegate.getEnableAssertions()
+            get() = delegate.enableAssertions
 
         val defaultCharacterEncoding: String
-            get() = delegate.getDefaultCharacterEncoding()
+            get() = delegate.defaultCharacterEncoding!!
 
         val bootstrapClasspath: FileCollection
             get() = delegate.getBootstrapClasspath()
 
         val jvmArgs: MutableList<String>
-            get() = ImmutableList.copyOf<String>(delegate.getJvmArgs())
+            get() = delegate.jvmArgs.filterNotNull().toMutableList()
 
         val allJvmArgs: MutableList<String>
-            get() = ImmutableList.copyOf<String>(delegate.getAllJvmArgs())
+            get() = delegate.allJvmArgs.filterNotNull().toMutableList()
 
         val mutableSystemProperties: MutableMap<String, Any>
-            get() = ImmutableMap.copyOf<String, Any>(delegate.getMutableSystemProperties())
+            get() = delegate.mutableSystemProperties.entries
+                .associate { it.key!! to it.value as Any }
+                .toMutableMap()
 
         fun copyTo(target: JavaForkOptions) {
             this.delegate.copyTo(target)

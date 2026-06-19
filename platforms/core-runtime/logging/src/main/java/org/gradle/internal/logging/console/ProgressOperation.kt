@@ -18,7 +18,7 @@ package org.gradle.internal.logging.console
 import org.gradle.internal.operations.OperationIdentifier
 import org.gradle.util.internal.GUtil
 
-class ProgressOperation(private var status: String, val category: String, @JvmField val operationId: OperationIdentifier, @JvmField val parent: ProgressOperation) {
+class ProgressOperation(private var status: String, val category: String, @JvmField val operationId: OperationIdentifier, val parent: ProgressOperation?) {
     private var children: MutableSet<ProgressOperation>? = null
 
     override fun toString(): String {
@@ -29,7 +29,7 @@ class ProgressOperation(private var status: String, val category: String, @JvmFi
         this.status = status
     }
 
-    val message: String
+    val message: String?
         get() {
             if (GUtil.isTrue(status)) {
                 return status

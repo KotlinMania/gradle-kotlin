@@ -15,6 +15,7 @@
  */
 package org.gradle.tooling.internal.consumer.loader
 
+import java.io.File
 import org.gradle.api.JavaVersion
 import org.gradle.initialization.BuildCancellationToken
 import org.gradle.internal.Factory
@@ -58,13 +59,13 @@ class DefaultToolingImplementationLoader internal constructor(private val classL
     constructor() : this(DefaultToolingImplementationLoader::class.java.getClassLoader())
 
     override fun create(
-        distribution: Distribution,
+        distribution: Distribution?,
         progressLoggerFactory: ProgressLoggerFactory?,
         progressListener: InternalBuildProgressListener?,
-        connectionParameters: ConnectionParameters,
+        connectionParameters: ConnectionParameters?,
         cancellationToken: BuildCancellationToken?
-    ): ConsumerConnection {
-        LOGGER.debug("Using tooling provider from {}", distribution.displayName)
+    ): ConsumerConnection? {
+        LOGGER.debug("Using tooling provider from {}", distribution!!.displayName)
         val serviceClassLoader = createImplementationClassLoader(distribution, progressLoggerFactory, progressListener, connectionParameters, cancellationToken)
         val serviceLocator: ServiceLocator = DefaultServiceLocator(serviceClassLoader)
         try {
@@ -77,15 +78,15 @@ class DefaultToolingImplementationLoader internal constructor(private val classL
             val adapter = ProtocolToModelAdapter(ConsumerTargetTypeProvider())
             val modelMapping = ModelMapping()
             if (connection is InternalStopWhenIdleConnection) {
-                return createConnection(StopWhenIdleConsumerConnection(connection, modelMapping, adapter), connectionParameters)
+                return createConnection(StopWhenIdleConsumerConnection(connection, modelMapping, adapter), connectionParameters!!)
             } else if (connection is InternalInvalidatableVirtualFileSystemConnection) {
-                return createConnection(NotifyDaemonsAboutChangedPathsConsumerConnection(connection, modelMapping, adapter), connectionParameters)
+                return createConnection(NotifyDaemonsAboutChangedPathsConsumerConnection(connection, modelMapping, adapter), connectionParameters!!)
             } else if (connection is InternalPhasedActionConnection) {
-                return createConnection(PhasedActionAwareConsumerConnection(connection, modelMapping, adapter), connectionParameters)
+                return createConnection(PhasedActionAwareConsumerConnection(connection, modelMapping, adapter), connectionParameters!!)
             } else if (connection is InternalParameterAcceptingConnection) {
-                return createConnection(ParameterAcceptingConsumerConnection(connection, modelMapping, adapter), connectionParameters)
+                return createConnection(ParameterAcceptingConsumerConnection(connection, modelMapping, adapter), connectionParameters!!)
             } else if (connection is InternalTestExecutionConnection) {
-                return createConnection(TestExecutionConsumerConnection(connection, modelMapping, adapter), connectionParameters)
+                return createConnection(TestExecutionConsumerConnection(connection, modelMapping, adapter), connectionParameters!!)
             } else {
                 return UnsupportedOlderVersionConnection(connection, adapter)
             }
@@ -109,7 +110,7 @@ class DefaultToolingImplementationLoader internal constructor(private val classL
         connectionParameters: ConnectionParameters?,
         cancellationToken: BuildCancellationToken?
     ): ClassLoader {
-        val implementationClasspath = distribution.getToolingImplementationClasspath(progressLoggerFactory, progressListener, connectionParameters, cancellationToken)
+        val implementationClasspath = distribution.getToolingImplementationClasspath(progressLoggerFactory, progressListener, connectionParameters, cancellationToken)!!
         LOGGER.debug("Using tooling provider classpath: {}", implementationClasspath)
         val filterSpec = FilteringClassLoader.Spec()
         filterSpec.allowPackage("org.gradle.tooling.internal.protocol")

@@ -15,15 +15,12 @@
  */
 package org.gradle.tooling.events.problems.internal
 
+import org.gradle.tooling.events.problems.Problem
 import org.gradle.tooling.events.problems.ProblemId
 import org.gradle.tooling.events.problems.ProblemSummary
 
-class DefaultProblemSummary(private val problemId: ProblemId, private val count: Int) : ProblemSummary {
-    override fun getProblemId(): ProblemId {
-        return problemId
-    }
+class DefaultProblemSummary(override val problemId: ProblemId, override val count: Int) : ProblemSummary {
 
-    override fun getCount(): Int {
-        return count
-    }
+
+
 }

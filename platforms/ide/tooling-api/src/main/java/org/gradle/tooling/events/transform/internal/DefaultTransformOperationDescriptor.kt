@@ -20,37 +20,26 @@ import org.gradle.tooling.events.internal.DefaultOperationDescriptor
 import org.gradle.tooling.events.transform.TransformOperationDescriptor
 import org.gradle.tooling.internal.protocol.events.InternalTransformDescriptor
 
-class DefaultTransformOperationDescriptor(descriptor: InternalTransformDescriptor, parent: OperationDescriptor?, private val dependencies: MutableSet<OperationDescriptor?>?) :
+class DefaultTransformOperationDescriptor(descriptor: InternalTransformDescriptor, parent: OperationDescriptor?, override val dependencies: MutableSet<OperationDescriptor?>?) :
     DefaultOperationDescriptor(descriptor, parent), TransformOperationDescriptor {
-    private val transformer: TransformOperationDescriptor.TransformerDescriptor
-    private val subject: TransformOperationDescriptor.SubjectDescriptor
+    override val transformer: TransformOperationDescriptor.TransformerDescriptor
+    override val subject: TransformOperationDescriptor.SubjectDescriptor
 
     init {
         this.transformer = DefaultTransformerDescriptor(descriptor.transformerName)
         this.subject = DefaultSubjectDescriptor(descriptor.subjectName)
     }
 
-    override fun getTransformer(): TransformOperationDescriptor.TransformerDescriptor {
-        return transformer
+
+
+
+
+
+
+    private class DefaultTransformerDescriptor(override val displayName: String?) : TransformOperationDescriptor.TransformerDescriptor {
+
     }
 
-    override fun getSubject(): TransformOperationDescriptor.SubjectDescriptor {
-        return subject
-    }
-
-    override fun getDependencies(): MutableSet<out OperationDescriptor?>? {
-        return dependencies
-    }
-
-    private class DefaultTransformerDescriptor(private val displayName: String?) : TransformOperationDescriptor.TransformerDescriptor {
-        override fun getDisplayName(): String? {
-            return displayName
-        }
-    }
-
-    private class DefaultSubjectDescriptor(private val displayName: String?) : TransformOperationDescriptor.SubjectDescriptor {
-        override fun getDisplayName(): String? {
-            return displayName
-        }
+    private class DefaultSubjectDescriptor(override val displayName: String?) : TransformOperationDescriptor.SubjectDescriptor {
     }
 }

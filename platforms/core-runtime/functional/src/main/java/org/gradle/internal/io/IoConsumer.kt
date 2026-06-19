@@ -22,11 +22,13 @@ import java.util.function.Consumer
 /**
  * A variant of [Consumer] that is allowed to throw [IOException].
  */
+@FunctionalInterface
 fun interface IoConsumer<T : Any?> {
     @Throws(IOException::class)
     fun accept(payload: T?)
 
     companion object {
+        @JvmStatic
         fun <T : Any?> wrap(consumer: IoConsumer<T?>): Consumer<T?> {
             return Consumer { payload: T? ->
                 try {

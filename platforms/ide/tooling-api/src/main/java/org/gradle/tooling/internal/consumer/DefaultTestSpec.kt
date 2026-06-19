@@ -20,67 +20,63 @@ import org.gradle.tooling.internal.protocol.test.InternalTestSpec
 
 class DefaultTestSpec(
     taskPath: String?,
-    private val classes: MutableList<String?>,
-    private val methods: MutableMap<String?, MutableList<String?>?>,
-    private val packages: MutableList<String?>,
-    private val patterns: MutableList<String?>
+    private val classNames: MutableList<String?>,
+    private val methodNames: MutableMap<String?, MutableList<String?>?>,
+    private val packageNames: MutableList<String?>,
+    private val patternNames: MutableList<String?>
 ) : DefaultTaskSpec(taskPath), TestSpec, InternalTestSpec {
     internal constructor(taskPath: String?) : this(taskPath, ArrayList<String?>(), LinkedHashMap<String?, MutableList<String?>?>(), ArrayList<String?>(), ArrayList<String?>())
 
     override fun includePackage(pkg: String?): TestSpec {
-        return includePackages(mutableListOf<String?>(pkg))
+        return includePackages(mutableListOf<String?>(pkg))!!
     }
 
-    override fun includePackages(packages: MutableCollection<String?>): TestSpec {
-        this.packages.addAll(packages)
+    override fun includePackages(packages: MutableCollection<String?>?): TestSpec {
+        packageNames.addAll(packages.orEmpty())
         return this
     }
 
     override fun includeClass(cls: String?): TestSpec {
-        return includeClasses(mutableListOf<String?>(cls))
+        return includeClasses(mutableListOf<String?>(cls))!!
     }
 
-    override fun includeClasses(classes: MutableCollection<String?>): TestSpec {
-        this.classes.addAll(classes)
+    override fun includeClasses(classes: MutableCollection<String?>?): TestSpec {
+        classNames.addAll(classes.orEmpty())
         return this
     }
 
     override fun includeMethod(cls: String?, method: String?): TestSpec {
-        return includeMethods(cls, mutableListOf<String?>(method))
+        return includeMethods(cls, mutableListOf<String?>(method))!!
     }
 
-    override fun includeMethods(clazz: String?, newMethods: MutableCollection<String?>): TestSpec {
-        var methods = this.methods.get(clazz)
-        if (methods == null) {
-            methods = ArrayList<String?>(newMethods.size)
-            this.methods.put(clazz, methods)
-        }
-        methods.addAll(newMethods)
+    override fun includeMethods(clazz: String?, newMethods: MutableCollection<String?>?): TestSpec {
+        val methods = methodNames.getOrPut(clazz) { ArrayList<String?>(newMethods?.size ?: 0) }
+        methods!!.addAll(newMethods.orEmpty())
         return this
     }
 
     override fun includePattern(pattern: String?): TestSpec {
-        return includePatterns(mutableListOf<String?>(pattern))
+        return includePatterns(mutableListOf<String?>(pattern))!!
     }
 
-    override fun includePatterns(patterns: MutableCollection<String?>): TestSpec {
-        this.patterns.addAll(patterns)
+    override fun includePatterns(patterns: MutableCollection<String?>?): TestSpec {
+        patternNames.addAll(patterns.orEmpty())
         return this
     }
 
     override fun getPackages(): MutableList<String?> {
-        return packages
+        return packageNames
     }
 
     override fun getClasses(): MutableList<String?> {
-        return classes
+        return classNames
     }
 
     override fun getMethods(): MutableMap<String?, MutableList<String?>?> {
-        return methods
+        return methodNames
     }
 
     override fun getPatterns(): MutableList<String?> {
-        return patterns
+        return patternNames
     }
 }

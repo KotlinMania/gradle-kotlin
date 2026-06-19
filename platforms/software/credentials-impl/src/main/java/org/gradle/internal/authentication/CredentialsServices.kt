@@ -21,7 +21,11 @@ import org.jspecify.annotations.NullMarked
 
 @NullMarked
 class CredentialsServices : AbstractGradleModuleServices() {
-    public override fun registerBuildServices(registration: ServiceRegistration) {
-        registration.add<DefaultAuthenticationSchemeRegistry?>(AuthenticationSchemeRegistry::class.java, DefaultAuthenticationSchemeRegistry::class.java)
+    public override fun registerBuildServices(registration: ServiceRegistration?) {
+        @Suppress("UNCHECKED_CAST")
+        registration!!.add(
+            AuthenticationSchemeRegistry::class.java as Class<in DefaultAuthenticationSchemeRegistry?>,
+            DefaultAuthenticationSchemeRegistry::class.java as Class<DefaultAuthenticationSchemeRegistry?>
+        )
     }
 }

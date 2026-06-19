@@ -24,14 +24,18 @@ import java.util.Arrays
 
 @Contextual
 class ToolchainDownloadException : GradleException, ResolutionProvider {
-    val resolutions: MutableList<String>
+    private val resolutions: MutableList<String?>
 
     constructor(spec: JavaToolchainSpec, url: String, cause: String?) : super(getMessage(spec, url, cause)) {
-        this.resolutions = Arrays.asList<String>(ToolchainProvisioningException.Companion.AUTO_DETECTION_RESOLUTION, ToolchainProvisioningException.Companion.DOWNLOAD_REPOSITORIES_RESOLUTION)
+        this.resolutions = Arrays.asList<String?>(ToolchainProvisioningException.Companion.AUTO_DETECTION_RESOLUTION, ToolchainProvisioningException.Companion.DOWNLOAD_REPOSITORIES_RESOLUTION)
     }
 
     constructor(spec: JavaToolchainSpec, uri: URI, cause: Throwable) : super(getMessage(spec, uri.toString(), cause.message), cause) {
-        resolutions = mutableListOf<String>()
+        resolutions = mutableListOf<String?>()
+    }
+
+    override fun getResolutions(): MutableList<String?> {
+        return resolutions
     }
 
     companion object {

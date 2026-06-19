@@ -21,4 +21,4 @@ import org.gradle.tooling.events.StartEvent
 /**
  * Base implementation of the `StartEvent` interface.
  */
-open class DefaultStartEvent(eventTime: Long, displayName: String?, descriptor: OperationDescriptor?) : BaseProgressEvent(eventTime, displayName, descriptor), StartEvent
+open class DefaultStartEvent<D : OperationDescriptor?>(eventTime: Long, displayName: String?, descriptor: D) : BaseProgressEvent<D>(eventTime, displayName, descriptor), StartEvent

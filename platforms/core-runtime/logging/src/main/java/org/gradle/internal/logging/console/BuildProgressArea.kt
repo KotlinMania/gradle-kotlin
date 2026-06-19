@@ -17,12 +17,10 @@ package org.gradle.internal.logging.console
 
 interface BuildProgressArea {
     // TODO(ew): Consider whether this belongs in Console or here
-    val progressBar: StyledLabel?
+    val progressBar: StyledLabel
 
-    @JvmField
-    val cursorParkLine: StyledLabel?
-    @JvmField
-    val buildProgressLabels: MutableList<StyledLabel>?
+    val cursorParkLine: StyledLabel
+    val buildProgressLabels: MutableList<StyledLabel>
     fun resizeBuildProgressTo(numberOfLabels: Int)
     fun setVisible(isVisible: Boolean)
 }

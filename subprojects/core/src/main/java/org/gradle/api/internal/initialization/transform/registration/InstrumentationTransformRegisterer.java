@@ -133,7 +133,7 @@ public class InstrumentationTransformRegisterer {
                 spec.parameters(params -> {
                     params.getBuildService().set(service);
                     params.getContextId().set(contextId);
-                    params.getAgentSupported().set(agentStatus.isAgentInstrumentationEnabled);
+                    params.getAgentSupported().set(agentStatus.isAgentInstrumentationEnabled());
                     paramsConfiguration.accept(params);
                 });
             }

@@ -21,26 +21,18 @@ import java.io.PrintWriter
 import java.io.StringWriter
 
 open class DefaultFailure @JvmOverloads constructor(
-    private val message: String?,
-    private val description: String?,
-    private val causes: MutableList<out Failure?>?,
-    private val problems: MutableList<Problem?>? = mutableListOf<Problem?>()
+    override val message: String?,
+    override val description: String?,
+    override val causes: MutableList<out Failure?>?,
+    override val problems: MutableList<Problem?>? = mutableListOf<Problem?>()
 ) : Failure {
-    override fun getMessage(): String? {
-        return message
-    }
 
-    override fun getDescription(): String? {
-        return description
-    }
 
-    override fun getCauses(): MutableList<out Failure?>? {
-        return causes
-    }
 
-    override fun getProblems(): MutableList<Problem?>? {
-        return problems
-    }
+
+
+
+
 
     override fun toString(): String {
         return "DefaultFailure{" +

@@ -36,9 +36,10 @@ dependencies {
     testFixturesImplementation(projects.coreApi)
     testFixturesImplementation(projects.fileCollections)
     testFixturesImplementation(libs.commonsIo)
+    testFixturesImplementation(kotlin("stdlib"))
 
     integTestDistributionRuntimeOnly(projects.distributionsCore)
-    implementation(kotlin("stdlib-jdk8"))
+    implementation(kotlin("stdlib"))
 }
 
 gradleModule {

@@ -15,6 +15,7 @@
  */
 package org.gradle.tooling.internal.protocol.events
 
+import java.io.File
 import org.jspecify.annotations.NullMarked
 
 /**
@@ -27,7 +28,7 @@ import org.jspecify.annotations.NullMarked
  */
 @NullMarked
 interface InternalTestMetadataEventVersion2 : InternalProgressEvent {
-    val descriptor: InternalTestMetadataDescriptor?
+    override val descriptor: InternalTestMetadataDescriptor?
 
     val file: File?
 

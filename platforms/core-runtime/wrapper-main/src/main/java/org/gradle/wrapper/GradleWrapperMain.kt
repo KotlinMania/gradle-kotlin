@@ -38,7 +38,7 @@ object GradleWrapperMain {
     }
 
     @Throws(Exception::class)
-    private fun prepareWrapper(args: Array<String?>, wrapperJar: File): Action {
+    private fun prepareWrapper(args: Array<String>, wrapperJar: File): Action {
         val propertiesFile = wrapperProperties(wrapperJar)
         val rootDir = rootDir(wrapperJar)
 
@@ -70,7 +70,7 @@ object GradleWrapperMain {
         }
 
         val wrapperExecutor = WrapperExecutor.forWrapperPropertiesFile(propertiesFile)
-        val configuration = wrapperExecutor.getConfiguration()
+        val configuration = wrapperExecutor.configuration
         val download: IDownload = Download(logger, "gradlew", Download.UNKNOWN_VERSION, configuration.networkTimeout)
 
         return Action {

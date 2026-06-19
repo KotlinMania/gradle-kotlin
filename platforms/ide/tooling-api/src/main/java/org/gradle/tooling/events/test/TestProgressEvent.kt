@@ -29,5 +29,5 @@ interface TestProgressEvent : ProgressEvent {
      *
      * @return The description of the underlying test operation.
      */
-    override fun getDescriptor(): TestOperationDescriptor?
+    override val descriptor: TestOperationDescriptor?
 }

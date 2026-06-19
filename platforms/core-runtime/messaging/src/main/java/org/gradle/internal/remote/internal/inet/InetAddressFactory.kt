@@ -40,7 +40,7 @@ open class InetAddressFactory {
     constructor()
 
     @VisibleForTesting
-    constructor(inetAddresses: InetAddresses) {
+    internal constructor(inetAddresses: InetAddresses) {
         this.inetAddresses = inetAddresses
     }
 
@@ -101,7 +101,7 @@ open class InetAddressFactory {
         if (inetAddresses == null) { // For testing
             inetAddresses = InetAddresses()
         }
-        if (inetAddresses!!.getLoopback().isEmpty()) {
+        if (inetAddresses!!.loopback.isEmpty()) {
             logger.debug("No loopback address for local binding, using fallback {}", wildcardBindingAddress)
             localBindingAddress = wildcardBindingAddress
         } else {

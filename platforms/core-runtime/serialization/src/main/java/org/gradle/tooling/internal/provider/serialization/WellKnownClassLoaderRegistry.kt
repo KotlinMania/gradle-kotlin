@@ -30,10 +30,10 @@ class WellKnownClassLoaderRegistry(private val delegate: PayloadClassLoaderRegis
     override fun newSerializeSession(): SerializeMap {
         val delegateSession = delegate.newSerializeSession()
         return object : SerializeMap {
-            val knownLoaders: MutableMap<Short?, ClassLoaderDetails?> = HashMap<Short?, ClassLoaderDetails?>()
+            val knownLoaders: MutableMap<Short, ClassLoaderDetails> = HashMap<Short, ClassLoaderDetails>()
 
             override fun visitClass(target: Class<*>): Short {
-                val classLoader = target.getClassLoader()
+                val classLoader = target.classLoader
                 if (classLoader == null || PLATFORM_CLASS_LOADERS.contains(classLoader)) {
                     knownLoaders.put(PLATFORM_CLASS_LOADER_ID, PLATFORM_CLASS_LOADER_DETAILS)
                     return PLATFORM_CLASS_LOADER_ID
@@ -41,7 +41,7 @@ class WellKnownClassLoaderRegistry(private val delegate: PayloadClassLoaderRegis
                 return delegateSession.visitClass(target)
             }
 
-            override fun collectClassLoaderDefinitions(details: MutableMap<Short?, ClassLoaderDetails?>) {
+            override fun collectClassLoaderDefinitions(details: MutableMap<Short, ClassLoaderDetails>) {
                 delegateSession.collectClassLoaderDefinitions(details)
                 details.putAll(knownLoaders)
             }
@@ -52,7 +52,7 @@ class WellKnownClassLoaderRegistry(private val delegate: PayloadClassLoaderRegis
         val delegateSession = delegate.newDeserializeSession()
         return object : DeserializeMap {
             @Throws(ClassNotFoundException::class)
-            override fun resolveClass(classLoaderDetails: ClassLoaderDetails, className: String?): Class<*>? {
+            override fun resolveClass(classLoaderDetails: ClassLoaderDetails, className: String): Class<*> {
                 if (classLoaderDetails.spec is KnownClassLoaderSpec) {
                     val knownClassLoaderSpec = classLoaderDetails.spec
                     when (knownClassLoaderSpec.id) {
@@ -65,7 +65,7 @@ class WellKnownClassLoaderRegistry(private val delegate: PayloadClassLoaderRegis
         }
     }
 
-    private class KnownClassLoaderSpec(private val id: Short) : ClassLoaderSpec() {
+    private class KnownClassLoaderSpec(val id: Short) : ClassLoaderSpec() {
         override fun equals(obj: Any?): Boolean {
             if (obj === this) {
                 return true
@@ -88,13 +88,13 @@ class WellKnownClassLoaderRegistry(private val delegate: PayloadClassLoaderRegis
     }
 
     companion object {
-        private val PLATFORM_CLASS_LOADERS: MutableSet<ClassLoader?>
-        private val PLATFORM_CLASS_LOADER = ClassLoaderUtils.getPlatformClassLoader()
+        private val PLATFORM_CLASS_LOADERS: MutableSet<ClassLoader>
+        private val PLATFORM_CLASS_LOADER = requireNotNull(ClassLoaderUtils.getPlatformClassLoader())
         private val PLATFORM_CLASS_LOADER_ID: Short = -1
         private val PLATFORM_CLASS_LOADER_DETAILS = ClassLoaderDetails(UUID.randomUUID(), KnownClassLoaderSpec(PLATFORM_CLASS_LOADER_ID))
 
         init {
-            val builder = ImmutableSet.builder<ClassLoader?>()
+            val builder = ImmutableSet.builder<ClassLoader>()
             var cl: ClassLoader? = PLATFORM_CLASS_LOADER
             while (cl != null) {
                 builder.add(cl)

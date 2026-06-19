@@ -69,12 +69,12 @@ class DefaultExecHandle internal constructor(
     /**
      * Arguments to pass to the executable.
      */
-    private val arguments: MutableList<String?>,
+    private val arguments: MutableList<String>,
     /**
      * The variables to set in the environment the executable is run in.
      */
-    private val environment: MutableMap<String?, String?>, private val outputHandler: StreamsHandler, private val inputHandler: StreamsHandler,
-    listeners: MutableList<ExecHandleListener?>, private val redirectErrorStream: Boolean, val timeout: Int, val isDaemon: Boolean,
+    private val environment: MutableMap<String, String>, private val outputHandler: StreamsHandler, private val inputHandler: StreamsHandler,
+    listeners: MutableList<ExecHandleListener>, private val redirectErrorStream: Boolean, val timeout: Int, val isDaemon: Boolean,
     private val executor: Executor, private val buildCancellationToken: BuildCancellationToken
 ) : ExecHandle, ProcessSettings {
     private val processLauncher: ProcessLauncher
@@ -97,7 +97,7 @@ class DefaultExecHandle internal constructor(
 
     private var execResult: ExecResultImpl? = null
 
-    private val broadcast: ListenerBroadcast<ExecHandleListener?>
+    private val broadcast: ListenerBroadcast<ExecHandleListener>
 
     private val shutdownHookAction: ExecHandleShutdownHookAction
 
@@ -105,9 +105,11 @@ class DefaultExecHandle internal constructor(
         this.lock = ReentrantLock()
         this.stateChanged = lock.newCondition()
         this.state = ExecHandleState.INIT
-        processLauncher = getInstance().get<ProcessLauncher>(ProcessLauncher::class.java)
+        @Suppress("UNCHECKED_CAST")
+        processLauncher = getInstance().get<ProcessLauncher>(ProcessLauncher::class.java as Class<ProcessLauncher?>)!!
         shutdownHookAction = ExecHandleShutdownHookAction(this)
-        broadcast = ListenerBroadcast<ExecHandleListener?>(ExecHandleListener::class.java)
+        @Suppress("UNCHECKED_CAST")
+        broadcast = ListenerBroadcast<ExecHandleListener>(ExecHandleListener::class.java as Class<ExecHandleListener?>)
         broadcast.addAll(listeners)
     }
 
@@ -123,12 +125,12 @@ class DefaultExecHandle internal constructor(
         return displayName!!
     }
 
-    override fun getArguments(): MutableList<String?> {
-        return Collections.unmodifiableList<String?>(arguments)
+    override fun getArguments(): MutableList<String> {
+        return Collections.unmodifiableList<String>(arguments)
     }
 
-    override fun getEnvironment(): MutableMap<String?, String?> {
-        return Collections.unmodifiableMap<String?, String?>(environment)
+    override fun getEnvironment(): MutableMap<String, String> {
+        return Collections.unmodifiableMap<String, String>(environment)
     }
 
     override fun getState(): ExecHandleState {
@@ -172,7 +174,7 @@ class DefaultExecHandle internal constructor(
         }
 
         var newResult = ExecResultImpl(exitValue, execExceptionFor(failureCause, currentState), displayName)
-        if (!currentState.isTerminal() && newState != ExecHandleState.DETACHED) {
+        if (!currentState.isTerminal && newState != ExecHandleState.DETACHED) {
             try {
                 broadcast.getSource()!!.executionFinished(this, newResult)
             } catch (e: Exception) {
@@ -198,7 +200,7 @@ class DefaultExecHandle internal constructor(
             null
     }
 
-    private fun failureMessageFor(failureCause: Throwable?, currentState: ExecHandleState?): String {
+    private fun failureMessageFor(failureCause: Throwable, currentState: ExecHandleState?): String {
         if (currentState == ExecHandleState.STARTING) {
             if (LongCommandLineDetectionUtil.hasCommandLineExceedMaxLength(command, arguments) && LongCommandLineDetectionUtil.hasCommandLineExceedMaxLengthException(failureCause)) {
                 return String.format("Process '%s' could not be started because the command line exceed operating system limits.", displayName)
@@ -223,7 +225,7 @@ class DefaultExecHandle internal constructor(
 
             broadcast.getSource()!!.beforeExecutionStarted(this)
             execHandleRunner = ExecHandleRunner(
-                this, DefaultExecHandle.CompositeStreamsHandler(), processLauncher, executor, CurrentBuildOperationRef.instance().get()
+                this, CompositeStreamsHandler(), processLauncher, executor, CurrentBuildOperationRef.instance().get()
             )
             executor.execute(execHandleRunner)
 
@@ -279,7 +281,7 @@ class DefaultExecHandle internal constructor(
     override fun waitForFinish(): ExecResult {
         lock.lock()
         try {
-            while (!state.isTerminal()) {
+            while (!state.isTerminal) {
                 try {
                     stateChanged.await()
                 } catch (e: InterruptedException) {
@@ -348,7 +350,7 @@ class DefaultExecHandle internal constructor(
         setEndStateInfo(ExecHandleState.FAILED, -1, failureCause)
     }
 
-    override fun addListener(listener: ExecHandleListener?) {
+    override fun addListener(listener: ExecHandleListener) {
         broadcast.add(listener)
     }
 
@@ -364,7 +366,7 @@ class DefaultExecHandle internal constructor(
         return redirectErrorStream
     }
 
-    private class ExecResultImpl(val exitValue: Int, private val failure: ProcessExecutionException?, private val displayName: String?) : ExecResult {
+    private class ExecResultImpl(override val exitValue: Int, private val failure: ProcessExecutionException?, private val displayName: String?) : ExecResult {
         @Throws(ProcessExecutionException::class)
         override fun assertNormalExitValue(): ExecResult? {
             if (exitValue != 0) {
@@ -388,7 +390,7 @@ class DefaultExecHandle internal constructor(
 
         companion object {
             private fun getExitCodeHint(exitValue: Int): String {
-                if (OperatingSystem.current().isUnix() && exitValue > 128) {
+                if (OperatingSystem.current().isUnix && exitValue > 128) {
                     val signalNumber = exitValue - 128
                     val signal = Stream.of<Signal?>(*Signal.entries.toTypedArray())
                         .filter { s: Signal? -> s!!.intValue() == signalNumber }
@@ -401,7 +403,7 @@ class DefaultExecHandle internal constructor(
                         return ""
                     }
                 }
-                if (OperatingSystem.current().isWindows() && exitValue > -0x40000000 && exitValue < 0) {
+                if (OperatingSystem.current().isWindows && exitValue > -0x40000000 && exitValue < 0) {
                     return String.format(" (NTSTATUS 0x%08X)", exitValue)
                 }
                 return ""
@@ -417,7 +419,7 @@ class DefaultExecHandle internal constructor(
     }
 
     private inner class CompositeStreamsHandler : StreamsHandler {
-        override fun connectStreams(process: Process?, processName: String?, executor: Executor?) {
+        override fun connectStreams(process: Process, processName: String?, executor: Executor) {
             inputHandler.connectStreams(process, processName, executor)
             outputHandler.connectStreams(process, processName, executor)
         }

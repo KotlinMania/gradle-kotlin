@@ -50,13 +50,11 @@ open class BasicAntBuilder : org.gradle.api.AntBuilder(), Closeable {
         getAntProject().addDataTypeDefinition("gradleBaseDirSelector", BaseDirSelector::class.java)
     }
 
-    override fun getProperties(): MutableMap<String?, Any?> {
-        throw UnsupportedOperationException()
-    }
+    override val properties: MutableMap<String, Any?>?
+        get() = throw UnsupportedOperationException()
 
-    override fun getReferences(): MutableMap<String?, Any?> {
-        throw UnsupportedOperationException()
-    }
+    override val references: MutableMap<String, Any?>?
+        get() = throw UnsupportedOperationException()
 
     override fun importBuild(antBuildFile: Any) {
         throw UnsupportedOperationException()
@@ -66,11 +64,11 @@ open class BasicAntBuilder : org.gradle.api.AntBuilder(), Closeable {
         throw UnsupportedOperationException()
     }
 
-    override fun importBuild(antBuildFile: Any, taskNamer: Transformer<out String?, in String?>) {
+    override fun importBuild(antBuildFile: Any, taskNamer: Transformer<out String, in String>) {
         throw UnsupportedOperationException()
     }
 
-    override fun importBuild(antBuildFile: Any, baseDirectory: String, taskNamer: Transformer<out String?, in String?>) {
+    override fun importBuild(antBuildFile: Any, baseDirectory: String, taskNamer: Transformer<out String, in String>) {
         throw UnsupportedOperationException()
     }
 
@@ -84,13 +82,11 @@ open class BasicAntBuilder : org.gradle.api.AntBuilder(), Closeable {
         }
     }
 
-    override fun setLifecycleLogLevel(logLevel: AntMessagePriority) {
-        throw UnsupportedOperationException()
-    }
-
-    override fun getLifecycleLogLevel(): AntMessagePriority {
-        throw UnsupportedOperationException()
-    }
+    override var lifecycleLogLevel: AntMessagePriority?
+        get() = throw UnsupportedOperationException()
+        set(value) {
+            throw UnsupportedOperationException()
+        }
 
     override fun postNodeCompletion(parent: Any?, node: Any?): Any? {
         try {

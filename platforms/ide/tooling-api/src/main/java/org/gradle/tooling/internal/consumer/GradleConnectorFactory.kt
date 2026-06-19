@@ -24,7 +24,7 @@ import java.io.Closeable
  */
 @NullMarked
 interface GradleConnectorFactory : Closeable {
-    fun createConnector(): GradleConnector?
+    fun createConnector(): GradleConnector
 
     override fun close()
 }

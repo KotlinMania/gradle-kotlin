@@ -39,8 +39,9 @@ class DelegatingCodec<T>(
 
     override suspend fun ReadContext.decode(): T {
         // Delegate to the other codec
+        @Suppress("UNCHECKED_CAST")
         return withCodec(userTypesCodec) {
-            readNonNull()
-        }
+            readNonNull<Any>()
+        } as T
     }
 }

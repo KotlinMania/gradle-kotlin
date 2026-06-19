@@ -18,10 +18,10 @@ package org.gradle.security.internal
 import java.io.IOException
 
 class EmptyPublicKeyService private constructor() : PublicKeyService {
-    override fun findByLongId(keyId: Long, builder: PublicKeyResultBuilder?) {
+    override fun findByLongId(keyId: Long, builder: PublicKeyResultBuilder) {
     }
 
-    override fun findByFingerprint(fingerprint: ByteArray?, builder: PublicKeyResultBuilder?) {
+    override fun findByFingerprint(fingerprint: ByteArray, builder: PublicKeyResultBuilder) {
     }
 
     @Throws(IOException::class)

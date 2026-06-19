@@ -28,5 +28,5 @@ interface Dispatch<T> {
      *
      * @param message The message.
      */
-    fun dispatch(message: T?)
+    fun dispatch(message: T)
 }

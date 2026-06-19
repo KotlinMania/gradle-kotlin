@@ -37,7 +37,7 @@ public class TestSuiteExecutionException extends GradleException implements Reso
     @Override
     public List<String> getResolutions() {
         if (getCause() instanceof ResolutionProvider) {
-            return ((ResolutionProvider) getCause()).resolutions;
+            return ((ResolutionProvider) getCause()).getResolutions();
         } else {
             return Collections.emptyList();
         }

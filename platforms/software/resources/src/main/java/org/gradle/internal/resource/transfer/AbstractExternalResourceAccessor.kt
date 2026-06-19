@@ -36,10 +36,10 @@ abstract class AbstractExternalResourceAccessor : ExternalResourceAccessor {
                 }
             }
         } catch (e: IOException) {
-            throw ResourceExceptions.getFailed(location.getUri(), e)
+            throw ResourceExceptions.getFailed(location.uri, e)
         }
     }
 
     @Throws(ResourceException::class)
-    protected abstract fun openResource(location: ExternalResourceName?, revalidate: Boolean): ExternalResourceReadResponse?
+    protected abstract fun openResource(location: ExternalResourceName, revalidate: Boolean): ExternalResourceReadResponse?
 }

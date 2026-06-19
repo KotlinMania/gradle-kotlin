@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 /*
  * Copyright 2023 the original author or authors.
  *
@@ -99,18 +101,18 @@ class ProblemsBuildTreeServices : ServiceRegistrationProvider {
         return DefaultProblemSummarizer(
             eventEmitter,
             currentBuildOperationRef,
-            ImmutableList.of<ProblemEmitter>(BuildOperationBasedProblemEmitter(eventEmitter), ConsoleProblemEmitter(startParameter.warningMode)),
+            ImmutableList.of<ProblemEmitter>(BuildOperationBasedProblemEmitter(eventEmitter), ConsoleProblemEmitter(startParameter.warningMode!!)),
             internalOptions,
             problemReportCreator,
-            TaskIdentityProvider { id: OperationIdentifier? ->
-                val taskIdentity = ProblemTaskIdentityTracker.getTaskIdentity()
-                if (taskIdentity != null) {
-                    return@TaskIdentityProvider taskIdentity
-                } else {
-                    return@TaskIdentityProvider workExecutionTracker
-                        .getCurrentTask(id!!)
-                        .map<TaskIdentity>(Function { task: TaskInternal? -> TaskIdentity(task!!.getTaskIdentity().getBuildTreePath().asString()) })
-                        .orElse(null)
+            object : TaskIdentityProvider {
+                override fun taskIdentityFor(id: OperationIdentifier): TaskIdentity? {
+                    val taskIdentity = ProblemTaskIdentityTracker.taskIdentity
+                    if (taskIdentity != null) {
+                        return taskIdentity
+                    } else {
+                        val currentTask = workExecutionTracker.getCurrentTask(id).orElse(null) as TaskInternal? ?: return null
+                        return TaskIdentity(currentTask.getTaskIdentity().getBuildTreePath().asString())
+                    }
                 }
             }
         )

@@ -15,6 +15,9 @@
  */
 package org.gradle.tooling.internal.consumer
 
+import org.gradle.internal.event.ListenerManager
+import org.gradle.internal.logging.progress.ProgressLoggerFactory
+
 interface LoggingProvider {
     val listenerManager: ListenerManager?
     val progressLoggerFactory: ProgressLoggerFactory?

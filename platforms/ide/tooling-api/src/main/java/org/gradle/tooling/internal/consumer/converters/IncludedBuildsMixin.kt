@@ -15,14 +15,15 @@
  */
 package org.gradle.tooling.internal.consumer.converters
 
+import java.io.Serializable
+import org.gradle.tooling.model.DomainObjectSet
 import org.gradle.tooling.model.gradle.GradleBuild
 import org.gradle.tooling.model.internal.ImmutableDomainObjectSet
-import java.io.Serializable
 
 class IncludedBuildsMixin(private val gradleBuild: GradleBuild) : Serializable {
     val includedBuilds: DomainObjectSet<out GradleBuild?>
         get() = ImmutableDomainObjectSet.of<GradleBuild?>(mutableListOf<GradleBuild?>())
 
     val editableBuilds: DomainObjectSet<out GradleBuild?>?
-        get() = gradleBuild.getIncludedBuilds()
+        get() = gradleBuild.includedBuilds
 }

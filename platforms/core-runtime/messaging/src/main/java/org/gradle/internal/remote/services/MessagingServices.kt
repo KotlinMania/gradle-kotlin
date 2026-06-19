@@ -43,7 +43,7 @@ import java.util.UUID
  *
  */
 open class MessagingServices : ServiceRegistrationProvider {
-    private val idGenerator: IdGenerator<UUID?> = UUIDGenerator()
+    private val idGenerator: IdGenerator<UUID> = UUIDGenerator()
 
     @Provides
     protected fun createInetAddressFactory(): InetAddressFactory {
@@ -66,7 +66,7 @@ open class MessagingServices : ServiceRegistrationProvider {
     }
 
     @Provides
-    protected fun createMessagingClient(outgoingConnector: OutgoingConnector, executorFactory: ExecutorFactory?): MessagingClient {
+    protected fun createMessagingClient(outgoingConnector: OutgoingConnector, executorFactory: ExecutorFactory): MessagingClient {
         return MessageHubBackedClient(
             outgoingConnector,
             executorFactory
@@ -74,7 +74,7 @@ open class MessagingServices : ServiceRegistrationProvider {
     }
 
     @Provides
-    protected fun createMessagingServer(incomingConnector: IncomingConnector, executorFactory: ExecutorFactory?): MessagingServer {
+    protected fun createMessagingServer(incomingConnector: IncomingConnector, executorFactory: ExecutorFactory): MessagingServer {
         return MessageHubBackedServer(
             incomingConnector,
             executorFactory

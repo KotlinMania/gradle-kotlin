@@ -15,6 +15,8 @@
  */
 package org.gradle.tooling.model.build
 
+import java.io.File
+
 /**
  * Informs about the Gradle environment, for example the Gradle version.
  *

@@ -125,7 +125,7 @@ abstract class AbstractDecoder : Decoder {
         }
 
         @Throws(IOException::class)
-        override fun read(buffer: ByteArray?, offset: Int, count: Int): Int {
+        override fun read(buffer: ByteArray, offset: Int, count: Int): Int {
             return maybeReadBytes(buffer, offset, count)
         }
     }

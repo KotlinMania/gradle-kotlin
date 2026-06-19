@@ -28,9 +28,9 @@ import java.io.OutputStream
  * Can be merged with [ClientExecHandleBuilder] in Gradle 10.
  */
 @Deprecated("")
-class DefaultExecHandleBuilder(delegate: ClientExecHandleBuilder?) : AbstractExecHandleBuilder(delegate), ExecHandleBuilder, ProcessArgumentsSpec.HasExecutable {
+class DefaultExecHandleBuilder(delegate: ClientExecHandleBuilder) : AbstractExecHandleBuilder(delegate), ExecHandleBuilder {
     override fun getExecutable(): String {
-        return delegate.getExecutable()
+        return delegate.executable!!
     }
 
     override fun setExecutable(executable: String) {
@@ -58,7 +58,7 @@ class DefaultExecHandleBuilder(delegate: ClientExecHandleBuilder?) : AbstractExe
         delegate.setWorkingDir(dir)
     }
 
-    override fun commandLine(vararg arguments: Any?): DefaultExecHandleBuilder {
+    override fun commandLine(vararg arguments: Any): DefaultExecHandleBuilder {
         delegate.commandLine(*arguments)
         return this
     }
@@ -68,11 +68,11 @@ class DefaultExecHandleBuilder(delegate: ClientExecHandleBuilder?) : AbstractExe
         return this
     }
 
-    override fun setCommandLine(args: MutableList<String?>) {
+    override fun setCommandLine(args: MutableList<String>) {
         delegate.commandLine(args)
     }
 
-    override fun setCommandLine(vararg args: Any?) {
+    override fun setCommandLine(vararg args: Any) {
         delegate.commandLine(*args)
     }
 
@@ -80,7 +80,7 @@ class DefaultExecHandleBuilder(delegate: ClientExecHandleBuilder?) : AbstractExe
         delegate.commandLine(args)
     }
 
-    override fun args(vararg args: Any?): DefaultExecHandleBuilder {
+    override fun args(vararg args: Any): DefaultExecHandleBuilder {
         delegate.args(*args)
         return this
     }
@@ -90,7 +90,7 @@ class DefaultExecHandleBuilder(delegate: ClientExecHandleBuilder?) : AbstractExe
         return this
     }
 
-    override fun setArgs(arguments: MutableList<String?>): DefaultExecHandleBuilder {
+    override fun setArgs(arguments: MutableList<String>): DefaultExecHandleBuilder {
         delegate.setArgs(arguments)
         return this
     }
@@ -100,15 +100,15 @@ class DefaultExecHandleBuilder(delegate: ClientExecHandleBuilder?) : AbstractExe
         return this
     }
 
-    override fun getArgs(): MutableList<String?> {
+    override fun getArgs(): MutableList<String> {
         return delegate.getArgs()
     }
 
-    override fun getArgumentProviders(): MutableList<CommandLineArgumentProvider?> {
+    override fun getArgumentProviders(): MutableList<CommandLineArgumentProvider> {
         return delegate.getArgumentProviders()
     }
 
-    override fun getAllArguments(): MutableList<String?> {
+    override fun getAllArguments(): MutableList<String> {
         return delegate.getAllArguments()
     }
 
@@ -122,15 +122,15 @@ class DefaultExecHandleBuilder(delegate: ClientExecHandleBuilder?) : AbstractExe
         return this
     }
 
-    override fun getEnvironment(): MutableMap<String?, Any?> {
+    override fun getEnvironment(): MutableMap<String, Any> {
         return delegate.getEnvironment()
     }
 
-    override fun setEnvironment(environmentVariables: MutableMap<String?, *>) {
+    override fun setEnvironment(environmentVariables: MutableMap<String, *>) {
         delegate.setEnvironment(environmentVariables)
     }
 
-    override fun environment(environmentVariables: MutableMap<String?, *>): ProcessForkOptions {
+    override fun environment(environmentVariables: MutableMap<String, *>): ProcessForkOptions {
         delegate.environment(environmentVariables)
         return this
     }
@@ -150,12 +150,12 @@ class DefaultExecHandleBuilder(delegate: ClientExecHandleBuilder?) : AbstractExe
         return this
     }
 
-    override fun setStandardOutput(outputStream: OutputStream?): DefaultExecHandleBuilder {
+    override fun setStandardOutput(outputStream: OutputStream): DefaultExecHandleBuilder {
         super.setStandardOutput(outputStream)
         return this
     }
 
-    override fun setStandardInput(inputStream: InputStream?): DefaultExecHandleBuilder {
+    override fun setStandardInput(inputStream: InputStream): DefaultExecHandleBuilder {
         super.setStandardInput(inputStream)
         return this
     }
@@ -165,7 +165,7 @@ class DefaultExecHandleBuilder(delegate: ClientExecHandleBuilder?) : AbstractExe
         return this
     }
 
-    override fun listener(listener: ExecHandleListener?): DefaultExecHandleBuilder {
+    override fun listener(listener: ExecHandleListener): DefaultExecHandleBuilder {
         super.listener(listener)
         return this
     }
@@ -181,7 +181,7 @@ class DefaultExecHandleBuilder(delegate: ClientExecHandleBuilder?) : AbstractExe
     }
 
     override fun copyTo(options: ProcessForkOptions): ProcessForkOptions {
-        options.setExecutable(delegate.getExecutable())
+        options.setExecutable(delegate.executable)
         options.setWorkingDir(delegate.getWorkingDir())
         options.setEnvironment(delegate.getEnvironment())
         return this

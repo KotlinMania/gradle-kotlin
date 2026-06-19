@@ -236,7 +236,7 @@ public class DefaultWorkerProcessBuilder implements WorkerProcessBuilder {
                 }
             }));
         workerProcess.startAccepting(acceptor);
-        Address localAddress = acceptor.address;
+        Address localAddress = acceptor.getAddress();
 
         // Build configuration for GradleWorkerMain
         long id = idGenerator.generateId();
@@ -257,7 +257,7 @@ public class DefaultWorkerProcessBuilder implements WorkerProcessBuilder {
         workerImplementationFactory.prepareJavaCommand(id, displayName, this, implementationClassPath, implementationModulePath, localAddress, javaCommand, shouldPublishJvmMemoryInfo, java9Compatible);
 
         if (addJpmsCompatibilityFlags) {
-            javaCommand.jvmArgs(JpmsConfiguration.forWorkerProcesses(javaVersionMajor, nativeServicesMode.isPotentiallyEnabled));
+            javaCommand.jvmArgs(JpmsConfiguration.forWorkerProcesses(javaVersionMajor, nativeServicesMode.isPotentiallyEnabled()));
         }
 
         javaCommand.args("'" + displayName + "'");
@@ -343,12 +343,12 @@ public class DefaultWorkerProcessBuilder implements WorkerProcessBuilder {
 
         @Override
         public long getMaxMemory() {
-            return snapshot.maxMemory;
+            return snapshot.getMaxMemory();
         }
 
         @Override
         public long getCommittedMemory() {
-            return snapshot.committedMemory;
+            return snapshot.getCommittedMemory();
         }
     }
 }

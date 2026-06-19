@@ -26,6 +26,5 @@ interface FinishEvent : ProgressEvent {
      *
      * @return the result of the finished operation
      */
-    @JvmField
     val result: OperationResult?
 }

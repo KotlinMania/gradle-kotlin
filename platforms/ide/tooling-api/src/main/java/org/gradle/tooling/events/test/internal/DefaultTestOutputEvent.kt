@@ -21,20 +21,13 @@ import org.gradle.tooling.events.test.TestOutputEvent
 /**
  * Implementation of the `TestOutputEvent` interface.
  */
-class DefaultTestOutputEvent(private val eventTime: Long, private val descriptor: TestOutputDescriptor) : TestOutputEvent {
-    override fun getEventTime(): Long {
-        return eventTime
-    }
+class DefaultTestOutputEvent(override val eventTime: Long, override val descriptor: TestOutputDescriptor) : TestOutputEvent {
 
-    override fun getDisplayName(): String {
-        return descriptor.destination.toString() + ": " + descriptor.message
-    }
 
-    override fun getDescriptor(): TestOutputDescriptor {
-        return descriptor
-    }
+    override val displayName: String
+        get() = descriptor.destination.toString() + ": " + descriptor.message
 
     override fun toString(): String {
-        return getDisplayName()
+        return displayName
     }
 }

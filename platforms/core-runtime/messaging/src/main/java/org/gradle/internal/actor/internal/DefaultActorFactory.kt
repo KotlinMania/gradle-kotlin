@@ -64,21 +64,21 @@ class DefaultActorFactory(private val executorFactory: ExecutorFactory) : ActorF
             }
             var actor = nonBlockingActors.get(target)
             if (actor == null) {
-                actor = DefaultActorFactory.NonBlockingActor(target)
+                actor = NonBlockingActor(target)
                 nonBlockingActors.put(target, actor)
             }
             return actor!!
         }
     }
 
-    override fun createBlockingActor(target: Any?): Actor {
+    override fun createBlockingActor(target: Any): Actor {
         synchronized(lock) {
             if (nonBlockingActors.containsKey(target)) {
                 throw UnsupportedOperationException("Cannot create a non-blocking and blocking actor for the same object. This is not implemented yet.")
             }
             var actor = blockingActors.get(target)
             if (actor == null) {
-                actor = DefaultActorFactory.BlockingActor(target)
+                actor = BlockingActor(target)
                 blockingActors.put(target, actor)
             }
             return actor!!
@@ -134,9 +134,9 @@ class DefaultActorFactory(private val executorFactory: ExecutorFactory) : ActorF
         init {
             executor = executorFactory.create("Dispatch " + targetObject)
             failureHandler = ExceptionTrackingFailureHandler(LoggerFactory.getLogger(NonBlockingActor::class.java))
-            dispatch = AsyncDispatch<MethodInvocation?>(
+            dispatch = AsyncDispatch<MethodInvocation>(
                 executor,
-                FailureHandlingDispatch<MethodInvocation?>(
+                FailureHandlingDispatch<MethodInvocation>(
                     ReflectionDispatch(targetObject),
                     failureHandler
                 ), Int.MAX_VALUE

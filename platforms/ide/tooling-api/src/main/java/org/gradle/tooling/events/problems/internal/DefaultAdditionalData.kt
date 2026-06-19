@@ -26,7 +26,6 @@ open class DefaultAdditionalData(additionalData: MutableMap<String, Any>) : Addi
         this.additionalData = ImmutableMap.copyOf<String, Any>(additionalData)
     }
 
-    override fun getAsMap(): MutableMap<String, Any> {
-        return additionalData
-    }
+    override val asMap: MutableMap<String, Any>
+        get() = additionalData
 }

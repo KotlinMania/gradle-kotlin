@@ -20,20 +20,11 @@ import org.gradle.util.internal.VersionNumber
 import org.jspecify.annotations.NullMarked
 
 @NullMarked
-class DefaultCompilerVersion(private val type: String, private val vendor: String, private val version: VersionNumber) : CompilerVersion {
-    override fun getType(): String {
-        return type
-    }
-
-    override fun getVendor(): String {
-        return vendor
-    }
-
-    override fun getVersion(): String {
-        return version.toString()
-    }
+class DefaultCompilerVersion(override val type: String, override val vendor: String, private val versionNumber: VersionNumber) : CompilerVersion {
+    override val version: String
+        get() = versionNumber.toString()
 
     override fun toString(): String {
-        return "CompilerVersion{" + "type='" + type + '\'' + ", vendor='" + vendor + '\'' + ", version=" + version + '}'
+        return "CompilerVersion{" + "type='" + type + '\'' + ", vendor='" + vendor + '\'' + ", version=" + versionNumber + '}'
     }
 }

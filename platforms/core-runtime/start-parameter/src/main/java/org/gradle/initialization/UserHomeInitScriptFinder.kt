@@ -18,7 +18,10 @@ package org.gradle.initialization
 import java.io.File
 
 class UserHomeInitScriptFinder(private val userHomeDir: File?) : DirectoryInitScriptFinder(), InitScriptFinder {
-    override fun findScripts(scripts: MutableCollection<File?>) {
+    override fun findScripts(scripts: MutableCollection<File?>?) {
+        if (userHomeDir == null || scripts == null) {
+            return
+        }
         val userInitScript = resolveScriptFile(userHomeDir, "init")
         if (userInitScript != null) {
             scripts.add(userInitScript)
@@ -26,4 +29,3 @@ class UserHomeInitScriptFinder(private val userHomeDir: File?) : DirectoryInitSc
         findScriptsInDir(File(userHomeDir, "init.d"), scripts)
     }
 }
-

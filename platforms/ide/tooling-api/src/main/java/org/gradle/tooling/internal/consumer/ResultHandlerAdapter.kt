@@ -15,6 +15,7 @@
  */
 package org.gradle.tooling.internal.consumer
 
+import org.gradle.tooling.Failure
 import org.gradle.tooling.ResultHandler
 import org.gradle.tooling.internal.protocol.ResultHandlerVersion1
 
@@ -23,13 +24,13 @@ import org.gradle.tooling.internal.protocol.ResultHandlerVersion1
  *
  * @param <T> The result type.
 </T> */
-open class ResultHandlerAdapter<T> protected constructor(private val handler: ResultHandler<in T?>, private val connectionExceptionTransformer: ConnectionExceptionTransformer) :
+open class ResultHandlerAdapter<T>(private val handler: ResultHandler<in T?>?, private val connectionExceptionTransformer: ConnectionExceptionTransformer) :
     ResultHandlerVersion1<T?> {
     override fun onComplete(result: T?) {
-        handler.onComplete(result)
+        handler?.onComplete(result)
     }
 
-    override fun onFailure(failure: Throwable) {
-        handler.onFailure(connectionExceptionTransformer.transform(failure))
+    override fun onFailure(failure: Throwable?) {
+        handler?.onFailure(connectionExceptionTransformer.transform(failure!!))
     }
 }

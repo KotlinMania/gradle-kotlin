@@ -17,6 +17,10 @@ package org.gradle.tooling.internal.consumer
 
 import com.google.common.base.Preconditions
 import com.google.common.collect.ImmutableSet
+import java.io.File
+import java.io.InputStream
+import java.io.OutputStream
+import java.util.EnumSet
 import org.gradle.internal.classpath.ClassPath
 import org.gradle.tooling.CancellationToken
 import org.gradle.tooling.Failure
@@ -25,16 +29,9 @@ import org.gradle.tooling.ProgressListener
 import org.gradle.tooling.Supplier
 import org.gradle.tooling.events.OperationType
 import org.gradle.tooling.internal.consumer.parameters.ConsumerOperationParameters
-import org.gradle.util.internal.CollectionUtils.toList
-import java.io.File
-import java.io.InputStream
-import java.io.OutputStream
-import java.util.Arrays
-import java.util.EnumSet
 
-abstract class AbstractLongRunningOperation<T : AbstractLongRunningOperation<T?>?> protected constructor(protected val connectionParameters: ConnectionParameters) : LongRunningOperation {
+abstract class AbstractLongRunningOperation<T : LongRunningOperation> protected constructor(protected val connectionParameters: ConnectionParameters) : LongRunningOperation {
     private val buildFailedProgressAdapter: BuildFailedProgressAdapter? = BuildFailedProgressAdapter()
-    @JvmField
     protected val operationParamsBuilder: ConsumerOperationParameters.Builder
 
     init {
@@ -51,22 +48,22 @@ abstract class AbstractLongRunningOperation<T : AbstractLongRunningOperation<T?>
         }
 
     override fun withArguments(vararg arguments: String?): T? {
-        operationParamsBuilder.setArguments(Companion.rationalizeInput<String>(arguments))
+        operationParamsBuilder.setArguments(rationalizeInput(arguments))
         return this.`this`
     }
 
     override fun withArguments(arguments: Iterable<String?>?): T? {
-        operationParamsBuilder.setArguments(rationalizeInput<String>(arguments))
+        operationParamsBuilder.setArguments(rationalizeInput(arguments))
         return this.`this`
     }
 
     override fun addArguments(vararg arguments: String?): T? {
-        operationParamsBuilder.addArguments(toList<String>(Preconditions.checkNotNull<Array<String?>?>(arguments)))
+        operationParamsBuilder.addArguments(rationalizeInput(arguments))
         return this.`this`
     }
 
     override fun addArguments(arguments: Iterable<String?>?): T? {
-        operationParamsBuilder.addArguments(toList<String>(Preconditions.checkNotNull<Iterable<String?>?>(arguments)))
+        operationParamsBuilder.addArguments(rationalizeInput(arguments))
         return this.`this`
     }
 
@@ -96,33 +93,31 @@ abstract class AbstractLongRunningOperation<T : AbstractLongRunningOperation<T?>
     }
 
     override fun setJvmArguments(vararg jvmArguments: String?): T? {
-        operationParamsBuilder.setBaseJvmArguments(Companion.rationalizeInput<String>(jvmArguments))
+        operationParamsBuilder.setBaseJvmArguments(rationalizeInput(jvmArguments))
         return this.`this`
     }
 
     override fun setJvmArguments(jvmArguments: Iterable<String?>?): T? {
-        operationParamsBuilder.setBaseJvmArguments(rationalizeInput<String>(jvmArguments))
+        operationParamsBuilder.setBaseJvmArguments(rationalizeInput(jvmArguments))
         return this.`this`
     }
 
     override fun addJvmArguments(vararg jvmArguments: String?): T? {
-        Preconditions.checkNotNull<Array<String?>?>(jvmArguments)
-        operationParamsBuilder.addJvmArguments(Companion.rationalizeInput<String>(jvmArguments))
+        operationParamsBuilder.addJvmArguments(rationalizeInput(jvmArguments))
         return this.`this`
     }
 
     override fun addJvmArguments(jvmArguments: Iterable<String?>?): T? {
-        Preconditions.checkNotNull<Iterable<String?>?>(jvmArguments)
-        operationParamsBuilder.addJvmArguments(rationalizeInput<String>(jvmArguments))
+        operationParamsBuilder.addJvmArguments(rationalizeInput(jvmArguments))
         return this.`this`
     }
 
-    override fun withSystemProperties(systemProperties: MutableMap<String?, String?>): T? {
+    override fun withSystemProperties(systemProperties: MutableMap<String, String>): T? {
         operationParamsBuilder.setSystemProperties(systemProperties)
         return this.`this`
     }
 
-    override fun setEnvironmentVariables(envVariables: MutableMap<String?, String?>): T? {
+    override fun setEnvironmentVariables(envVariables: MutableMap<String, String>): T? {
         operationParamsBuilder.setEnvironmentVariables(envVariables)
         return this.`this`
     }
@@ -133,25 +128,25 @@ abstract class AbstractLongRunningOperation<T : AbstractLongRunningOperation<T?>
     }
 
     override fun addProgressListener(listener: org.gradle.tooling.events.ProgressListener): T? {
-        return addProgressListener(listener, EnumSet.allOf<OperationType?>(OperationType::class.java))
+        return addProgressListener(listener, EnumSet.allOf(OperationType::class.java))
     }
 
-    override fun addProgressListener(listener: org.gradle.tooling.events.ProgressListener, vararg operationTypes: OperationType?): T? {
-        return addProgressListener(listener, ImmutableSet.copyOf<OperationType?>(operationTypes))
+    override fun addProgressListener(listener: org.gradle.tooling.events.ProgressListener?, vararg operationTypes: OperationType): T? {
+        return addProgressListener(listener, ImmutableSet.copyOf(operationTypes))
     }
 
-    override fun addProgressListener(listener: org.gradle.tooling.events.ProgressListener, eventTypes: MutableSet<OperationType?>): T? {
-        operationParamsBuilder.addProgressListener(listener, eventTypes)
+    override fun addProgressListener(listener: org.gradle.tooling.events.ProgressListener?, eventTypes: MutableSet<OperationType>): T? {
+        operationParamsBuilder.addProgressListener(listener!!, eventTypes)
         return this.`this`
     }
 
-    override fun withCancellationToken(cancellationToken: CancellationToken?): T? {
-        operationParamsBuilder.setCancellationToken(Preconditions.checkNotNull<CancellationToken?>(cancellationToken)!!)
+    override fun withCancellationToken(cancellationToken: CancellationToken): T? {
+        operationParamsBuilder.setCancellationToken(Preconditions.checkNotNull(cancellationToken))
         return this.`this`
     }
 
     override fun withDetailedFailure(): T? {
-        operationParamsBuilder.addProgressListener(buildFailedProgressAdapter!!, EnumSet.of<OperationType?>(OperationType.ROOT))
+        operationParamsBuilder.addProgressListener(buildFailedProgressAdapter!!, EnumSet.of(OperationType.ROOT))
         return this.`this`
     }
 
@@ -168,20 +163,22 @@ abstract class AbstractLongRunningOperation<T : AbstractLongRunningOperation<T?>
     }
 
     protected fun createExceptionTransformer(messageProvider: ConnectionExceptionTransformer.ConnectionFailureMessageProvider?): ConnectionExceptionTransformer {
-        return ConnectionExceptionTransformer(messageProvider, object : Supplier<MutableList<Failure?>?> {
+        return ConnectionExceptionTransformer(messageProvider!!, object : Supplier<MutableList<Failure?>?> {
             override fun get(): MutableList<Failure?> {
-                return if (buildFailedProgressAdapter == null) mutableListOf<Failure?>() else buildFailedProgressAdapter.failures
+                return if (buildFailedProgressAdapter == null) mutableListOf() else ArrayList<Failure?>(buildFailedProgressAdapter.failures)
             }
         })
     }
 
     companion object {
-        protected fun <T> rationalizeInput(arguments: Array<T?>?): MutableList<T?>? {
-            return if (arguments != null && arguments.size > 0) Arrays.asList<T?>(*arguments) else null
+        protected fun <T : Any> rationalizeInput(arguments: Array<out T?>?): MutableList<T>? {
+            val filtered = arguments?.filterNotNull()
+            return if (!filtered.isNullOrEmpty()) filtered.toMutableList() else null
         }
 
-        protected fun <T> rationalizeInput(arguments: Iterable<out T?>?): MutableList<T?>? {
-            return if (arguments != null && arguments.iterator().hasNext()) toList<T?>(arguments) else null
+        protected fun <T : Any> rationalizeInput(arguments: Iterable<T?>?): MutableList<T>? {
+            val filtered = arguments?.filterNotNull()
+            return if (!filtered.isNullOrEmpty()) filtered.toMutableList() else null
         }
     }
 }

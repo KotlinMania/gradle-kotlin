@@ -22,7 +22,7 @@ class CompositeInitScriptFinder(vararg finders: InitScriptFinder?) : InitScriptF
     private val finders: MutableList<InitScriptFinder>
 
     init {
-        this.finders = Arrays.asList<InitScriptFinder?>(*finders)
+        this.finders = Arrays.asList<InitScriptFinder?>(*finders).filterNotNull().toMutableList()
     }
 
     override fun findScripts(scripts: MutableCollection<File?>?) {

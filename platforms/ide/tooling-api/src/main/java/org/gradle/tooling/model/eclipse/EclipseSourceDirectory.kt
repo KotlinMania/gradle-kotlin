@@ -46,6 +46,5 @@ interface EclipseSourceDirectory : SourceDirectory, EclipseClasspathEntry {
      *
      * @since 3.0
      */
-    @Throws(UnsupportedMethodException::class)
-    override fun getClasspathAttributes(): DomainObjectSet<out ClasspathAttribute?>?
+    override val classpathAttributes: DomainObjectSet<out ClasspathAttribute?>?
 }

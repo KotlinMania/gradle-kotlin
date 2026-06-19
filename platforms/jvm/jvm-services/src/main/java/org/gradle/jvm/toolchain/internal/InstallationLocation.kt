@@ -19,7 +19,7 @@ import org.gradle.api.Describable
 import java.io.File
 
 class InstallationLocation private constructor(
-    @JvmField val location: File, @JvmField val source: String?,
+    val location: File, val source: String?,
     /**
      * Flag for if this location was auto-detected, i.e. not explicitly defined by the user.
      *

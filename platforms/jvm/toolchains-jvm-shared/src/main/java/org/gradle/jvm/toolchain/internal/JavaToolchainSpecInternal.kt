@@ -49,8 +49,8 @@ interface JavaToolchainSpecInternal : JavaToolchainSpec {
      * Finalizes values of all spec properties, disallowing any further changes.
      */
     fun finalizeProperties() {
-        getLanguageVersion().finalizeValue()
-        getVendor().finalizeValue()
-        getImplementation().finalizeValue()
+        languageVersion.finalizeValue()
+        vendor.finalizeValue()
+        implementation.finalizeValue()
     }
 }

@@ -21,5 +21,5 @@ interface TargetTypeProvider : Serializable {
     /**
      * Determines the model type to use to wrap the given protocol object.
      */
-    fun <T> getTargetType(initialTargetType: Class<T?>, protocolObject: Any): Class<out T>?
+    fun <T> getTargetType(initialTargetType: Class<T?>, protocolObject: Any): Class<out T>
 }

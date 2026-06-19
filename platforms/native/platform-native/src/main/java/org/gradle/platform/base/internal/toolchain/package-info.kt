@@ -18,10 +18,4 @@
  */
 package org.gradle.platform.base.internal.toolchain
 
-import org.gradle.internal.logging.text.DiagnosticsVisitor.node
-import org.gradle.internal.logging.text.DiagnosticsVisitor.startChildren
-import org.gradle.internal.logging.text.DiagnosticsVisitor.endChildren
-import org.gradle.internal.logging.text.TreeFormatter.toString
-import org.gradle.util.internal.CollectionUtils.findFirst
-import org.gradle.platform.base.Platform.getName
 

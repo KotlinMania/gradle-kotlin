@@ -25,5 +25,5 @@ import org.gradle.tooling.events.ProgressEvent
  */
 @Incubating
 interface BuildPhaseProgressEvent : ProgressEvent {
-    override fun getDescriptor(): BuildPhaseOperationDescriptor?
+    override val descriptor: BuildPhaseOperationDescriptor?
 }

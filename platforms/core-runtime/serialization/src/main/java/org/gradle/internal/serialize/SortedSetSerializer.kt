@@ -29,11 +29,11 @@ import org.jspecify.annotations.NullMarked
  * preserving the serialized (sorted) order.
  */
 @NullMarked
-class SortedSetSerializer<T : Comparable<T?>?>(private val entrySerializer: Serializer<T?>) : AbstractSerializer<MutableSet<T?>?>() {
+class SortedSetSerializer<T : Comparable<T>>(private val entrySerializer: Serializer<T>) : AbstractSerializer<MutableSet<T>>() {
     @Throws(Exception::class)
-    override fun write(encoder: Encoder, value: MutableSet<T?>) {
-        val sorted: MutableList<T?> = ArrayList<T?>(value)
-        sorted.sort(null)
+    override fun write(encoder: Encoder, value: MutableSet<T>) {
+        val sorted: MutableList<T> = ArrayList<T>(value)
+        sorted.sort()
         encoder.writeInt(sorted.size)
         for (t in sorted) {
             entrySerializer.write(encoder, t)
@@ -41,16 +41,16 @@ class SortedSetSerializer<T : Comparable<T?>?>(private val entrySerializer: Seri
     }
 
     @Throws(Exception::class)
-    override fun read(decoder: Decoder): MutableSet<T?> {
+    override fun read(decoder: Decoder): MutableSet<T> {
         val size = decoder.readInt()
-        val set: MutableSet<T?> = Sets.newLinkedHashSetWithExpectedSize<T?>(size)
+        val set: MutableSet<T> = Sets.newLinkedHashSetWithExpectedSize<T>(size)
         for (i in 0..<size) {
             set.add(entrySerializer.read(decoder))
         }
         return set
     }
 
-    public override fun equals(obj: Any): Boolean {
+    public override fun equals(obj: Any?): Boolean {
         if (!super.equals(obj)) {
             return false
         }

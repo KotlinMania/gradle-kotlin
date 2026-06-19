@@ -45,32 +45,32 @@ object KeyringStripper {
         }
     }
 
-    fun strip(keyring: PGPPublicKeyRing, fingerprintCalculator: KeyFingerPrintCalculator?): PGPPublicKeyRing {
+    fun strip(keyring: PGPPublicKeyRing, fingerprintCalculator: KeyFingerPrintCalculator): PGPPublicKeyRing {
         val strippedKeys = StreamSupport
-            .stream<PGPPublicKey?>(keyring.spliterator(), false)
-            .map<PGPPublicKey?> { key: PGPPublicKey? -> KeyringStripper.stripKey(key!!, fingerprintCalculator) }
+            .stream<PGPPublicKey>(keyring.spliterator(), false)
+            .map<PGPPublicKey> { key: PGPPublicKey -> stripKey(key, fingerprintCalculator) }
             .collect(Collectors.toList())
 
         return PGPPublicKeyRing(strippedKeys)
     }
 
-    private fun stripKey(key: PGPPublicKey, fingerprintCalculator: KeyFingerPrintCalculator?): PGPPublicKey {
+    private fun stripKey(key: PGPPublicKey, fingerprintCalculator: KeyFingerPrintCalculator): PGPPublicKey {
         val stripped: PGPPublicKey
         try {
             if (key.isMasterKey()) {
                 val id = PGPUtils.getUserIDs(key)
                     .stream()
-                    .filter { obj: String? -> KeyringStripper.looksLikeEmail() }
-                    .min(Comparator.comparing<String?, Int?>(Function { obj: String? -> obj!!.length }))
+                    .filter { obj: String? -> obj != null && looksLikeEmail(obj) }
+                    .min(Comparator.comparing<String?, Int>(Function { obj: String? -> obj!!.length }))
 
-                val ids: MutableList<UserIDPacket?>?
-                val idSignatures: MutableList<MutableList<PGPSignature?>?>?
+                val ids: MutableList<UserIDPacket>
+                val idSignatures: MutableList<MutableList<PGPSignature>>
                 if (id.isPresent()) {
-                    ids = mutableListOf<UserIDPacket?>(UserIDPacket(id.get()))
-                    idSignatures = mutableListOf<MutableList<PGPSignature?>?>(mutableListOf<PGPSignature?>())
+                    ids = mutableListOf(UserIDPacket(id.get()))
+                    idSignatures = mutableListOf(mutableListOf())
                 } else {
-                    ids = mutableListOf<UserIDPacket?>()
-                    idSignatures = mutableListOf<MutableList<PGPSignature?>?>()
+                    ids = mutableListOf()
+                    idSignatures = mutableListOf()
                 }
 
                 // unfortunately, the PGPPublicKey constructor is package private, so we need to use reflection
@@ -88,7 +88,7 @@ object KeyringStripper {
                 stripped = SUBKEY_CONSTRUCTOR.newInstance(
                     key.getPublicKeyPacket(),
                     null,
-                    ImmutableList.copyOf<PGPSignature?>(key.getKeySignatures()),
+                    ImmutableList.copyOf<PGPSignature>(key.getKeySignatures()),
                     fingerprintCalculator
                 )
             }

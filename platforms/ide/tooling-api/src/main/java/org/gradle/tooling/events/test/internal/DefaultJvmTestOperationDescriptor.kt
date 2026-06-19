@@ -27,29 +27,20 @@ import org.gradle.tooling.internal.protocol.events.InternalJvmTestDescriptor
 class DefaultJvmTestOperationDescriptor(
     internalJvmTestDescriptor: InternalJvmTestDescriptor?,
     parent: OperationDescriptor?,
-    private val jvmTestKind: JvmTestKind?,
-    private val suiteName: String?,
-    private val className: String?,
-    private val methodName: String?,
+    override val jvmTestKind: JvmTestKind?,
+    override val suiteName: String?,
+    override val className: String?,
+    override val methodName: String?,
     private val testSource: TestSource?
-) : DefaultTestOperationDescriptor(internalJvmTestDescriptor, parent), JvmTestOperationDescriptor {
-    override fun getJvmTestKind(): JvmTestKind? {
-        return this.jvmTestKind
-    }
+) : DefaultTestOperationDescriptor(internalJvmTestDescriptor!!, parent), JvmTestOperationDescriptor {
 
-    override fun getSuiteName(): String? {
-        return this.suiteName
-    }
 
-    override fun getClassName(): String? {
-        return this.className
-    }
 
-    override fun getMethodName(): String? {
-        return this.methodName
-    }
 
-    override fun getSource(): TestSource? {
-        return this.testSource
-    }
+
+
+
+
+    override val source: TestSource?
+        get() = this.testSource
 }

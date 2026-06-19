@@ -15,12 +15,13 @@
  */
 package org.gradle.tooling.internal.consumer
 
-import org.gradle.internal.UncheckedException.Companion.throwAsUncheckedException
-import org.gradle.tooling.GradleConnectionException
-import org.gradle.tooling.ResultHandler
 import java.util.Arrays
 import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.BlockingQueue
+import org.gradle.internal.UncheckedException.Companion.throwAsUncheckedException
+import org.gradle.tooling.Failure
+import org.gradle.tooling.GradleConnectionException
+import org.gradle.tooling.ResultHandler
 
 class BlockingResultHandler<T>(private val resultType: Class<T?>) : ResultHandler<T?> {
     private val queue: BlockingQueue<Any?> = ArrayBlockingQueue<Any?>(1)
@@ -47,7 +48,7 @@ class BlockingResultHandler<T>(private val resultType: Class<T?>) : ResultHandle
         queue.add(if (result == null) NULL else result)
     }
 
-    override fun onFailure(failure: GradleConnectionException) {
+    override fun onFailure(failure: GradleConnectionException?) {
         queue.add(failure)
     }
 

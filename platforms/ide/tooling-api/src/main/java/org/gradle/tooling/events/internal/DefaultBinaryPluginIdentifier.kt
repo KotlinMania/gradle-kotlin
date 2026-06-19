@@ -16,13 +16,10 @@
 package org.gradle.tooling.events.internal
 
 import org.gradle.tooling.events.BinaryPluginIdentifier
+import org.gradle.tooling.events.PluginIdentifier
 
-class DefaultBinaryPluginIdentifier(displayName: String?, private val className: String?, private val pluginId: String?) : AbstractPluginIdentifier(displayName), BinaryPluginIdentifier {
-    override fun getClassName(): String? {
-        return className
-    }
+class DefaultBinaryPluginIdentifier(displayName: String?, override val className: String?, override val pluginId: String?) : AbstractPluginIdentifier(displayName), BinaryPluginIdentifier {
 
-    override fun getPluginId(): String? {
-        return pluginId
-    }
+
+
 }

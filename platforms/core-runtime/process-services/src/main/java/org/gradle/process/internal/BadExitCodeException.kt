@@ -48,23 +48,23 @@ class DefaultJavaExecAction(private val javaExecHandleBuilder: JavaExecHandleBui
         return execResult
     }
 
-    override fun getJvmArguments(): ListProperty<String?> {
-        return javaExecHandleBuilder.getJvmArguments()
+    override fun getJvmArguments(): ListProperty<String> {
+        return javaExecHandleBuilder.jvmArguments
     }
 
-    override fun getMainModule(): Property<String?> {
-        return javaExecHandleBuilder.getMainModule()
+    override fun getMainModule(): Property<String> {
+        return javaExecHandleBuilder.mainModule
     }
 
-    override fun getMainClass(): Property<String?> {
-        return javaExecHandleBuilder.getMainClass()
+    override fun getMainClass(): Property<String> {
+        return javaExecHandleBuilder.mainClass
     }
 
-    override fun getArgs(): MutableList<String?> {
-        return javaExecHandleBuilder.getArgs()
+    override fun getArgs(): MutableList<String> {
+        return javaExecHandleBuilder.args
     }
 
-    override fun args(vararg args: Any?): JavaExecSpec {
+    override fun args(vararg args: Any): JavaExecSpec {
         javaExecHandleBuilder.args(*args)
         return this
     }
@@ -74,7 +74,7 @@ class DefaultJavaExecAction(private val javaExecHandleBuilder: JavaExecHandleBui
         return this
     }
 
-    override fun setArgs(args: MutableList<String?>): JavaExecSpec {
+    override fun setArgs(args: MutableList<String>): JavaExecSpec {
         javaExecHandleBuilder.setArgs(args)
         return this
     }
@@ -84,8 +84,8 @@ class DefaultJavaExecAction(private val javaExecHandleBuilder: JavaExecHandleBui
         return this
     }
 
-    override fun getArgumentProviders(): MutableList<CommandLineArgumentProvider?> {
-        return javaExecHandleBuilder.getArgumentProviders()
+    override fun getArgumentProviders(): MutableList<CommandLineArgumentProvider> {
+        return javaExecHandleBuilder.argumentProviders
     }
 
     override fun classpath(vararg paths: Any?): JavaExecSpec {
@@ -103,7 +103,7 @@ class DefaultJavaExecAction(private val javaExecHandleBuilder: JavaExecHandleBui
     }
 
     override fun getModularity(): ModularitySpec {
-        return javaExecHandleBuilder.getModularity()
+        return javaExecHandleBuilder.modularity
     }
 
     override fun setIgnoreExitValue(ignoreExitValue: Boolean): BaseExecSpec {
@@ -116,12 +116,12 @@ class DefaultJavaExecAction(private val javaExecHandleBuilder: JavaExecHandleBui
     }
 
     override fun setStandardInput(inputStream: InputStream): BaseExecSpec {
-        javaExecHandleBuilder.setStandardInput(inputStream)
+        javaExecHandleBuilder.standardInput = inputStream
         return this
     }
 
     override fun getStandardInput(): InputStream {
-        return javaExecHandleBuilder.getStandardInput()
+        return javaExecHandleBuilder.standardInput
     }
 
     override fun setStandardOutput(outputStream: OutputStream): BaseExecSpec {
@@ -130,7 +130,7 @@ class DefaultJavaExecAction(private val javaExecHandleBuilder: JavaExecHandleBui
     }
 
     override fun getStandardOutput(): OutputStream {
-        return javaExecHandleBuilder.getStandardOutput()
+        return javaExecHandleBuilder.standardOutput
     }
 
     override fun setErrorOutput(outputStream: OutputStream): BaseExecSpec {
@@ -139,22 +139,22 @@ class DefaultJavaExecAction(private val javaExecHandleBuilder: JavaExecHandleBui
     }
 
     override fun getErrorOutput(): OutputStream {
-        return javaExecHandleBuilder.getErrorOutput()
+        return javaExecHandleBuilder.errorOutput
     }
 
-    override fun getCommandLine(): MutableList<String?> {
-        return javaExecHandleBuilder.getCommandLine()
+    override fun getCommandLine(): MutableList<String> {
+        return javaExecHandleBuilder.commandLine
     }
 
-    override fun getSystemProperties(): MutableMap<String?, Any?> {
-        return javaExecHandleBuilder.getSystemProperties()
+    override fun getSystemProperties(): MutableMap<String, Any?> {
+        return javaExecHandleBuilder.systemProperties
     }
 
-    override fun setSystemProperties(properties: MutableMap<String?, out Any?>) {
-        javaExecHandleBuilder.setSystemProperties(properties)
+    override fun setSystemProperties(properties: MutableMap<String, out Any?>) {
+        javaExecHandleBuilder.systemProperties = properties.toMutableMap()
     }
 
-    override fun systemProperties(properties: MutableMap<String?, out Any?>): JavaForkOptions {
+    override fun systemProperties(properties: MutableMap<String, out Any?>): JavaForkOptions {
         javaExecHandleBuilder.systemProperties(properties)
         return this
     }
@@ -165,35 +165,35 @@ class DefaultJavaExecAction(private val javaExecHandleBuilder: JavaExecHandleBui
     }
 
     override fun getDefaultCharacterEncoding(): String? {
-        return javaExecHandleBuilder.getDefaultCharacterEncoding()
+        return javaExecHandleBuilder.defaultCharacterEncoding
     }
 
     override fun setDefaultCharacterEncoding(defaultCharacterEncoding: String?) {
-        javaExecHandleBuilder.setDefaultCharacterEncoding(defaultCharacterEncoding!!)
+        javaExecHandleBuilder.defaultCharacterEncoding = defaultCharacterEncoding!!
     }
 
     override fun getMinHeapSize(): String? {
-        return javaExecHandleBuilder.getMinHeapSize()
+        return javaExecHandleBuilder.minHeapSize
     }
 
     override fun setMinHeapSize(heapSize: String?) {
-        javaExecHandleBuilder.setMinHeapSize(heapSize!!)
+        javaExecHandleBuilder.minHeapSize = heapSize!!
     }
 
     override fun getMaxHeapSize(): String? {
-        return javaExecHandleBuilder.getMaxHeapSize()
+        return javaExecHandleBuilder.maxHeapSize
     }
 
     override fun setMaxHeapSize(heapSize: String?) {
-        javaExecHandleBuilder.setMaxHeapSize(heapSize!!)
+        javaExecHandleBuilder.maxHeapSize = heapSize!!
     }
 
-    override fun getJvmArgs(): MutableList<String?> {
-        return javaExecHandleBuilder.getJvmArgs()
+    override fun getJvmArgs(): MutableList<String> {
+        return javaExecHandleBuilder.jvmArgs
     }
 
-    override fun setJvmArgs(arguments: MutableList<String?>) {
-        javaExecHandleBuilder.setJvmArgs(arguments)
+    override fun setJvmArgs(arguments: MutableList<String>) {
+        javaExecHandleBuilder.jvmArgs = arguments
     }
 
     override fun setJvmArgs(arguments: Iterable<*>) {
@@ -205,21 +205,21 @@ class DefaultJavaExecAction(private val javaExecHandleBuilder: JavaExecHandleBui
         return this
     }
 
-    override fun jvmArgs(vararg arguments: Any?): JavaForkOptions {
+    override fun jvmArgs(vararg arguments: Any): JavaForkOptions {
         javaExecHandleBuilder.jvmArgs(*arguments)
         return this
     }
 
-    override fun getJvmArgumentProviders(): MutableList<CommandLineArgumentProvider?> {
-        return javaExecHandleBuilder.getJvmArgumentProviders()
+    override fun getJvmArgumentProviders(): MutableList<CommandLineArgumentProvider> {
+        return javaExecHandleBuilder.jvmArgumentProviders
     }
 
     override fun getBootstrapClasspath(): FileCollection {
-        return javaExecHandleBuilder.getBootstrapClasspath()
+        return javaExecHandleBuilder.bootstrapClasspath
     }
 
     override fun setBootstrapClasspath(classpath: FileCollection) {
-        javaExecHandleBuilder.setBootstrapClasspath(classpath)
+        javaExecHandleBuilder.bootstrapClasspath = classpath
     }
 
     override fun bootstrapClasspath(vararg classpath: Any?): JavaForkOptions {
@@ -228,31 +228,31 @@ class DefaultJavaExecAction(private val javaExecHandleBuilder: JavaExecHandleBui
     }
 
     override fun getEnableAssertions(): Boolean {
-        return javaExecHandleBuilder.getEnableAssertions()
+        return javaExecHandleBuilder.enableAssertions
     }
 
     override fun setEnableAssertions(enabled: Boolean) {
-        javaExecHandleBuilder.setEnableAssertions(enabled)
+        javaExecHandleBuilder.enableAssertions = enabled
     }
 
     override fun getDebug(): Boolean {
-        return javaExecHandleBuilder.getDebug()
+        return javaExecHandleBuilder.debug
     }
 
     override fun setDebug(enabled: Boolean) {
-        javaExecHandleBuilder.setDebug(enabled)
+        javaExecHandleBuilder.debug = enabled
     }
 
     override fun getDebugOptions(): JavaDebugOptions {
-        return javaExecHandleBuilder.getDebugOptions()
+        return javaExecHandleBuilder.debugOptions
     }
 
-    override fun debugOptions(action: Action<JavaDebugOptions?>) {
+    override fun debugOptions(action: Action<JavaDebugOptions>) {
         javaExecHandleBuilder.debugOptions(action)
     }
 
-    override fun getAllJvmArgs(): MutableList<String?> {
-        return javaExecHandleBuilder.getAllJvmArgs()
+    override fun getAllJvmArgs(): MutableList<String> {
+        return javaExecHandleBuilder.allJvmArgs
     }
 
     @Deprecated("")
@@ -266,7 +266,7 @@ class DefaultJavaExecAction(private val javaExecHandleBuilder: JavaExecHandleBui
     }
 
     override fun getExecutable(): String {
-        return javaExecHandleBuilder.getExecutable()
+        return javaExecHandleBuilder.executable!!
     }
 
     override fun setExecutable(executable: String) {
@@ -283,7 +283,7 @@ class DefaultJavaExecAction(private val javaExecHandleBuilder: JavaExecHandleBui
     }
 
     override fun getWorkingDir(): File? {
-        return javaExecHandleBuilder.getWorkingDir()
+        return javaExecHandleBuilder.workingDir
     }
 
     override fun setWorkingDir(dir: File?) {
@@ -300,14 +300,15 @@ class DefaultJavaExecAction(private val javaExecHandleBuilder: JavaExecHandleBui
     }
 
     override fun getEnvironment(): MutableMap<String?, Any?> {
-        return javaExecHandleBuilder.getEnvironment()
+        @Suppress("UNCHECKED_CAST")
+        return javaExecHandleBuilder.environment as MutableMap<String?, Any?>
     }
 
-    override fun setEnvironment(environmentVariables: MutableMap<String?, *>) {
+    override fun setEnvironment(environmentVariables: MutableMap<String, *>) {
         javaExecHandleBuilder.setEnvironment(environmentVariables)
     }
 
-    override fun environment(environmentVariables: MutableMap<String?, *>): ProcessForkOptions {
+    override fun environment(environmentVariables: MutableMap<String, *>): ProcessForkOptions {
         javaExecHandleBuilder.environment(environmentVariables)
         return this
     }
@@ -317,8 +318,10 @@ class DefaultJavaExecAction(private val javaExecHandleBuilder: JavaExecHandleBui
         return this
     }
 
-    override fun listener(listener: ExecHandleListener): JavaExecAction {
-        javaExecHandleBuilder.listener(listener)
+    override fun listener(listener: ExecHandleListener?): JavaExecAction {
+        if (listener != null) {
+            javaExecHandleBuilder.listener(listener)
+        }
         return this
     }
 

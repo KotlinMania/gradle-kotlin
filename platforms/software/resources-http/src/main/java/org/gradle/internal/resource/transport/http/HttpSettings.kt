@@ -15,40 +15,32 @@
  */
 package org.gradle.internal.resource.transport.http
 
+import org.gradle.authentication.Authentication
+import org.gradle.internal.verifier.HttpRedirectVerifier
+import javax.net.ssl.HostnameVerifier
 
 interface HttpSettings {
-    @JvmField
-    val proxySettings: HttpProxySettings?
+    val proxySettings: HttpProxySettings
 
-    @JvmField
-    val secureProxySettings: HttpProxySettings?
+    val secureProxySettings: HttpProxySettings
 
-    @JvmField
-    val timeoutSettings: HttpTimeoutSettings?
+    val timeoutSettings: HttpTimeoutSettings
 
-    @JvmField
     val maxRedirects: Int
 
-    @JvmField
     val maxConnTotal: Int
 
-    @JvmField
     val maxConnPerRoute: Int
 
-    @JvmField
-    val redirectVerifier: HttpRedirectVerifier?
+    val redirectVerifier: HttpRedirectVerifier
 
-    @JvmField
-    val redirectMethodHandlingStrategy: RedirectMethodHandlingStrategy?
+    val redirectMethodHandlingStrategy: RedirectMethodHandlingStrategy
 
-    @JvmField
-    val authenticationSettings: MutableCollection<Authentication?>?
+    val authenticationSettings: MutableCollection<Authentication>
 
-    @JvmField
-    val sslContextFactory: SslContextFactory?
+    val sslContextFactory: SslContextFactory
 
-    @JvmField
-    val hostnameVerifier: HostnameVerifier?
+    val hostnameVerifier: HostnameVerifier
 
     enum class RedirectMethodHandlingStrategy {
         /**

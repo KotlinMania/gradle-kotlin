@@ -58,7 +58,7 @@ public class DefaultWorkValidationContext implements WorkValidationContext {
         return new ProblemRecordingTypeValidationContext(type, pluginId, getProblemsService()) {
             @Override
             protected void recordError(ProblemInternal problem) {
-                if (DefaultTypeValidationContext.onlyAffectsCacheableWork(problem.definition.getId()) && !cacheable) {
+                if (DefaultTypeValidationContext.onlyAffectsCacheableWork(problem.getDefinition().getId()) && !cacheable) {
                     return;
                 }
                 errors.add(problem);

@@ -26,46 +26,46 @@ import java.nio.file.Path
 import java.nio.file.Paths
 
 class BaseSerializerFactory {
-    fun <T> getSerializerFor(type: Class<T?>): Serializer<T?> {
+    fun <T> getSerializerFor(type: Class<T>): Serializer<T> {
         if (type == String::class.java) {
-            return Cast.uncheckedNonnullCast<Serializer<T?>>(STRING_SERIALIZER)
+            return Cast.uncheckedNonnullCast<Serializer<T>>(STRING_SERIALIZER)
         }
-        if (type == Long::class.java) {
-            return Cast.uncheckedNonnullCast<Serializer<T?>>(LONG_SERIALIZER)
+        if (type == java.lang.Long::class.java || type == Long::class.javaPrimitiveType) {
+            return Cast.uncheckedNonnullCast<Serializer<T>>(LONG_SERIALIZER)
         }
         if (type == File::class.java) {
-            return Cast.uncheckedNonnullCast<Serializer<T?>>(FILE_SERIALIZER)
+            return Cast.uncheckedNonnullCast<Serializer<T>>(FILE_SERIALIZER)
         }
         if (type == ByteArray::class.java) {
-            return Cast.uncheckedNonnullCast<Serializer<T?>>(BYTE_ARRAY_SERIALIZER)
+            return Cast.uncheckedNonnullCast<Serializer<T>>(BYTE_ARRAY_SERIALIZER)
         }
         if (type.isEnum()) {
-            return Cast.uncheckedNonnullCast<Serializer<T?>>(EnumSerializer<Enum<*>?>(Cast.uncheckedNonnullCast<Class<Enum<*>?>?>(type)))
+            return Cast.uncheckedNonnullCast<Serializer<T>>(EnumSerializer<Enum<*>>(Cast.uncheckedNonnullCast<Class<Enum<*>>>(type)))
         }
-        if (type == Boolean::class.java) {
-            return Cast.uncheckedNonnullCast<Serializer<T?>>(BOOLEAN_SERIALIZER)
+        if (type == java.lang.Boolean::class.java || type == Boolean::class.javaPrimitiveType) {
+            return Cast.uncheckedNonnullCast<Serializer<T>>(BOOLEAN_SERIALIZER)
         }
         if (Throwable::class.java.isAssignableFrom(type)) {
-            return Cast.uncheckedNonnullCast<Serializer<T?>>(THROWABLE_SERIALIZER)
+            return Cast.uncheckedNonnullCast<Serializer<T>>(THROWABLE_SERIALIZER)
         }
         if (HashCode::class.java.isAssignableFrom(type)) {
-            return Cast.uncheckedNonnullCast<Serializer<T?>>(HASHCODE_SERIALIZER)
+            return Cast.uncheckedNonnullCast<Serializer<T>>(HASHCODE_SERIALIZER)
         }
         if (Path::class.java.isAssignableFrom(type)) {
-            return Cast.uncheckedNonnullCast<Serializer<T?>>(PATH_SERIALIZER)
+            return Cast.uncheckedNonnullCast<Serializer<T>>(PATH_SERIALIZER)
         }
-        return DefaultSerializer<T?>(type.getClassLoader())
+        return Cast.uncheckedNonnullCast<Serializer<T>>(DefaultSerializer<T>(type.getClassLoader()))
     }
 
-    private class EnumSerializer<T : Enum<*>?>(private val type: Class<T?>) : AbstractSerializer<T?>() {
+    private class EnumSerializer<T : Enum<*>>(private val type: Class<T>) : AbstractSerializer<T>() {
         @Throws(Exception::class)
-        override fun read(decoder: Decoder): T? {
+        override fun read(decoder: Decoder): T {
             return type.getEnumConstants()[decoder.readSmallInt()]
         }
 
         @Throws(Exception::class)
-        override fun write(encoder: Encoder, value: T?) {
-            encoder.writeSmallInt(value!!.ordinal.toByte().toInt())
+        override fun write(encoder: Encoder, value: T) {
+            encoder.writeSmallInt(value.ordinal.toByte().toInt())
         }
 
         override fun equals(obj: Any?): Boolean {
@@ -82,7 +82,7 @@ class BaseSerializerFactory {
         }
     }
 
-    private class LongSerializer : AbstractSerializer<Long?>() {
+    private class LongSerializer : AbstractSerializer<Long>() {
         @Throws(Exception::class)
         override fun read(decoder: Decoder): Long {
             return decoder.readLong()
@@ -94,19 +94,19 @@ class BaseSerializerFactory {
         }
     }
 
-    private class StringSerializer : AbstractSerializer<String?>() {
+    private class StringSerializer : AbstractSerializer<String>() {
         @Throws(Exception::class)
-        override fun read(decoder: Decoder): String? {
+        override fun read(decoder: Decoder): String {
             return decoder.readString()
         }
 
         @Throws(Exception::class)
-        override fun write(encoder: Encoder, value: String?) {
+        override fun write(encoder: Encoder, value: String) {
             encoder.writeString(value)
         }
     }
 
-    private class FileSerializer : AbstractSerializer<File?>() {
+    private class FileSerializer : AbstractSerializer<File>() {
         @Throws(Exception::class)
         override fun read(decoder: Decoder): File {
             return File(decoder.readString())
@@ -118,7 +118,7 @@ class BaseSerializerFactory {
         }
     }
 
-    private class PathSerializer : AbstractSerializer<Path?>() {
+    private class PathSerializer : AbstractSerializer<Path>() {
         @Throws(Exception::class)
         override fun read(decoder: Decoder): Path {
             return Paths.get(decoder.readString())
@@ -130,23 +130,23 @@ class BaseSerializerFactory {
         }
     }
 
-    private class ByteArraySerializer : AbstractSerializer<ByteArray?>() {
+    private class ByteArraySerializer : AbstractSerializer<ByteArray>() {
         @Throws(Exception::class)
-        override fun read(decoder: Decoder): ByteArray? {
+        override fun read(decoder: Decoder): ByteArray {
             return decoder.readBinary()
         }
 
         @Throws(Exception::class)
-        override fun write(encoder: Encoder, value: ByteArray?) {
+        override fun write(encoder: Encoder, value: ByteArray) {
             encoder.writeBinary(value)
         }
     }
 
-    private class StringMapSerializer : AbstractSerializer<MutableMap<String?, String?>?>() {
+    private class StringMapSerializer : AbstractSerializer<MutableMap<String, String>>() {
         @Throws(Exception::class)
-        override fun read(decoder: Decoder): MutableMap<String?, String?> {
+        override fun read(decoder: Decoder): MutableMap<String, String> {
             val pairs = decoder.readSmallInt()
-            val builder = ImmutableMap.builder<String?, String?>()
+            val builder = ImmutableMap.builder<String, String>()
             for (i in 0..<pairs) {
                 builder.put(decoder.readString(), decoder.readString())
             }
@@ -154,7 +154,7 @@ class BaseSerializerFactory {
         }
 
         @Throws(Exception::class)
-        override fun write(encoder: Encoder, value: MutableMap<String?, String?>) {
+        override fun write(encoder: Encoder, value: MutableMap<String, String>) {
             encoder.writeSmallInt(value.size)
             for (entry in value.entries) {
                 encoder.writeString(entry.key)
@@ -163,7 +163,7 @@ class BaseSerializerFactory {
         }
     }
 
-    private class BooleanSerializer : AbstractSerializer<Boolean?>() {
+    private class BooleanSerializer : AbstractSerializer<Boolean>() {
         @Throws(Exception::class)
         override fun read(decoder: Decoder): Boolean {
             return decoder.readBoolean()
@@ -175,7 +175,7 @@ class BaseSerializerFactory {
         }
     }
 
-    private class ByteSerializer : AbstractSerializer<Byte?>() {
+    private class ByteSerializer : AbstractSerializer<Byte>() {
         @Throws(Exception::class)
         override fun read(decoder: Decoder): Byte {
             return decoder.readByte()
@@ -187,7 +187,7 @@ class BaseSerializerFactory {
         }
     }
 
-    private class ShortSerializer : AbstractSerializer<Short?>() {
+    private class ShortSerializer : AbstractSerializer<Short>() {
         @Throws(Exception::class)
         override fun read(decoder: Decoder): Short {
             return decoder.readShort()
@@ -199,7 +199,7 @@ class BaseSerializerFactory {
         }
     }
 
-    private class CharSerializer : AbstractSerializer<Char?>() {
+    private class CharSerializer : AbstractSerializer<Char>() {
         @Throws(Exception::class)
         override fun read(decoder: Decoder): Char {
             return decoder.readInt().toChar()
@@ -211,7 +211,7 @@ class BaseSerializerFactory {
         }
     }
 
-    private class IntegerSerializer : AbstractSerializer<Int?>() {
+    private class IntegerSerializer : AbstractSerializer<Int>() {
         @Throws(Exception::class)
         override fun read(decoder: Decoder): Int {
             return decoder.readInt()
@@ -223,7 +223,7 @@ class BaseSerializerFactory {
         }
     }
 
-    private class FloatSerializer : AbstractSerializer<Float?>() {
+    private class FloatSerializer : AbstractSerializer<Float>() {
         @Throws(Exception::class)
         override fun read(decoder: Decoder): Float {
             return decoder.readFloat()
@@ -235,7 +235,7 @@ class BaseSerializerFactory {
         }
     }
 
-    private class DoubleSerializer : AbstractSerializer<Double?>() {
+    private class DoubleSerializer : AbstractSerializer<Double>() {
         @Throws(Exception::class)
         override fun read(decoder: Decoder): Double {
             return decoder.readDouble()
@@ -247,7 +247,7 @@ class BaseSerializerFactory {
         }
     }
 
-    private class BigIntegerSerializer : AbstractSerializer<BigInteger?>() {
+    private class BigIntegerSerializer : AbstractSerializer<BigInteger>() {
         @Throws(Exception::class)
         override fun read(decoder: Decoder): BigInteger {
             return BigInteger(decoder.readBinary())
@@ -259,7 +259,7 @@ class BaseSerializerFactory {
         }
     }
 
-    private class BigDecimalSerializer : AbstractSerializer<BigDecimal?>() {
+    private class BigDecimalSerializer : AbstractSerializer<BigDecimal>() {
         @Throws(Exception::class)
         override fun read(decoder: Decoder): BigDecimal {
             val unscaledVal: BigInteger = BIG_INTEGER_SERIALIZER.read(decoder)
@@ -288,26 +288,38 @@ class BaseSerializerFactory {
 
     companion object {
         @JvmField
-        val STRING_SERIALIZER: Serializer<String?> = StringSerializer()
-        val BOOLEAN_SERIALIZER: Serializer<Boolean?> = BooleanSerializer()
-        val BYTE_SERIALIZER: Serializer<Byte?> = ByteSerializer()
-        val CHAR_SERIALIZER: Serializer<Char?> = CharSerializer()
-        val SHORT_SERIALIZER: Serializer<Short?> = ShortSerializer()
-        val INTEGER_SERIALIZER: Serializer<Int?> = IntegerSerializer()
+        val STRING_SERIALIZER: Serializer<String> = StringSerializer()
         @JvmField
-        val LONG_SERIALIZER: Serializer<Long?> = LongSerializer()
-        val FLOAT_SERIALIZER: Serializer<Float?> = FloatSerializer()
-        val DOUBLE_SERIALIZER: Serializer<Double?> = DoubleSerializer()
+        val BOOLEAN_SERIALIZER: Serializer<Boolean> = BooleanSerializer()
         @JvmField
-        val FILE_SERIALIZER: Serializer<File?> = FileSerializer()
+        val BYTE_SERIALIZER: Serializer<Byte> = ByteSerializer()
         @JvmField
-        val PATH_SERIALIZER: Serializer<Path?> = PathSerializer()
-        val BYTE_ARRAY_SERIALIZER: Serializer<ByteArray?> = ByteArraySerializer()
+        val CHAR_SERIALIZER: Serializer<Char> = CharSerializer()
         @JvmField
-        val NO_NULL_STRING_MAP_SERIALIZER: Serializer<MutableMap<String?, String?>?> = StringMapSerializer()
+        val SHORT_SERIALIZER: Serializer<Short> = ShortSerializer()
+        @JvmField
+        val INTEGER_SERIALIZER: Serializer<Int> = IntegerSerializer()
+        @JvmField
+        val LONG_SERIALIZER: Serializer<Long> = LongSerializer()
+        @JvmField
+        val FLOAT_SERIALIZER: Serializer<Float> = FloatSerializer()
+        @JvmField
+        val DOUBLE_SERIALIZER: Serializer<Double> = DoubleSerializer()
+        @JvmField
+        val FILE_SERIALIZER: Serializer<File> = FileSerializer()
+        @JvmField
+        val PATH_SERIALIZER: Serializer<Path> = PathSerializer()
+        @JvmField
+        val BYTE_ARRAY_SERIALIZER: Serializer<ByteArray> = ByteArraySerializer()
+        @JvmField
+        val NO_NULL_STRING_MAP_SERIALIZER: Serializer<MutableMap<String, String>> = StringMapSerializer()
+        @JvmField
         val THROWABLE_SERIALIZER: Serializer<Throwable?> = ThrowableSerializer()
-        val HASHCODE_SERIALIZER: Serializer<HashCode?> = HashCodeSerializer()
+        @JvmField
+        val HASHCODE_SERIALIZER: Serializer<HashCode> = HashCodeSerializer()
+        @JvmField
         val BIG_INTEGER_SERIALIZER: Serializer<BigInteger> = BigIntegerSerializer()
-        val BIG_DECIMAL_SERIALIZER: Serializer<BigDecimal?> = BigDecimalSerializer()
+        @JvmField
+        val BIG_DECIMAL_SERIALIZER: Serializer<BigDecimal> = BigDecimalSerializer()
     }
 }

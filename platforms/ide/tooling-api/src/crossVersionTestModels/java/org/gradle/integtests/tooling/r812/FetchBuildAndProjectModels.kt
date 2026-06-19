@@ -15,11 +15,22 @@
  */
 package org.gradle.integtests.tooling.r812
 
+import org.gradle.tooling.*
+import org.gradle.tooling.model.*
+import org.gradle.tooling.model.build.*
+import org.gradle.tooling.model.eclipse.*
+import org.gradle.tooling.model.gradle.*
+import org.gradle.tooling.model.idea.*
+import org.gradle.tooling.model.kotlin.dsl.*
+import org.gradle.tooling.internal.adapter.ProtocolToModelAdapter
+import java.io.File
+import org.gradle.integtests.tooling.r48.*
+
 import org.gradle.tooling.BuildAction
 import java.util.Arrays
 
 class FetchBuildAndProjectModels : BuildAction<MutableList<Any?>?> {
-    public override fun execute(controller: BuildController): MutableList<Any?> {
+    public override fun execute(controller: BuildController?): MutableList<Any?> {
         val gradleBuild: GradleBuild = controller.getBuildModel()
         val gradleBuild1: GradleBuild? = controller.getModel(gradleBuild, GradleBuild::class.java)
         val project: GradleProject? = controller.getModel(gradleBuild.getRootProject(), GradleProject::class.java)

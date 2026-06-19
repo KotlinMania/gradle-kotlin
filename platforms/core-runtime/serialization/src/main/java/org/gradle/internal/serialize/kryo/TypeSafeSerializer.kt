@@ -21,13 +21,13 @@ import org.gradle.internal.serialize.ObjectReader
 import org.gradle.internal.serialize.ObjectWriter
 import org.gradle.internal.serialize.StatefulSerializer
 
-class TypeSafeSerializer<T>(private val type: Class<T?>, private val serializer: StatefulSerializer<T?>) : StatefulSerializer<Any?> {
+class TypeSafeSerializer<T>(private val type: Class<T>, private val serializer: StatefulSerializer<T?>) : StatefulSerializer<Any?> {
     override fun newReader(decoder: Decoder?): ObjectReader<Any?> {
         val reader = serializer.newReader(decoder)
         return object : ObjectReader<Any?> {
             @Throws(Exception::class)
             override fun read(): Any? {
-                return reader.read()
+                return reader!!.read()
             }
         }
     }
@@ -37,7 +37,7 @@ class TypeSafeSerializer<T>(private val type: Class<T?>, private val serializer:
         return object : ObjectWriter<Any?> {
             @Throws(Exception::class)
             override fun write(value: Any?) {
-                writer.write(type.cast(value))
+                writer!!.write(type.cast(value))
             }
         }
     }

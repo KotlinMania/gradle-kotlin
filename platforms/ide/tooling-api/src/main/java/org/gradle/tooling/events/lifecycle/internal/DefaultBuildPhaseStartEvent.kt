@@ -19,8 +19,5 @@ import org.gradle.tooling.events.internal.DefaultStartEvent
 import org.gradle.tooling.events.lifecycle.BuildPhaseOperationDescriptor
 import org.gradle.tooling.events.lifecycle.BuildPhaseStartEvent
 
-class DefaultBuildPhaseStartEvent(eventTime: Long, displayName: String?, descriptor: BuildPhaseOperationDescriptor?) : DefaultStartEvent(eventTime, displayName, descriptor), BuildPhaseStartEvent {
-    override fun getDescriptor(): BuildPhaseOperationDescriptor? {
-        return super.getDescriptor() as BuildPhaseOperationDescriptor?
-    }
+class DefaultBuildPhaseStartEvent(eventTime: Long, displayName: String?, descriptor: BuildPhaseOperationDescriptor?) : DefaultStartEvent<BuildPhaseOperationDescriptor?>(eventTime, displayName, descriptor), BuildPhaseStartEvent {
 }

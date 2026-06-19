@@ -39,7 +39,7 @@ class HttpResponseResource(private val method: String, val uRI: URI, private val
             this.lastModified,
             this.contentLength,
             this.contentType, etag, getSha1(response, etag),
-            this.filename, response.isMissing()
+            this.filename, response.isMissing
         )
     }
 

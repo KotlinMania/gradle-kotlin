@@ -15,6 +15,7 @@
  */
 package org.gradle.api.problems.internal
 
+import org.gradle.api.problems.FileLocation
 import org.gradle.api.problems.ProblemLocation
 
 /**
@@ -31,11 +32,10 @@ interface StackTraceLocation : ProblemLocation {
      * Most of the time, this is a location in a build file.
      * `null` if the source file location could not be inferred.
      */
-    @JvmField
-    val fileLocation: FileLocation?
+    fun getFileLocation(): FileLocation?
 
     /**
      * The stack trace elements that lead to the problem.
      */
-    val stackTrace: MutableList<StackTraceElement>?
+    fun getStackTrace(): MutableList<StackTraceElement>?
 }

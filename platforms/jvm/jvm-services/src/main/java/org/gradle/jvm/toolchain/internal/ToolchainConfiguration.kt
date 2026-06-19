@@ -17,6 +17,7 @@ package org.gradle.jvm.toolchain.internal
 
 import org.gradle.internal.service.scopes.Scope
 import org.gradle.internal.service.scopes.ServiceScope
+import java.io.File
 
 /**
  * Service representing the build level configuration of the JVM toolchain subsystem.
@@ -24,27 +25,25 @@ import org.gradle.internal.service.scopes.ServiceScope
  *
  * Used also in the launcher for the daemon toolchain
  */
-@ServiceScope([Scope.Build::class, Scope.Global::class])
+@ServiceScope(Scope.Build::class, Scope.Global::class)
 interface ToolchainConfiguration {
-    var javaInstallationsFromEnvironment: MutableCollection<String?>?
+    var javaInstallationsFromEnvironment: MutableCollection<String>
 
-    var installationsFromPaths: MutableCollection<String?>?
+    var installationsFromPaths: MutableCollection<String>
 
-    @JvmField
     var isAutoDetectEnabled: Boolean
 
-    @JvmField
     var isDownloadEnabled: Boolean
 
-    val asdfDataDirectory: File?
+    val asdfDataDirectory: File
 
     var intelliJdkDirectory: File?
 
     val jabbaHomeDirectory: File?
 
-    val sdkmanCandidatesDirectory: File?
+    val sdkmanCandidatesDirectory: File
 
-    fun getEnvironmentVariableValue(variableName: String?): String?
+    fun getEnvironmentVariableValue(variableName: String): String?
 
     companion object {
         const val AUTO_DETECT: String = "org.gradle.java.installations.auto-detect"

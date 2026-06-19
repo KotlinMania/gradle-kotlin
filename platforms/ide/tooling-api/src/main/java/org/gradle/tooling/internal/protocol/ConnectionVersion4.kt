@@ -15,6 +15,8 @@
  */
 package org.gradle.tooling.internal.protocol
 
+import java.io.File
+
 /**
  *
  * Represents a connection to a Gradle implementation.

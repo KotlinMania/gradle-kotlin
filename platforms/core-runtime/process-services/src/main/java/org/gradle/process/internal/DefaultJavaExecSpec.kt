@@ -23,11 +23,11 @@ import org.gradle.process.ExecSpec
 import org.gradle.process.JavaExecSpec
 
 class DefaultExecOperations(private val processOperations: ProcessOperations) : ExecOperations {
-    override fun exec(action: Action<in ExecSpec?>?): ExecResult? {
+    override fun exec(action: Action<in ExecSpec>): ExecResult? {
         return processOperations.exec(action)
     }
 
-    override fun javaexec(action: Action<in JavaExecSpec?>?): ExecResult? {
+    override fun javaexec(action: Action<in JavaExecSpec>): ExecResult? {
         return processOperations.javaexec(action)
     }
 }

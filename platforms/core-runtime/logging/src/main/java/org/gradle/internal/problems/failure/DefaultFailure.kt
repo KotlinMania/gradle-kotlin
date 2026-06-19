@@ -103,7 +103,7 @@ internal class DefaultFailure(
                 '}'
     }
 
-    override fun equals(o: Any): Boolean {
+    override fun equals(o: Any?): Boolean {
         if (o !is DefaultFailure) {
             return false
         }

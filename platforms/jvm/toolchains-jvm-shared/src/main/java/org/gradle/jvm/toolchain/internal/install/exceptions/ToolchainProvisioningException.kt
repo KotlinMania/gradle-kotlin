@@ -36,15 +36,19 @@ class ToolchainProvisioningException(
         cause
     )
 ), ResolutionProvider {
-    val resolutions: MutableList<String>
+    private val resolutions: MutableList<String?>
 
     init {
-        this.resolutions = Arrays.asList<String>(*resolutions)
+        this.resolutions = Arrays.asList<String?>(*resolutions)
+    }
+
+    override fun getResolutions(): MutableList<String?> {
+        return resolutions
     }
 
     companion object {
         @JvmField
-        val AUTO_DETECTION_RESOLUTION: String = "Learn more about toolchain auto-detection and auto-provisioning at " + userManual("toolchains", "sec:auto_detection").url + "."
-        val DOWNLOAD_REPOSITORIES_RESOLUTION: String = "Learn more about toolchain repositories at " + userManual("toolchains", "sub:download_repositories").url + "."
+        val AUTO_DETECTION_RESOLUTION: String = "Learn more about toolchain auto-detection and auto-provisioning at " + userManual("toolchains", "sec:auto_detection").getUrl() + "."
+        val DOWNLOAD_REPOSITORIES_RESOLUTION: String = "Learn more about toolchain repositories at " + userManual("toolchains", "sub:download_repositories").getUrl() + "."
     }
 }

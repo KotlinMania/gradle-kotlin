@@ -28,7 +28,6 @@ interface PasswordCredentials : Credentials {
      *
      * @param userName The user name. May be null.
      */
-    @JvmField
     @get:ToBeReplacedByLazyProperty
     var username: String?
 
@@ -37,7 +36,6 @@ interface PasswordCredentials : Credentials {
      *
      * @param password The password. May be null.
      */
-    @JvmField
     @get:ToBeReplacedByLazyProperty
     var password: String?
 }

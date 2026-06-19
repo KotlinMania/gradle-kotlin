@@ -17,8 +17,6 @@ package org.gradle.tooling.events.problems.internal
 
 import org.gradle.tooling.events.problems.Solution
 
-class DefaultSolution(private val solution: String) : Solution {
-    override fun getSolution(): String {
-        return solution
-    }
+class DefaultSolution(override val solution: String) : Solution {
+
 }

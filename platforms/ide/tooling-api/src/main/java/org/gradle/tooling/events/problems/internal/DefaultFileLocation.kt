@@ -15,10 +15,9 @@
  */
 package org.gradle.tooling.events.problems.internal
 
+import java.io.File
 import org.gradle.tooling.events.problems.FileLocation
 
-open class DefaultFileLocation(private val path: String) : FileLocation {
-    override fun getPath(): String {
-        return path
-    }
+open class DefaultFileLocation(override val path: String) : FileLocation {
+
 }

@@ -30,27 +30,27 @@ class GcsResourceConnector(private val gcsClient: GcsClient) : AbstractExternalR
     @Throws(ResourceException::class)
     override fun list(parent: ExternalResourceName): MutableList<String?>? {
         LOGGER.debug("Listing parent resources: {}", parent)
-        return gcsClient.list(parent.getUri())
+        return gcsClient.list(parent.uri)
     }
 
     @Throws(ResourceException::class)
     public override fun openResource(location: ExternalResourceName, revalidate: Boolean): ExternalResourceReadResponse? {
         LOGGER.debug("Attempting to get resource: {}", location)
-        val gcsObject = gcsClient.getResource(location.getUri())
+        val gcsObject = gcsClient.getResource(location.uri)
         if (gcsObject == null) {
             return null
         }
-        return GcsResource(gcsClient, gcsObject, location.getUri())
+        return GcsResource(gcsClient, gcsObject, location.uri)
     }
 
     @Throws(ResourceException::class)
     override fun getMetaData(location: ExternalResourceName, revalidate: Boolean): ExternalResourceMetaData? {
         LOGGER.debug("Attempting to get resource metadata: {}", location)
-        val gcsObject = gcsClient.getResource(location.getUri())
+        val gcsObject = gcsClient.getResource(location.uri)
         if (gcsObject == null) {
             return null
         }
-        return ResourceMapper.Companion.toExternalResourceMetaData(location.getUri(), gcsObject)
+        return ResourceMapper.toExternalResourceMetaData(location.uri, gcsObject)
     }
 
     @Throws(IOException::class)
@@ -58,7 +58,7 @@ class GcsResourceConnector(private val gcsClient: GcsClient) : AbstractExternalR
         LOGGER.debug("Attempting to upload stream to: {}", destination)
         val inputStream = resource.open()
         try {
-            gcsClient.put(inputStream, resource.getContentLength(), destination.getUri())
+            gcsClient.put(inputStream, resource.getContentLength(), destination.uri)
         } finally {
             inputStream.close()
         }

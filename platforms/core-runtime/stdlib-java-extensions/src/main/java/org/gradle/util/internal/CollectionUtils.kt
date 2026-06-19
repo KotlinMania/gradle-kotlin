@@ -211,6 +211,11 @@ object CollectionUtils {
         return CollectionUtils.flattenCollections<Any?>(Any::class.java as Class<Any?>, *things)
     }
 
+    @JvmStatic
+    fun flattenCollections(thing: Any?): MutableList<*> {
+        return CollectionUtils.flattenCollections<Any?>(Any::class.java as Class<Any?>, thing)
+    }
+
     /**
      * Recursively unpacks all the given things into a flat list, ensuring they are of a certain type.
      *
@@ -533,7 +538,13 @@ object CollectionUtils {
      * @return The joined string
      */
     @JvmStatic
-    fun join(separator: String, objects: kotlin.Array<Any?>): String {
+    fun join(separator: String?, objects: kotlin.Array<Any?>?): String {
+        if (separator == null) {
+            throw NullPointerException("The 'separator' cannot be null")
+        }
+        if (objects == null) {
+            throw NullPointerException("The 'objects' cannot be null")
+        }
         return join(separator, Arrays.asList<Any?>(*objects))
     }
 
@@ -543,7 +554,13 @@ object CollectionUtils {
      * @see .join
      */
     @JvmStatic
-    fun <R, I> join(separator: String, objects: kotlin.Array<I?>, transformer: Function<in I?, out R?>): String {
+    fun <R, I> join(separator: String?, objects: kotlin.Array<I?>?, transformer: Function<in I?, out R?>): String {
+        if (separator == null) {
+            throw NullPointerException("The 'separator' cannot be null")
+        }
+        if (objects == null) {
+            throw NullPointerException("The 'objects' cannot be null")
+        }
         return join(separator, collect(objects, transformer))
     }
 
@@ -564,7 +581,13 @@ object CollectionUtils {
      * @return The joined string
      */
     @JvmStatic
-    fun join(separator: String, objects: Iterable<*>): String {
+    fun join(separator: String?, objects: Iterable<*>?): String {
+        if (separator == null) {
+            throw NullPointerException("The 'separator' cannot be null")
+        }
+        if (objects == null) {
+            throw NullPointerException("The 'objects' cannot be null")
+        }
         val string = StringBuilder()
         val iterator = objects.iterator()
         if (iterator.hasNext()) {
@@ -583,7 +606,13 @@ object CollectionUtils {
      * @see .join
      */
     @JvmStatic
-    fun <R, I> join(separator: String, objects: Iterable<out I?>, transformer: Function<in I?, out R?>): String {
+    fun <R, I> join(separator: String?, objects: Iterable<out I?>?, transformer: Function<in I?, out R?>): String {
+        if (separator == null) {
+            throw NullPointerException("The 'separator' cannot be null")
+        }
+        if (objects == null) {
+            throw NullPointerException("The 'objects' cannot be null")
+        }
         return join(separator, collect(objects, transformer))
     }
 

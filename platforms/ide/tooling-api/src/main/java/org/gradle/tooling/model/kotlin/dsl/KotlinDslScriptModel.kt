@@ -15,6 +15,8 @@
  */
 package org.gradle.tooling.model.kotlin.dsl
 
+import java.io.File
+
 /**
  * Model for a Kotlin DSL script.
  *

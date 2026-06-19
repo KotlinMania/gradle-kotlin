@@ -22,7 +22,7 @@ interface ExternalResourceRepository {
     /**
      * Returns a copy of this repository with progress logging enabled.
      */
-    fun withProgressLogging(): ExternalResourceRepository?
+    fun withProgressLogging(): ExternalResourceRepository
 
     /**
      * Returns the resource with the given name. Note that this method does not access the resource in any way, it simply creates an object that can. To access the resource, use the methods on the returned object.
@@ -30,12 +30,12 @@ interface ExternalResourceRepository {
      * @param resource The location of the resource
      * @param revalidate Ensure the external resource is not stale when reading its content
      */
-    fun resource(resource: ExternalResourceName?, revalidate: Boolean): ExternalResource?
+    fun resource(resource: ExternalResourceName, revalidate: Boolean): ExternalResource
 
     /**
      * Returns the resource with the given name. Note that this method does not access the resource in any way, it simply creates an object that can. To access the resource, use the methods on the returned object.
      *
      * @param resource The location of the resource
      */
-    fun resource(resource: ExternalResourceName?): ExternalResource?
+    fun resource(resource: ExternalResourceName): ExternalResource
 }

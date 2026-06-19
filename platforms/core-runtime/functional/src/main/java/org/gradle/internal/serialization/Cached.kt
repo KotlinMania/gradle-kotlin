@@ -55,7 +55,7 @@ abstract class Cached<T> {
         fun result(): Try<T?> {
             var currentResult: Try<T?>? = result
             if (currentResult == null) {
-                val toCompute = computation ?: throw IllegalStateException("Computation was already performed.")
+                val toCompute = computation ?: return result ?: throw IllegalStateException("Computation was already performed.")
                 // copy reference into the call stack to avoid exacerbating https://github.com/gradle/gradle/issues/31239
                 currentResult = tryComputation(toCompute)
                 result = currentResult
@@ -92,6 +92,7 @@ abstract class Cached<T> {
          *
          * @see [bug report](https://github.com/gradle/gradle/issues/31239)
          */
+        @JvmStatic
         fun <T> of(computation: Callable<T?>): Cached<T?> {
             return Deferred<T?>(computation)
         }

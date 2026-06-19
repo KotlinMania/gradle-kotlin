@@ -62,7 +62,7 @@ public class DefaultZipEntryContext implements ZipEntryContext {
 
         @Override
         public String[] get() {
-            return FilePathUtil.getPathSegments(zipEntry.name);
+            return FilePathUtil.getPathSegments(zipEntry.getName());
         }
     }
 }

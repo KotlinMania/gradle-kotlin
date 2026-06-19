@@ -15,11 +15,10 @@
  */
 package org.gradle.tooling.events.internal
 
-import org.gradle.tooling.events.ScriptPluginIdentifier
 import java.net.URI
+import org.gradle.tooling.events.PluginIdentifier
+import org.gradle.tooling.events.ScriptPluginIdentifier
 
-class DefaultScriptPluginIdentifier(displayName: String?, private val uri: URI?) : AbstractPluginIdentifier(displayName), ScriptPluginIdentifier {
-    override fun getUri(): URI? {
-        return uri
-    }
+class DefaultScriptPluginIdentifier(displayName: String?, override val uri: URI?) : AbstractPluginIdentifier(displayName), ScriptPluginIdentifier {
+
 }

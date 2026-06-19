@@ -88,7 +88,7 @@ class DefaultJavaInstallationRegistry @VisibleForTesting protected constructor(
 
     init {
         val allSuppliers: MutableList<InstallationSupplier> = ArrayList<InstallationSupplier>(suppliers)
-        if (toolchainConfiguration.isAutoDetectEnabled()) {
+        if (toolchainConfiguration.isAutoDetectEnabled) {
             allSuppliers.addAll(optionalSuppliers)
         }
         this.installations = Installations(Supplier { maybeCollectInBuildOperation(allSuppliers) })
@@ -101,7 +101,7 @@ class DefaultJavaInstallationRegistry @VisibleForTesting protected constructor(
         if (buildOperationRunner == null) {
             return collectInstallations(suppliers)
         }
-        return buildOperationRunner.call<MutableSet<InstallationLocation>>(ToolchainDetectionBuildOperation(Callable { collectInstallations(suppliers) }))
+        return buildOperationRunner.call<MutableSet<InstallationLocation>>(ToolchainDetectionBuildOperation(Callable { collectInstallations(suppliers) }))!!
     }
 
     @VisibleForTesting
@@ -114,15 +114,15 @@ class DefaultJavaInstallationRegistry @VisibleForTesting protected constructor(
             val progressLogger = progressLoggerFactory.newOperation(JavaInstallationRegistry::class.java)!!.start("Discovering toolchains", "Discovering toolchains")
             val result = listInstallations()
                 .parallelStream()
-                .peek { location: InstallationLocation? -> progressLogger!!.progress("Extracting toolchain metadata from " + location!!.getDisplayName()) }
-                .map<JvmToolchainMetadata> { location: InstallationLocation? -> this.resolveMetadata(location!!) }
+                .peek { location: InstallationLocation -> progressLogger!!.progress("Extracting toolchain metadata from " + location.getDisplayName()) }
+                .map<JvmToolchainMetadata> { location: InstallationLocation -> this.resolveMetadata(location) }
                 .collect(Collectors.toList())
             progressLogger!!.completed()
             return result
         } else {
             return listInstallations()
                 .parallelStream()
-                .map<JvmToolchainMetadata> { location: InstallationLocation? -> this.resolveMetadata(location!!) }
+                .map<JvmToolchainMetadata> { location: InstallationLocation -> this.resolveMetadata(location) }
                 .collect(Collectors.toList())
         }
     }
@@ -138,19 +138,19 @@ class DefaultJavaInstallationRegistry @VisibleForTesting protected constructor(
 
     private fun collectInstallations(suppliers: MutableList<InstallationSupplier>): MutableSet<InstallationLocation> {
         return suppliers.parallelStream()
-            .peek { x: InstallationSupplier? -> logger.debug("Discovering toolchains provided via {}", x!!.getSourceName()) }
-            .map<MutableSet<InstallationLocation>> { obj: InstallationSupplier? -> obj!!.get() }
-            .flatMap<InstallationLocation> { obj: MutableSet<InstallationLocation?>? -> obj!!.stream() }
-            .filter { installationLocation: InstallationLocation? -> this.installationExists(installationLocation!!) }
-            .map<InstallationLocation> { location: InstallationLocation? -> this.canonicalize(location!!) }
-            .map<InstallationLocation> { location: InstallationLocation? -> this.maybeGetEnclosedInstallation(location!!) }
-            .filter { installationLocation: InstallationLocation? -> this.installationHasExecutable(installationLocation!!) }
-            .filter(Companion.distinctByKey<InstallationLocation>(Function { obj: InstallationLocation -> obj.getLocation() }))
+            .peek { supplier: InstallationSupplier -> logger.debug("Discovering toolchains provided via {}", supplier.sourceName) }
+            .map<MutableSet<InstallationLocation>> { supplier: InstallationSupplier -> supplier.get() }
+            .flatMap<InstallationLocation> { locations: MutableSet<InstallationLocation> -> locations.stream() }
+            .filter { installationLocation: InstallationLocation -> this.installationExists(installationLocation) }
+            .map<InstallationLocation> { location: InstallationLocation -> this.canonicalize(location) }
+            .map<InstallationLocation> { location: InstallationLocation -> this.maybeGetEnclosedInstallation(location) }
+            .filter { installationLocation: InstallationLocation -> this.installationHasExecutable(installationLocation) }
+            .filter(Companion.distinctByKey<InstallationLocation>(Function { obj: InstallationLocation -> obj.location }))
             .collect(Collectors.toSet())
     }
 
     protected fun installationExists(installationLocation: InstallationLocation): Boolean {
-        val file = installationLocation.getLocation()
+        val file = installationLocation.location
         if (!file.exists()) {
             problemReporter.reportProblemIfNeeded(logger, installationLocation, "Directory " + installationLocation.getDisplayName() + " used for java installations does not exist")
             return false
@@ -163,7 +163,7 @@ class DefaultJavaInstallationRegistry @VisibleForTesting protected constructor(
     }
 
     protected fun installationHasExecutable(installationLocation: InstallationLocation): Boolean {
-        if (!hasJavaExecutable(installationLocation.getLocation())) {
+        if (!hasJavaExecutable(installationLocation.location)) {
             problemReporter.reportProblemIfNeeded(logger, installationLocation, "Path for java installation " + installationLocation.getDisplayName() + " does not contain a java executable")
             return false
         }
@@ -171,7 +171,7 @@ class DefaultJavaInstallationRegistry @VisibleForTesting protected constructor(
     }
 
     private fun canonicalize(location: InstallationLocation): InstallationLocation {
-        val file = location.getLocation()
+        val file = location.location
         try {
             val canonicalFile = file.getCanonicalFile()
             val javaHome = findJavaHome(canonicalFile)
@@ -182,7 +182,7 @@ class DefaultJavaInstallationRegistry @VisibleForTesting protected constructor(
     }
 
     private fun maybeGetEnclosedInstallation(location: InstallationLocation): InstallationLocation {
-        val home = location.getLocation()
+        val home = location.location
         val parentPath = home.getParentFile()
         val isEmbeddedJre = home.getName().equals("jre", ignoreCase = true)
         if (isEmbeddedJre && hasJavaExecutable(parentPath)) {
@@ -252,9 +252,9 @@ class DefaultJavaInstallationRegistry @VisibleForTesting protected constructor(
             return allSuppliers
         }
 
-        fun <T> distinctByKey(keyExtractor: Function<in T?, *>): Predicate<T?> {
+        fun <T> distinctByKey(keyExtractor: Function<in T, *>): Predicate<T> {
             val seen: MutableSet<Any> = ConcurrentHashMap.newKeySet<Any>()
-            return Predicate { t: T? -> seen.add(keyExtractor.apply(t)) }
+            return Predicate { t: T -> seen.add(keyExtractor.apply(t)) }
         }
     }
 }

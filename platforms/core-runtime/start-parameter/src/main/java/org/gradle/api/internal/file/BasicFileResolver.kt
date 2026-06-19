@@ -30,7 +30,8 @@ import java.util.regex.Pattern
  * TODO - share more stuff with AbstractFileResolver.
  */
 class BasicFileResolver(private val baseDir: File?) : Transformer<File?, String?> {
-    override fun transform(original: String): File? {
+    override fun transform(original: String?): File? {
+        val original = original!!
         if (original.startsWith("file:")) {
             try {
                 return FileUtils.normalize(File(URI(original)))

@@ -36,6 +36,5 @@ abstract class InterHubMessage {
         Stateful
     }
 
-    @JvmField
-    abstract val delivery: Delivery?
+    abstract fun getDelivery(): Delivery
 }

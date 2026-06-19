@@ -20,7 +20,6 @@ import org.gradle.internal.service.scopes.ServiceScope
 
 @ServiceScope(Scope.Global::class)
 interface OsMemoryInfo {
-    @JvmField
-    @get:Throws(UnsupportedOperationException::class)
-    val osSnapshot: OsMemoryStatus?
+    @Throws(UnsupportedOperationException::class)
+    fun getOsSnapshot(): OsMemoryStatus
 }

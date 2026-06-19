@@ -39,7 +39,7 @@ interface LoggingOutputInternal : LoggingOutput {
      *
      * Removes standard output and/or error as a side-effect.
      */
-    fun attachProcessConsole(consoleOutput: ConsoleOutput?, consoleUnicodeSupport: ConsoleUnicodeSupport?)
+    fun attachProcessConsole(consoleOutput: ConsoleOutput, consoleUnicodeSupport: ConsoleUnicodeSupport?)
 
     /**
      * Adds the given [OutputStream] as a logging destination. The stream receives stdout and stderr logging formatted according to the current logging settings and encoded using the system character encoding. The output also includes color and dynamic text encoded using ANSI control sequences, depending on the requested output format.
@@ -53,7 +53,7 @@ interface LoggingOutputInternal : LoggingOutput {
      * @param errorStream Receives formatted error output. Note that this steam may not necessarily be used, depending on the console mode requested.
      * @param consoleOutput The output format.
      */
-    fun attachConsole(outputStream: OutputStream?, errorStream: OutputStream?, consoleOutput: ConsoleOutput?)
+    fun attachConsole(outputStream: OutputStream, errorStream: OutputStream, consoleOutput: ConsoleOutput?)
 
     /**
      * Adds the given [OutputStream] as a logging destination. The stream receives stdout and stderr logging formatted according to the current logging settings and encoded using the system character encoding. The output also includes color and dynamic text encoded using ANSI control sequences, depending on the requested output format.
@@ -66,31 +66,31 @@ interface LoggingOutputInternal : LoggingOutput {
      * @param consoleMetadata The metadata associated with this console
      * @param consoleOutput The output format.
      */
-    fun attachConsole(outputStream: OutputStream?, errorStream: OutputStream?, consoleOutput: ConsoleOutput?, consoleMetadata: ConsoleMetaData?)
+    fun attachConsole(outputStream: OutputStream, errorStream: OutputStream, consoleOutput: ConsoleOutput?, consoleMetadata: ConsoleMetaData?)
 
     /**
      * Adds the given [OutputStream] as a logging destination. The stream receives stdout logging formatted according to the current logging settings and
      * encoded using the system character encoding.
      */
-    fun addStandardOutputListener(outputStream: OutputStream?)
+    fun addStandardOutputListener(outputStream: OutputStream)
 
     /**
      * Adds the given [OutputStream] as a logging destination. The stream receives stderr logging formatted according to the current logging settings and
      * encoded using the system character encoding.
      */
-    fun addStandardErrorListener(outputStream: OutputStream?)
+    fun addStandardErrorListener(outputStream: OutputStream)
 
     /**
      * Adds the given listener as a logging destination.
      */
     @UsedByScanPlugin
-    fun addOutputEventListener(listener: OutputEventListener?)
+    fun addOutputEventListener(listener: OutputEventListener)
 
     /**
      * Adds the given listener.
      */
     @UsedByScanPlugin
-    fun removeOutputEventListener(listener: OutputEventListener?)
+    fun removeOutputEventListener(listener: OutputEventListener)
 
     /**
      * Flush any outstanding output.

@@ -52,7 +52,11 @@ class DefaultSslContextFactory : SslContextFactory {
              * https://github.com/gradle/gradle/issues/7842
              * https://github.com/gradle/gradle/issues/2588
              */
-            return SystemProperties.getInstance().withSystemProperties<SSLContext>(props, org.gradle.internal.Factory { SslContextLoader.load(props) })
+            return SystemProperties.getInstance().withSystemProperties<SSLContext>(props, object : org.gradle.internal.Factory<SSLContext> {
+                override fun create(): SSLContext {
+                    return SslContextLoader.load(props)
+                }
+            })
         }
     }
 
@@ -85,12 +89,17 @@ class DefaultSslContextFactory : SslContextFactory {
         )
 
         private val currentProperties: MutableMap<String, String>
-            get() = SystemProperties.getInstance().withSystemProperties<MutableMap<String, String>>(org.gradle.internal.Factory {
-                val currentProperties: MutableMap<String, String> = TreeMap<String, String>()
-                for (prop in SSL_SYSTEM_PROPERTIES) {
-                    currentProperties.put(prop, System.getProperty(prop))
+            get() = SystemProperties.getInstance().withSystemProperties<MutableMap<String, String>>(object : org.gradle.internal.Factory<MutableMap<String, String>> {
+                override fun create(): MutableMap<String, String> {
+                    val currentProperties: MutableMap<String, String> = TreeMap<String, String>()
+                    for (prop in SSL_SYSTEM_PROPERTIES) {
+                        val value = System.getProperty(prop)
+                        if (value != null) {
+                            currentProperties[prop] = value
+                        }
+                    }
+                    return currentProperties
                 }
-                currentProperties
             })
     }
 }

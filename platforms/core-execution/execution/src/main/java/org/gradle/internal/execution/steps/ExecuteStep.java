@@ -166,10 +166,10 @@ public abstract class ExecuteStep<C extends WorkspaceContext> implements Step<C,
         try {
             workOutput = work.execute(executionRequest);
         } catch (Throwable t) {
-            return Result.failed(t, Duration.ofMillis(timer.elapsedMillis));
+            return Result.failed(t, Duration.ofMillis(timer.getElapsedMillis()));
         }
 
-        Duration duration = Duration.ofMillis(timer.elapsedMillis);
+        Duration duration = Duration.ofMillis(timer.getElapsedMillis());
         ExecutionOutcome mode = determineOutcome(context, workOutput);
 
         return Result.success(duration, new Execution() {

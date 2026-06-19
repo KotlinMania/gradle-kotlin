@@ -15,8 +15,4 @@
  */
 package org.gradle.api.internal.artifacts.ivyservice.moduleconverter
 
-import org.gradle.api.internal.artifacts.ImmutableModuleIdentifierFactory.moduleWithVersion
-import org.gradle.api.internal.attributes.immutable.ImmutableAttributesSchemaFactory.create
-import org.gradle.internal.component.local.model.LocalComponentGraphResolveStateFactory.adhocRootComponentState
-import org.gradle.internal.component.local.model.LocalComponentGraphResolveStateFactory.stateFor
 

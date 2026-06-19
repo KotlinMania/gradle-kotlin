@@ -21,26 +21,26 @@ import org.gradle.internal.serialize.Message
 import org.gradle.internal.serialize.Serializer
 
 internal class JavaSerializationBackedMethodArgsSerializer(private val classLoader: ClassLoader?) : MethodArgsSerializer {
-    override fun forTypes(types: Array<Class<*>?>): Serializer<Array<Any?>?> {
+    override fun forTypes(types: Array<Class<*>>): Serializer<Array<Any?>?> {
         if (types.size == 0) {
             return EmptyArraySerializer()
         }
-        return JavaSerializationBackedMethodArgsSerializer.ArraySerializer()
+        return ArraySerializer()
     }
 
     private class EmptyArraySerializer : Serializer<Array<Any?>?> {
-        override fun read(decoder: Decoder?): Array<Any?> {
+        override fun read(decoder: Decoder): Array<Any?> {
             return ZERO_ARGS
         }
 
-        override fun write(encoder: Encoder?, value: Array<Any?>?) {
+        override fun write(encoder: Encoder, value: Array<Any?>?) {
         }
     }
 
     private inner class ArraySerializer : Serializer<Array<Any?>?> {
         @Throws(Exception::class)
         override fun read(decoder: Decoder): Array<Any?>? {
-            return Message.receive(decoder.inputStream, classLoader) as Array<Any?>?
+            return Message.receive(decoder.inputStream, classLoader!!) as Array<Any?>?
         }
 
         @Throws(Exception::class)

@@ -34,8 +34,8 @@ import org.gradle.language.base.internal.plugins.CleanRule
  *
  * @see [Base plugin reference](https://docs.gradle.org/current/userguide/base_plugin.html)
  */
-abstract class LifecycleBasePlugin : Plugin<Project?> {
-    override fun apply(project: Project?) {
+abstract class LifecycleBasePlugin : Plugin<Project> {
+    override fun apply(project: Project) {
         val projectInternal = project as ProjectInternal
         addClean(projectInternal)
         addCleanRule(project)
@@ -45,18 +45,18 @@ abstract class LifecycleBasePlugin : Plugin<Project?> {
     }
 
     private fun addClean(project: ProjectInternal) {
-        val buildDir: Provider<Directory?> = project.getLayout().getBuildDirectory()
+        val buildDir: Provider<Directory> = project.getLayout().getBuildDirectory()
 
         // Register at least the project buildDir as a directory to be deleted.
-        val buildOutputCleanupRegistry = project.getServices().get<BuildOutputCleanupRegistry?>(BuildOutputCleanupRegistry::class.java)
-        buildOutputCleanupRegistry!!.registerOutputs(buildDir)
+        val buildOutputCleanupRegistry = project.getServices().get(BuildOutputCleanupRegistry::class.java) as BuildOutputCleanupRegistry
+        buildOutputCleanupRegistry.registerOutputs(buildDir)
 
-        val clean: Provider<Delete?> = project.getTasks().register<Delete?>(CLEAN_TASK_NAME, Delete::class.java, Action { cleanTask: Delete? ->
-            cleanTask!!.setDescription("Deletes the build directory.")
+        val clean: Provider<Delete> = project.getTasks().register(CLEAN_TASK_NAME, Delete::class.java, Action { cleanTask: Delete ->
+            cleanTask.setDescription("Deletes the build directory.")
             cleanTask.setGroup(BUILD_GROUP)
             cleanTask.delete(buildDir)
         })
-        buildOutputCleanupRegistry.registerOutputs(clean.map<FileCollection?>(Transformer { cl: Delete? -> cl!!.getTargetFiles() }))
+        buildOutputCleanupRegistry.registerOutputs(clean.map<FileCollection>(Transformer { cl: Delete -> cl.getTargetFiles() }))
     }
 
     private fun addCleanRule(project: Project) {

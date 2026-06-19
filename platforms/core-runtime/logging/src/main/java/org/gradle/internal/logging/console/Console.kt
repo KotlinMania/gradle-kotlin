@@ -16,15 +16,12 @@
 package org.gradle.internal.logging.console
 
 interface Console {
-    @JvmField
-    val buildOutputArea: TextArea?
+    val buildOutputArea: TextArea
 
-    @JvmField
-    val buildProgressArea: BuildProgressArea?
+    val buildProgressArea: BuildProgressArea
 
     // TODO(ew): Consider whether this belongs in BuildProgressArea or here
-    @JvmField
-    val statusBar: StyledLabel?
+    val statusBar: StyledLabel
 
     /**
      * Flushes any pending updates. Updates may or may not be buffered, and this method should be called to finish rendering and pending updates, such as updating the status bar.

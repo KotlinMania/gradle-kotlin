@@ -18,25 +18,26 @@ package org.gradle.internal.logging.events
 import org.gradle.util.internal.TextUtil
 
 class SelectOptionPromptEvent(timestamp: Long, @JvmField val question: String, @JvmField val options: MutableList<String>, @JvmField val defaultOption: Int) : PromptOutputEvent(timestamp) {
-    override fun getPrompt(): String {
-        val builder = StringBuilder()
-        builder.append(question)
-        builder.append(":")
-        builder.append(TextUtil.getPlatformLineSeparator())
-        for (i in options.indices) {
-            builder.append("  ")
-            builder.append(i + 1)
-            builder.append(": ")
-            builder.append(options.get(i))
+    override val prompt: String
+        get() {
+            val builder = StringBuilder()
+            builder.append(question)
+            builder.append(":")
             builder.append(TextUtil.getPlatformLineSeparator())
+            for (i in options.indices) {
+                builder.append("  ")
+                builder.append(i + 1)
+                builder.append(": ")
+                builder.append(options.get(i))
+                builder.append(TextUtil.getPlatformLineSeparator())
+            }
+            builder.append("Enter selection (default: ")
+            builder.append(options.get(defaultOption))
+            builder.append(") [1..")
+            builder.append(options.size)
+            builder.append("] ")
+            return builder.toString()
         }
-        builder.append("Enter selection (default: ")
-        builder.append(options.get(defaultOption))
-        builder.append(") [1..")
-        builder.append(options.size)
-        builder.append("] ")
-        return builder.toString()
-    }
 
     override fun convert(text: String): PromptResult<Int> {
         if (text.isEmpty()) {

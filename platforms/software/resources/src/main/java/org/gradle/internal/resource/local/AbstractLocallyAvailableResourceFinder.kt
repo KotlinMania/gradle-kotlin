@@ -20,7 +20,7 @@ import org.gradle.internal.hash.ChecksumService
 import java.io.File
 import java.util.function.Function
 
-open class AbstractLocallyAvailableResourceFinder<C>(private val producer: Function<C?, Factory<MutableList<File?>?>?>, val checksumService: ChecksumService?) : LocallyAvailableResourceFinder<C?> {
+open class AbstractLocallyAvailableResourceFinder<C>(private val producer: Function<C?, Factory<MutableList<File>>>, val checksumService: ChecksumService) : LocallyAvailableResourceFinder<C?> {
     override fun findCandidates(criterion: C?): LocallyAvailableResourceCandidates {
         return LazyLocallyAvailableResourceCandidates(producer.apply(criterion), checksumService)
     }

@@ -15,6 +15,7 @@
  */
 package org.gradle.tooling.model.gradle
 
+import org.gradle.tooling.model.GradleModuleVersion
 import org.gradle.tooling.model.ProjectIdentifier
 import org.gradle.tooling.model.ProjectModel
 
@@ -29,7 +30,7 @@ interface GradlePublication : ProjectModel {
      *
      * @since 3.3
      */
-    override fun getProjectIdentifier(): ProjectIdentifier?
+    override val projectIdentifier: ProjectIdentifier?
 
     /**
      * Returns the unique identifier of the publication.

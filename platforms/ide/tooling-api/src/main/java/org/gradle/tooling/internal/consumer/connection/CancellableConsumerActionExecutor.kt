@@ -22,13 +22,12 @@ class CancellableConsumerActionExecutor(private val delegate: ConsumerActionExec
         delegate.stop()
     }
 
-    override fun getDisplayName(): String {
-        return delegate.getDisplayName()
-    }
+    override val displayName: String?
+        get() = delegate.displayName
 
     @Throws(UnsupportedOperationException::class, IllegalStateException::class)
     override fun <T> run(action: ConsumerAction<T?>): T? {
-        val cancellationToken = action.getParameters().getCancellationToken()
+        val cancellationToken = action.parameters!!.getCancellationToken()
         if (cancellationToken.isCancellationRequested()) {
             throw BuildCancelledException("Build cancelled")
         }

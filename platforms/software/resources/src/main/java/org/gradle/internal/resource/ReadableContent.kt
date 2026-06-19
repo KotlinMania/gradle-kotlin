@@ -26,7 +26,7 @@ interface ReadableContent {
      * Unbuffered input stream to read contents of resource.
      */
     @Throws(ResourceException::class)
-    fun open(): InputStream?
+    fun open(): InputStream
 
-    val contentLength: Long
+    fun getContentLength(): Long
 }

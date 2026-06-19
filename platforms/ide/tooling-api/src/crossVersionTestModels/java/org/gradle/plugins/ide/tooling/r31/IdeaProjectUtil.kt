@@ -15,6 +15,17 @@
  */
 package org.gradle.plugins.ide.tooling.r31
 
+import org.gradle.tooling.*
+import org.gradle.tooling.model.*
+import org.gradle.tooling.model.build.*
+import org.gradle.tooling.model.eclipse.*
+import org.gradle.tooling.model.gradle.*
+import org.gradle.tooling.model.idea.*
+import org.gradle.tooling.model.kotlin.dsl.*
+import org.gradle.tooling.internal.adapter.ProtocolToModelAdapter
+import java.io.File
+import org.gradle.integtests.tooling.r48.*
+
 import org.gradle.tooling.BuildAction
 import java.io.Serializable
 import kotlin.collections.ArrayList
@@ -24,7 +35,7 @@ import kotlin.collections.MutableMap
 
 class IdeaProjectUtil {
     class GetAllIdeaProjectsAction : BuildAction<AllProjects?> {
-        public override fun execute(controller: BuildController): AllProjects {
+        public override fun execute(controller: BuildController?): AllProjects {
             val result = AllProjects()
 
             val buildModel: GradleBuild = controller.getBuildModel()
@@ -33,15 +44,15 @@ class IdeaProjectUtil {
 
             collectAllNestedBuilds(buildModel, controller, result)
 
-            result.allIdeaProjects.add(result.rootIdeaProject)
+            result.rootIdeaProject?.let { result.allIdeaProjects.add(it) }
             val includedWithoutRoot: LinkedHashMap<GradleBuild?, IdeaProject?> = LinkedHashMap<GradleBuild?, IdeaProject?>(result.includedBuildIdeaProjects)
             includedWithoutRoot.remove(buildModel)
-            result.allIdeaProjects.addAll(includedWithoutRoot.values)
+            result.allIdeaProjects.addAll(includedWithoutRoot.values.filterNotNull())
 
             return result
         }
 
-        private fun collectAllNestedBuilds(buildModel: GradleBuild, controller: BuildController, result: AllProjects) {
+        private fun collectAllNestedBuilds(buildModel: GradleBuild, controller: BuildController?, result: AllProjects) {
             for (includedBuild in buildModel.getIncludedBuilds()) {
                 if (!result.includedBuildIdeaProjects.containsKey(includedBuild)) {
                     val includedBuildProject: IdeaProject? = controller.getModel(includedBuild, IdeaProject::class.java)

@@ -16,6 +16,7 @@
 package org.gradle.testkit.runner
 
 import org.gradle.api.Incubating
+import java.io.BufferedReader
 
 /**
  * The result of executing a build, via the [GradleRunner].

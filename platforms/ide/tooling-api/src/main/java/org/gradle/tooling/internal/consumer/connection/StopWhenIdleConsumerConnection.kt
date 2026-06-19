@@ -15,6 +15,7 @@
  */
 package org.gradle.tooling.internal.consumer.connection
 
+import java.io.File
 import org.gradle.tooling.internal.adapter.ProtocolToModelAdapter
 import org.gradle.tooling.internal.consumer.parameters.ConsumerOperationParameters
 import org.gradle.tooling.internal.consumer.versioning.ModelMapping
@@ -30,6 +31,6 @@ import org.gradle.tooling.internal.protocol.InternalStopWhenIdleConnection
 class StopWhenIdleConsumerConnection(delegate: ConnectionVersion4, modelMapping: ModelMapping, adapter: ProtocolToModelAdapter) :
     NotifyDaemonsAboutChangedPathsConsumerConnection(delegate, modelMapping, adapter) {
     override fun stopWhenIdle(operationParameters: ConsumerOperationParameters) {
-        (getDelegate() as InternalStopWhenIdleConnection).stopWhenIdle(operationParameters)
+        (delegate as InternalStopWhenIdleConnection).stopWhenIdle(operationParameters)
     }
 }

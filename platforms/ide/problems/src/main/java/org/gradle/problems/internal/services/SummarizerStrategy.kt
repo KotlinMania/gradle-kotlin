@@ -26,11 +26,11 @@ class SummarizerStrategy(private val threshold: Int) {
     @get:Synchronized
     val cutOffProblems: MutableList<ProblemSummaryData>
         get() = seenProblemsWithCounts.entries.stream()
-            .filter { entry: MutableMap.MutableEntry<ProblemId?, ProblemSummaryInfo?>? -> entry!!.value!!.getCount() > threshold }
-            .map<ProblemSummaryData> { entry: MutableMap.MutableEntry<ProblemId?, ProblemSummaryInfo?>? ->
+            .filter { entry: MutableMap.MutableEntry<ProblemId, ProblemSummaryInfo> -> entry.value.count > threshold }
+            .map<ProblemSummaryData> { entry: MutableMap.MutableEntry<ProblemId, ProblemSummaryInfo> ->
                 ProblemSummaryData(
-                    entry!!.key!!,
-                    entry.value!!.getCount() - threshold
+                    entry.key,
+                    entry.value.count - threshold
                 )
             }
             .collect(ImmutableList.toImmutableList<ProblemSummaryData>())
@@ -38,8 +38,8 @@ class SummarizerStrategy(private val threshold: Int) {
     @Synchronized
     fun shouldEmit(problem: ProblemInternal): Boolean {
         val summaryInfo = seenProblemsWithCounts.computeIfAbsent(
-            problem.definition.getId()
-        ) { key: ProblemId? -> ProblemSummaryInfo() }
+            problem.getDefinition()!!.getId()!!
+        ) { ProblemSummaryInfo() }
         return summaryInfo.shouldEmit(problem.hashCode(), threshold)
     }
 }

@@ -68,7 +68,7 @@ private fun reportEvaluationFailuresAsProblemsAndThrow(
             else -> emptyList() // TODO: report all other DCL failures as problems
         }
     }
-    problems.internalReporter.reportError(failureProblems)
+    problems.getInternalReporter()!!.reportError(failureProblems.toMutableList())
     /**
      * Instead of [org.gradle.api.problems.ProblemReporter.throwing], we just throw
      * this single exception here to avoid duplicating the full message of the
@@ -76,4 +76,3 @@ private fun reportEvaluationFailuresAsProblemsAndThrow(
      */
     throw DeclarativeDslNotEvaluatedException(scriptSource.fileName, failures)
 }
-

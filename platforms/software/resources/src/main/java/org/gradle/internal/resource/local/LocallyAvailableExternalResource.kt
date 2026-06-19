@@ -16,6 +16,7 @@
 package org.gradle.internal.resource.local
 
 import org.gradle.internal.resource.ExternalResource
+import java.io.File
 
 /**
  * Represents an external resource whose meta-data and content is available locally. The content and meta-data may be a copy of some original resource and the original may or may not be a local resource.
@@ -24,7 +25,7 @@ interface LocallyAvailableExternalResource : ExternalResource {
     /**
      * Returns a local file containing the content of this resource. This may nor may not be the original resource.
      */
-    val file: File?
+    fun getFile(): File
 
     /**
      * Does this resource currently exist?

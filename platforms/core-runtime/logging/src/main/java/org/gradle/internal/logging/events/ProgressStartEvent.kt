@@ -74,7 +74,7 @@ class ProgressStartEvent(
     }
 
     override fun getLevel(): LogEventLevel {
-        return convert(getLogLevel())
+        return convert(logLevel)
     }
 
     companion object {

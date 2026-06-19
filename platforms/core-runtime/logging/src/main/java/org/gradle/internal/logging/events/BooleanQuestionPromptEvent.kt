@@ -20,17 +20,18 @@ import org.apache.commons.lang3.BooleanUtils
 import org.apache.commons.lang3.StringUtils
 
 class BooleanQuestionPromptEvent(timestamp: Long, @JvmField val question: String, @JvmField val defaultValue: Boolean) : PromptOutputEvent(timestamp) {
-    override fun getPrompt(): String {
-        val builder = StringBuilder()
-        builder.append(question)
-        builder.append(" (default: ")
-        val defaultString = if (defaultValue) "yes" else "no"
-        builder.append(defaultString)
-        builder.append(") [")
-        builder.append(StringUtils.join(YesNoQuestionPromptEvent.YES_NO_CHOICES, ", "))
-        builder.append("] ")
-        return builder.toString()
-    }
+    override val prompt: String
+        get() {
+            val builder = StringBuilder()
+            builder.append(question)
+            builder.append(" (default: ")
+            val defaultString = if (defaultValue) "yes" else "no"
+            builder.append(defaultString)
+            builder.append(") [")
+            builder.append(StringUtils.join(YesNoQuestionPromptEvent.YES_NO_CHOICES, ", "))
+            builder.append("] ")
+            return builder.toString()
+        }
 
     override fun convert(text: String): PromptResult<Boolean> {
         if (text.isEmpty()) {

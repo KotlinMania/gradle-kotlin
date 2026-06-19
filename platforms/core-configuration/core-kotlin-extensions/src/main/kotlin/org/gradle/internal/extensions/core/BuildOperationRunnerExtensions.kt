@@ -28,7 +28,7 @@ import org.gradle.internal.operations.CallableBuildOperation
 fun <T : Any> BuildOperationRunner.call(
     descriptor: () -> BuildOperationDescriptor.Builder,
     operation: (BuildOperationContext) -> T
-): T = call(callableBuildOperation<T>(descriptor, operation))
+): T = call(callableBuildOperation<T>(descriptor, operation))!!
 
 
 /**

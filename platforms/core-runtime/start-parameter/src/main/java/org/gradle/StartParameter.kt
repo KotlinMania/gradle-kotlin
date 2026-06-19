@@ -23,7 +23,12 @@ import org.gradle.api.Incubating
 import org.gradle.api.artifacts.verification.DependencyVerificationMode
 import org.gradle.api.launcher.cli.WelcomeMessageConfiguration
 import org.gradle.api.launcher.cli.WelcomeMessageDisplayMode
+import org.gradle.api.logging.LogLevel
+import org.gradle.api.logging.configuration.ConsoleOutput
 import org.gradle.api.logging.configuration.LoggingConfiguration
+import org.gradle.api.logging.configuration.ConsoleUnicodeSupport
+import org.gradle.api.logging.configuration.ShowStacktrace
+import org.gradle.api.logging.configuration.WarningMode
 import org.gradle.concurrent.ParallelismConfiguration
 import org.gradle.initialization.BuildLayoutParameters
 import org.gradle.initialization.CompositeInitScriptFinder
@@ -71,7 +76,8 @@ open class StartParameter protected constructor(layoutParameters: BuildLayoutPar
     private var projectProperties: MutableMap<String?, String?> = HashMap<String?, String?>()
     private var systemPropertiesArgs: MutableMap<String?, String?> = HashMap<String?, String?>()
     private var gradleUserHomeDir: File?
-    protected var gradleHomeDir: File?
+    @JvmField
+    var gradleHomeDir: File? = null
     private var settingsFile: File? = null
     private var buildFile: File? = null
     private var initScripts: MutableList<File> = ArrayList<File>()
@@ -129,7 +135,7 @@ open class StartParameter protected constructor(layoutParameters: BuildLayoutPar
      * @return a list of modules allowed to have a version update
      * @since 4.8
      */
-    var lockedDependenciesToUpdate: MutableList<String> = mutableListOf<String?>()
+    var lockedDependenciesToUpdate: MutableList<String> = mutableListOf<String>()
         private set
     /**
      * Returns the dependency verification mode.
@@ -153,76 +159,76 @@ open class StartParameter protected constructor(layoutParameters: BuildLayoutPar
     private var exportKeys = false
     private var welcomeMessageConfiguration: WelcomeMessageConfiguration? = WelcomeMessageConfiguration(WelcomeMessageDisplayMode.ONCE)
 
-    var logLevel: LogLevel?
+    override var logLevel: LogLevel?
         /**
          * {@inheritDoc}
          */
-        get() = loggingConfiguration.getLogLevel()
+        get() = loggingConfiguration.logLevel
         /**
          * {@inheritDoc}
          */
         set(logLevel) {
-            loggingConfiguration.setLogLevel(logLevel)
+            loggingConfiguration.logLevel = logLevel
         }
 
-    var showStacktrace: ShowStacktrace?
+    override var showStacktrace: ShowStacktrace?
         /**
          * {@inheritDoc}
          */
-        get() = loggingConfiguration.getShowStacktrace()
+        get() = loggingConfiguration.showStacktrace
         /**
          * {@inheritDoc}
          */
         set(showStacktrace) {
-            loggingConfiguration.setShowStacktrace(showStacktrace)
+            loggingConfiguration.showStacktrace = showStacktrace
         }
 
-    var consoleOutput: ConsoleOutput?
+    override var consoleOutput: ConsoleOutput?
         /**
          * {@inheritDoc}
          */
-        get() = loggingConfiguration.getConsoleOutput()
+        get() = loggingConfiguration.consoleOutput
         /**
          * {@inheritDoc}
          */
         set(consoleOutput) {
-            loggingConfiguration.setConsoleOutput(consoleOutput)
+            loggingConfiguration.consoleOutput = consoleOutput
         }
 
-    var consoleUnicodeSupport: ConsoleUnicodeSupport?
+    override var consoleUnicodeSupport: ConsoleUnicodeSupport?
         /**
          * {@inheritDoc}
          */
-        get() = loggingConfiguration.getConsoleUnicodeSupport()
+        get() = loggingConfiguration.consoleUnicodeSupport
         /**
          * {@inheritDoc}
          */
         set(unicodeSupport) {
-            loggingConfiguration.setConsoleUnicodeSupport(unicodeSupport)
+            loggingConfiguration.consoleUnicodeSupport = unicodeSupport
         }
 
-    var warningMode: WarningMode?
+    override var warningMode: WarningMode?
         /**
          * {@inheritDoc}
          */
-        get() = loggingConfiguration.getWarningMode()
+        get() = loggingConfiguration.warningMode
         /**
          * {@inheritDoc}
          */
         set(warningMode) {
-            loggingConfiguration.setWarningMode(warningMode)
+            loggingConfiguration.warningMode = warningMode
         }
 
-    var isNonInteractive: Boolean
+    override var isNonInteractive: Boolean
         /**
          * {@inheritDoc}
          */
-        get() = loggingConfiguration.isNonInteractive()
+        get() = loggingConfiguration.isNonInteractive
         /**
          * {@inheritDoc}
          */
         set(nonInteractive) {
-            this.loggingConfiguration.setNonInteractive(nonInteractive)
+            this.loggingConfiguration.isNonInteractive = nonInteractive
         }
 
     /**
@@ -338,7 +344,7 @@ open class StartParameter protected constructor(layoutParameters: BuildLayoutPar
         return HashCodeBuilder.reflectionHashCode(this)
     }
 
-    var taskNames: Iterable<String?>? = null
+    var taskNames: Iterable<String?>?
         /**
          * Returns the names of the tasks to execute in this build. When empty, the default tasks for the project will be executed. If [TaskExecutionRequest]s are set for this build then names from these task parameters are returned.
          *
@@ -363,9 +369,9 @@ open class StartParameter protected constructor(layoutParameters: BuildLayoutPar
          */
         set(taskNames) {
             if (taskNames == null) {
-                this.taskRequests = mutableListOf<TaskExecutionRequest?>(RunDefaultTasksExecutionRequest())
+                this.taskRequests = mutableListOf<TaskExecutionRequest>(RunDefaultTasksExecutionRequest())
             } else {
-                this.taskRequests = mutableListOf<T>(DefaultTaskExecutionRequest.of(taskNames))
+                this.taskRequests = mutableListOf<TaskExecutionRequest>(DefaultTaskExecutionRequest.of(taskNames))
             }
         }
 
@@ -386,7 +392,7 @@ open class StartParameter protected constructor(layoutParameters: BuildLayoutPar
      * @param taskParameters the tasks to execute in this build.
      */
     fun setTaskRequests(taskParameters: Iterable<out TaskExecutionRequest?>) {
-        this.taskRequests = Lists.newArrayList<TaskExecutionRequest?>(taskParameters)
+        this.taskRequests = taskParameters.filterNotNull().toMutableList()
     }
 
     /**
@@ -560,7 +566,7 @@ open class StartParameter protected constructor(layoutParameters: BuildLayoutPar
                 DistributionInitScriptFinder(gradleHomeDir)
             )
 
-            val scripts: MutableList<File> = ArrayList<File>(getInitScripts())
+            val scripts: MutableList<File?> = ArrayList<File?>(getInitScripts())
             initScriptFinder.findScripts(scripts)
             return Collections.unmodifiableList<File?>(scripts)
         }
@@ -682,16 +688,16 @@ open class StartParameter protected constructor(layoutParameters: BuildLayoutPar
         this.taskGraph = taskGraph
     }
 
-    var isParallelProjectExecutionEnabled: Boolean
+    override var isParallelProjectExecutionEnabled: Boolean
         /**
          * {@inheritDoc}
          */
-        get() = parallelismConfiguration.isParallelProjectExecutionEnabled()
+        get() = parallelismConfiguration.isParallelProjectExecutionEnabled
         /**
          * {@inheritDoc}
          */
         set(parallelProjectExecution) {
-            parallelismConfiguration.setParallelProjectExecutionEnabled(parallelProjectExecution)
+            parallelismConfiguration.isParallelProjectExecutionEnabled = parallelProjectExecution
         }
 
     /**
@@ -712,16 +718,16 @@ open class StartParameter protected constructor(layoutParameters: BuildLayoutPar
         this.buildCacheEnabled = buildCacheEnabled
     }
 
-    var maxWorkerCount: Int
+    override var maxWorkerCount: Int
         /**
          * {@inheritDoc}
          */
-        get() = parallelismConfiguration.getMaxWorkerCount()
+        get() = parallelismConfiguration.maxWorkerCount
         /**
          * {@inheritDoc}
          */
         set(maxWorkerCount) {
-            parallelismConfiguration.setMaxWorkerCount(maxWorkerCount)
+            parallelismConfiguration.maxWorkerCount = maxWorkerCount
         }
 
     /**
@@ -825,8 +831,8 @@ open class StartParameter protected constructor(layoutParameters: BuildLayoutPar
      * @see .isWriteDependencyLocks
      * @since 4.8
      */
-    fun setLockedDependenciesToUpdate(lockedDependenciesToUpdate: MutableList<String?>) {
-        this.lockedDependenciesToUpdate = Lists.newArrayList<String?>(lockedDependenciesToUpdate)
+    fun setLockedDependenciesToUpdate(lockedDependenciesToUpdate: MutableList<String>) {
+        this.lockedDependenciesToUpdate = Lists.newArrayList<String>(lockedDependenciesToUpdate)
         this.writeDependencyLocks = true
     }
 

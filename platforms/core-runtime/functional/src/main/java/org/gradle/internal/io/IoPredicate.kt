@@ -19,11 +19,13 @@ import org.gradle.internal.UncheckedException
 import java.io.IOException
 import java.util.function.Predicate
 
-interface IoPredicate<T> {
+@FunctionalInterface
+fun interface IoPredicate<T> {
     @Throws(IOException::class)
     fun test(t: T?): Boolean
 
     companion object {
+        @JvmStatic
         fun <T> wrap(predicate: IoPredicate<T?>): Predicate<T?> {
             return Predicate { t: T? ->
                 try {

@@ -29,7 +29,7 @@ import java.util.Optional
  * @since 7.6
  */
 @Incubating
-interface JavaToolchainResolver : BuildService<BuildServiceParameters.None?> {
+interface JavaToolchainResolver : BuildService<BuildServiceParameters.None> {
     /**
      * Returns a [JavaToolchainDownload] if a Java toolchain matching the provided
      * specification can be provided.
@@ -39,5 +39,5 @@ interface JavaToolchainResolver : BuildService<BuildServiceParameters.None?> {
      * @return          empty Optional if and only if the provided specification can't be
      * matched
      */
-    fun resolve(request: JavaToolchainRequest): Optional<JavaToolchainDownload>?
+    fun resolve(request: JavaToolchainRequest): Optional<JavaToolchainDownload>
 }

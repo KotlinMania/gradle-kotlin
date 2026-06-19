@@ -23,7 +23,7 @@ interface HasGradleProject : ProjectModel {
      * Returns the identifier for the project that this model is associated with.
      * @since 3.3
      */
-    override fun getProjectIdentifier(): ProjectIdentifier?
+    override val projectIdentifier: ProjectIdentifier?
 
     /**
      * The associated Gradle project. Via the gradle project you can access (list, run, etc.) Gradle tasks.

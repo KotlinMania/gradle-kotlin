@@ -83,48 +83,43 @@ class DistributionFactory(private val clock: Clock?) {
         return getDistribution(distUri)
     }
 
-    class ZippedDistribution private constructor(private val wrapperConfiguration: WrapperConfiguration, private val clock: Clock?) : Distribution {
+    class ZippedDistribution(private val wrapperConfiguration: WrapperConfiguration, private val clock: Clock?) : Distribution {
         private var installedDistribution: InstalledDistribution? = null
 
-        override fun getDisplayName(): String {
-            return "Gradle distribution '" + wrapperConfiguration.distribution + "'"
-        }
+        override val displayName: String
+            get() = "Gradle distribution '" + wrapperConfiguration.distribution + "'"
 
         override fun getToolingImplementationClasspath(
             progressLoggerFactory: ProgressLoggerFactory?,
             progressListener: InternalBuildProgressListener?,
-            connectionParameters: ConnectionParameters,
-            cancellationToken: BuildCancellationToken
-        ): ClassPath {
+            connectionParameters: ConnectionParameters?,
+            cancellationToken: BuildCancellationToken?
+        ): ClassPath? {
             if (installedDistribution == null) {
-                val installer = DistributionInstaller(progressLoggerFactory, progressListener, clock, wrapperConfiguration.networkTimeout)
+                val installer = DistributionInstaller(progressLoggerFactory!!, progressListener!!, clock!!, wrapperConfiguration.networkTimeout)
                 val installDir: File
                 try {
-                    cancellationToken.addCallback(object : Runnable {
+                    cancellationToken!!.addCallback(object : Runnable {
                         override fun run() {
                             installer.cancel()
                         }
                     })
                     installDir =
-                        installer.install(determineRealUserHomeDir(connectionParameters), determineRootDir(connectionParameters), wrapperConfiguration, determineSystemProperties(connectionParameters))
+                        installer.install(determineRealUserHomeDir(connectionParameters!!), determineRootDir(connectionParameters), wrapperConfiguration, determineSystemProperties(connectionParameters))!!
                 } catch (e: CancellationException) {
                     throw BuildCancelledException(String.format("Distribution download cancelled. Using distribution from '%s'.", wrapperConfiguration.distribution), e)
                 } catch (e: FileNotFoundException) {
-                    throw IllegalArgumentException(String.format("The specified %s does not exist.", getDisplayName()), e)
+                    throw IllegalArgumentException(String.format("The specified %s does not exist.", displayName), e)
                 } catch (e: Exception) {
                     throw GradleConnectionException(String.format("Could not install Gradle distribution from '%s'.", wrapperConfiguration.distribution), e)
                 }
-                installedDistribution = InstalledDistribution(installDir, getDisplayName(), getDisplayName())
+                installedDistribution = InstalledDistribution(installDir, displayName, displayName)
             }
             return installedDistribution!!.getToolingImplementationClasspath(progressLoggerFactory, progressListener, connectionParameters, cancellationToken)
         }
     }
 
-    private class InstalledDistribution(private val gradleHomeDir: File, private val displayName: String?, private val locationDisplayName: String?) : Distribution {
-        override fun getDisplayName(): String? {
-            return displayName
-        }
-
+    private class InstalledDistribution(private val gradleHomeDir: File, override val displayName: String?, private val locationDisplayName: String?) : Distribution {
         override fun getToolingImplementationClasspath(
             progressLoggerFactory: ProgressLoggerFactory?,
             progressListener: InternalBuildProgressListener?,

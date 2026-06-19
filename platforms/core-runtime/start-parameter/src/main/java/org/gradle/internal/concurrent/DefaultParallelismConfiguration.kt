@@ -21,44 +21,18 @@ import org.gradle.concurrent.ParallelismConfiguration
 import java.io.Serializable
 
 class DefaultParallelismConfiguration : Serializable, ParallelismConfiguration {
-    private var parallelProjectExecution = false
-    private var maxWorkerCount: Int
+    override var isParallelProjectExecutionEnabled = false
+    override var maxWorkerCount: Int = defaultMaxWorkerCount
+        set(maxWorkerCount) {
+            require(maxWorkerCount >= 1) { "Max worker count must be > 0" }
+            field = maxWorkerCount
+        }
 
     constructor() {
-        maxWorkerCount = defaultMaxWorkerCount
     }
 
     constructor(parallelProjectExecution: Boolean, maxWorkerCount: Int) {
-        this.parallelProjectExecution = parallelProjectExecution
-        this.maxWorkerCount = maxWorkerCount
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    override fun isParallelProjectExecutionEnabled(): Boolean {
-        return parallelProjectExecution
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    override fun setParallelProjectExecutionEnabled(parallelProjectExecution: Boolean) {
-        this.parallelProjectExecution = parallelProjectExecution
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    override fun getMaxWorkerCount(): Int {
-        return maxWorkerCount
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    override fun setMaxWorkerCount(maxWorkerCount: Int) {
-        require(maxWorkerCount >= 1) { "Max worker count must be > 0" }
+        this.isParallelProjectExecutionEnabled = parallelProjectExecution
         this.maxWorkerCount = maxWorkerCount
     }
 

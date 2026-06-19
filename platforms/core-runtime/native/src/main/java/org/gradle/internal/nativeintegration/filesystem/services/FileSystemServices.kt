@@ -48,7 +48,7 @@ class FileSystemServices : ServiceRegistrationProvider {
     }
 
     @Provides
-    fun createJdkSymlink(temporaryFileProvider: TemporaryFileProvider?): Symlink {
+    fun createJdkSymlink(temporaryFileProvider: TemporaryFileProvider): Symlink {
         return Jdk7Symlink(temporaryFileProvider)
     }
 
@@ -57,9 +57,9 @@ class FileSystemServices : ServiceRegistrationProvider {
         genericFileSystemFactory: GenericFileSystem.Factory,
         operatingSystem: OperatingSystem,
         metadataAccessor: FileMetadataAccessor?,
-        temporaryFileProvider: TemporaryFileProvider?
+        temporaryFileProvider: TemporaryFileProvider
     ): FileSystem {
-        if (operatingSystem.isWindows()) {
+        if (operatingSystem.isWindows) {
             val symlink = createWindowsJdkSymlink()
             return genericFileSystemFactory.create(EmptyChmod(), FallbackStat(), symlink)
         }

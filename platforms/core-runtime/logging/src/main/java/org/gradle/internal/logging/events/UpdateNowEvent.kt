@@ -15,6 +15,8 @@
  */
 package org.gradle.internal.logging.events
 
+import org.gradle.api.logging.LogLevel
+
 /**
  * Indicates an event that can trigger an immediate update to the console.
  */
@@ -23,6 +25,6 @@ class UpdateNowEvent(@JvmField val timestamp: Long) : OutputEvent(), Interactive
         return UpdateNowEvent::class.java.getSimpleName() + " " + timestamp
     }
 
-    val logLevel: LogLevel?
+    override val logLevel: LogLevel?
         get() = null
 }

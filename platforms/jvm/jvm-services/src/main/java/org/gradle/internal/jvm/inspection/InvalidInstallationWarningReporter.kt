@@ -24,11 +24,11 @@ import java.util.function.BiConsumer
 /**
  * Reports invalid JVM installations with the provided logger `warn` level.
  */
-class InvalidInstallationWarningReporter @VisibleForTesting constructor(private val logger: Logger) : BiConsumer<InstallationLocation?, JvmInstallationMetadata?> {
+class InvalidInstallationWarningReporter @VisibleForTesting constructor(private val logger: Logger) : BiConsumer<InstallationLocation, JvmInstallationMetadata> {
     constructor() : this(getLogger(InvalidInstallationWarningReporter::class.java)!!)
 
     override fun accept(installationLocation: InstallationLocation, metadata: JvmInstallationMetadata) {
-        if (!metadata.isValidInstallation()) {
+        if (!metadata.isValidInstallation) {
             logger.warn(
                 "Invalid Java installation found at {}. " +
                         "It will be re-checked in the next build. " +

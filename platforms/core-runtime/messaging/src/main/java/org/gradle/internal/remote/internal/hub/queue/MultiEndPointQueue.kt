@@ -31,7 +31,7 @@ open class MultiEndPointQueue(private val lock: Lock) : Dispatch<InterHubMessage
     private val initializer = QueueInitializer()
 
     override fun dispatch(message: InterHubMessage?) {
-        queue.add(message)
+        queue.add(message!!)
         flush()
     }
 
@@ -57,12 +57,12 @@ open class MultiEndPointQueue(private val lock: Lock) : Dispatch<InterHubMessage
         val selected = if (waiting.isEmpty()) null else waiting.get(0)
         while (!queue.isEmpty()) {
             val message = queue.peekFirst()
-            when (message.delivery) {
-                Stateful, AllHandlers -> {
+            when (message.getDelivery()) {
+                InterHubMessage.Delivery.Stateful, InterHubMessage.Delivery.AllHandlers -> {
                     if (endpoints.isEmpty()) {
                         return
                     }
-                    if (message.delivery === InterHubMessage.Delivery.Stateful) {
+                    if (message.getDelivery() === InterHubMessage.Delivery.Stateful) {
                         initializer.onStatefulMessage(message)
                     }
                     for (endpoint in endpoints) {
@@ -73,7 +73,7 @@ open class MultiEndPointQueue(private val lock: Lock) : Dispatch<InterHubMessage
                     continue
                 }
 
-                SingleHandler -> {
+                InterHubMessage.Delivery.SingleHandler -> {
                     if (selected == null) {
                         return
                     }
@@ -82,7 +82,7 @@ open class MultiEndPointQueue(private val lock: Lock) : Dispatch<InterHubMessage
                     selected.dispatch(message)
                 }
 
-                else -> throw IllegalArgumentException("Unknown delivery type: " + message.delivery)
+                else -> throw IllegalArgumentException("Unknown delivery type: " + message.getDelivery())
             }
         }
     }

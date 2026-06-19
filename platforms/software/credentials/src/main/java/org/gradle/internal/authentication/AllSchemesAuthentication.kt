@@ -23,7 +23,7 @@ import org.gradle.authentication.Authentication
  */
 class AllSchemesAuthentication(credentials: Credentials?) : AbstractAuthentication("all", Authentication::class.java) {
     init {
-        this.setCredentials(credentials)
+        this.credentials = credentials
     }
 
     override fun supports(credentials: Credentials?): Boolean {

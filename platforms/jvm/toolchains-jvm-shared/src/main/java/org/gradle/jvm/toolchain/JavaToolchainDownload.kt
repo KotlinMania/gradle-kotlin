@@ -32,10 +32,10 @@ import java.net.URI
  */
 @Incubating
 interface JavaToolchainDownload {
-    @JvmField
-    val uri: URI?
+    val uri: URI
 
     companion object {
+        @JvmStatic
         fun fromUri(uri: URI): JavaToolchainDownload {
             return DefaultJavaToolchainDownload.Companion.fromUri(uri)
         }

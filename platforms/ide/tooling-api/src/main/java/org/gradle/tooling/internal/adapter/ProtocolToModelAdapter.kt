@@ -55,12 +55,12 @@ class ProtocolToModelAdapter @JvmOverloads constructor(private val targetTypePro
     fun newGraph(): ObjectGraphAdapter {
         val graphDetails = ViewGraphDetails(targetTypeProvider)
         return object : ObjectGraphAdapter {
-            override fun <T> adapt(targetType: Class<T?>, sourceObject: Any): T? {
+            override fun <T> adapt(targetType: Class<T?>, sourceObject: Any?): T? {
                 return createView<T?>(targetType, sourceObject, NO_OP_MAPPER, graphDetails)
             }
 
             override fun <T> builder(viewType: Class<T?>): ViewBuilder<T?> {
-                return ProtocolToModelAdapter.DefaultViewBuilder<T?>(viewType, graphDetails)
+                return DefaultViewBuilder<T?>(viewType, graphDetails)
             }
         }
     }
@@ -79,7 +79,7 @@ class ProtocolToModelAdapter @JvmOverloads constructor(private val targetTypePro
      * Creates a builder for views of the given type.
      */
     override fun <T> builder(viewType: Class<T?>): ViewBuilder<T?> {
-        return ProtocolToModelAdapter.DefaultViewBuilder<T?>(viewType)
+        return DefaultViewBuilder<T?>(viewType)
     }
 
     /**
@@ -91,7 +91,7 @@ class ProtocolToModelAdapter @JvmOverloads constructor(private val targetTypePro
         return handler.sourceObject
     }
 
-    private class ViewGraphDetails(private val typeProvider: TargetTypeProvider) : Serializable {
+    private class ViewGraphDetails(val typeProvider: TargetTypeProvider) : Serializable {
         // Transient, don't serialize all the views that happen to have been visited, recreate them when visited via the deserialized view
         @Transient
         private var views = WeakIdentityHashMap<Any, MutableMap<ViewKey, WeakReference<Any>>>()
@@ -99,13 +99,13 @@ class ProtocolToModelAdapter @JvmOverloads constructor(private val targetTypePro
         fun putViewFor(sourceObject: Any, key: ViewKey, proxy: Any) {
             val viewsForSource = views.computeIfAbsent(
                 sourceObject,
-                object : WeakIdentityHashMap.AbsentValueProvider<MutableMap<ViewKey, WeakReference<Any>>> {
+                object : WeakIdentityHashMap.AbsentValueProvider<MutableMap<ViewKey, WeakReference<Any>>?> {
                     override fun provide(): MutableMap<ViewKey, WeakReference<Any>> {
                         return HashMap<ViewKey, WeakReference<Any>>()
                     }
-                })
+                })!!
 
-            viewsForSource.put(key, WeakReference<Any?>(proxy))
+            viewsForSource.put(key, WeakReference<Any>(proxy))
         }
 
         fun getViewFor(sourceObject: Any, key: ViewKey): Any? {
@@ -131,7 +131,7 @@ class ProtocolToModelAdapter @JvmOverloads constructor(private val targetTypePro
     }
 
     private class ViewKey(private val type: Class<*>, private val viewDecoration: ViewDecoration) : Serializable {
-        override fun equals(obj: Any): Boolean {
+        override fun equals(obj: Any?): Boolean {
             if (obj !is ViewKey) {
                 return false
             }
@@ -144,7 +144,7 @@ class ProtocolToModelAdapter @JvmOverloads constructor(private val targetTypePro
         }
     }
 
-    private class InvocationHandlerImpl(private val targetType: Class<*>, private val sourceObject: Any, private val decoration: ViewDecoration, private val graphDetails: ViewGraphDetails) :
+    private class InvocationHandlerImpl(private val targetType: Class<*>, val sourceObject: Any, private val decoration: ViewDecoration, private val graphDetails: ViewGraphDetails) :
         InvocationHandler, Serializable {
         private var proxy: Any? = null
 
@@ -182,7 +182,7 @@ class ProtocolToModelAdapter @JvmOverloads constructor(private val targetTypePro
             )
         }
 
-        override fun equals(o: Any): Boolean {
+        override fun equals(o: Any?): Boolean {
             if (o === this) {
                 return true
             }
@@ -211,13 +211,13 @@ class ProtocolToModelAdapter @JvmOverloads constructor(private val targetTypePro
                 return hashCode()
             }
 
-            val invocation = MethodInvocation(method.getName(), method.getReturnType(), method.getGenericReturnType(), method.getParameterTypes(), target, targetType, sourceObject, params)
+            val invocation = MethodInvocation(method.name, method.returnType, method.genericReturnType, method.parameterTypes, target, targetType, sourceObject, params)
             invoker!!.invoke(invocation)
             if (!invocation.found()) {
-                val methodName = method.getDeclaringClass().getSimpleName() + "." + method.getName() + "()"
+                val methodName = method.getDeclaringClass().getSimpleName() + "." + method.name + "()"
                 throw Exceptions.unsupportedMethod(methodName)
             }
-            return invocation.getResult()!!
+            return invocation.result!!
         }
 
         fun attachProxy(proxy: Any) {
@@ -247,8 +247,8 @@ class ProtocolToModelAdapter @JvmOverloads constructor(private val targetTypePro
         @Throws(Throwable::class)
         override fun invoke(invocation: MethodInvocation) {
             next.invoke(invocation)
-            if (invocation.found() && invocation.getResult() != null) {
-                invocation.setResult(Companion.convert(invocation.getGenericReturnType(), invocation.getResult()!!, decoration, graphDetails))
+            if (invocation.found() && invocation.result != null) {
+                invocation.result = Companion.convert(invocation.genericReturnType, invocation.result!!, decoration, graphDetails)
             }
         }
     }
@@ -283,7 +283,7 @@ class ProtocolToModelAdapter @JvmOverloads constructor(private val targetTypePro
             val isDirty: Boolean
                 get() = lookupClass.get() == null || parameterTypes.get() == null
 
-            override fun equals(o: Any): Boolean {
+            override fun equals(o: Any?): Boolean {
                 if (this === o) {
                     return true
                 }
@@ -332,9 +332,9 @@ class ProtocolToModelAdapter @JvmOverloads constructor(private val targetTypePro
         }
 
         fun get(invocation: MethodInvocation): Method? {
-            val owner: Class<*> = invocation.getDelegate().javaClass
-            val name = invocation.getName()
-            val parameterTypes = invocation.getParameterTypes()
+            val owner: Class<*> = invocation.delegate.javaClass
+            val name = invocation.name
+            val parameterTypes = invocation.parameterTypes
             val key = MethodInvocationKey(
                 owner,
                 name,
@@ -440,12 +440,12 @@ class ProtocolToModelAdapter @JvmOverloads constructor(private val targetTypePro
 
             val returnValue: Any?
             try {
-                returnValue = targetMethod.invoke(invocation.getDelegate(), *invocation.getParameters())
+                returnValue = targetMethod.invoke(invocation.delegate, *invocation.parameters)
             } catch (e: InvocationTargetException) {
-                throw e.cause
+                throw e.cause!!
             }
 
-            invocation.setResult(returnValue)
+            invocation.result = returnValue
         }
 
         fun locateMethod(invocation: MethodInvocation): Method? {
@@ -459,23 +459,23 @@ class ProtocolToModelAdapter @JvmOverloads constructor(private val targetTypePro
 
         @Throws(Throwable::class)
         override fun invoke(method: MethodInvocation) {
-            if (method.isGetter()) {
-                if (properties.containsKey(method.getName())) {
-                    method.setResult(properties.get(method.getName()))
+            if (method.isGetter) {
+                if (properties.containsKey(method.name)) {
+                    method.result = properties.get(method.name)
                     return
                 }
-                if (unknown.contains(method.getName())) {
+                if (unknown.contains(method.name)) {
                     return
                 }
 
                 val value: Any?
                 next.invoke(method)
                 if (!method.found()) {
-                    markUnknown(method.getName())
+                    markUnknown(method.name)
                     return
                 }
-                value = method.getResult()
-                cachePropertyValue(method.getName(), value!!)
+                value = method.result
+                cachePropertyValue(method.name, value!!)
                 return
             }
 
@@ -501,25 +501,25 @@ class ProtocolToModelAdapter @JvmOverloads constructor(private val targetTypePro
         @Throws(Throwable::class)
         override fun invoke(invocation: MethodInvocation) {
             next.invoke(invocation)
-            if (invocation.found() || invocation.getParameterTypes().size != 1 || !invocation.isIsOrGet()) {
+            if (invocation.found() || invocation.parameterTypes.size != 1 || !invocation.isIsOrGet) {
                 return
             }
 
             val getterInvocation = MethodInvocation(
-                invocation.getName(),
-                invocation.getReturnType(),
-                invocation.getGenericReturnType(),
+                invocation.name,
+                invocation.returnType,
+                invocation.genericReturnType,
                 EMPTY_CLASS_ARRAY,
-                invocation.getView(),
-                invocation.getViewType(),
-                invocation.getDelegate(),
+                invocation.view,
+                invocation.viewType,
+                invocation.delegate,
                 EMPTY
             )
             next.invoke(getterInvocation)
-            if (getterInvocation.found() && getterInvocation.getResult() != null) {
-                invocation.setResult(getterInvocation.getResult())
+            if (getterInvocation.found() && getterInvocation.result != null) {
+                invocation.result = getterInvocation.result
             } else {
-                invocation.setResult(invocation.getParameters()[0])
+                invocation.result = invocation.parameters[0]
             }
         }
     }
@@ -532,7 +532,7 @@ class ProtocolToModelAdapter @JvmOverloads constructor(private val targetTypePro
                 return
             }
 
-            val methodName = invocation.getName()
+            val methodName = invocation.name
             val isSupportMethod = methodName.length > 11 && methodName.startsWith("is") && methodName.endsWith("Supported")
             if (!isSupportMethod) {
                 return
@@ -541,16 +541,16 @@ class ProtocolToModelAdapter @JvmOverloads constructor(private val targetTypePro
             val getterName = "get" + methodName.substring(2, methodName.length - 9)
             val getterInvocation = MethodInvocation(
                 getterName,
-                invocation.getReturnType(),
-                invocation.getGenericReturnType(),
+                invocation.returnType,
+                invocation.genericReturnType,
                 EMPTY_CLASS_ARRAY,
-                invocation.getView(),
-                invocation.getViewType(),
-                invocation.getDelegate(),
+                invocation.view,
+                invocation.viewType,
+                invocation.delegate,
                 EMPTY
             )
             next.invoke(getterInvocation)
-            invocation.setResult(getterInvocation.found())
+            invocation.result = getterInvocation.found()
         }
     }
 
@@ -558,37 +558,37 @@ class ProtocolToModelAdapter @JvmOverloads constructor(private val targetTypePro
         @Throws(Throwable::class)
         override fun invoke(invocation: MethodInvocation) {
             var beanInvocation = MethodInvocation(
-                invocation.getName(),
-                invocation.getReturnType(),
-                invocation.getGenericReturnType(),
-                invocation.getParameterTypes(),
-                invocation.getView(),
-                invocation.getViewType(),
+                invocation.name,
+                invocation.returnType,
+                invocation.genericReturnType,
+                invocation.parameterTypes,
+                invocation.view,
+                invocation.viewType,
                 instance,
-                invocation.getParameters()
+                invocation.parameters
             )
             next.invoke(beanInvocation)
             if (beanInvocation.found()) {
-                invocation.setResult(beanInvocation.getResult())
+                invocation.result = beanInvocation.result
                 return
             }
-            if (!invocation.isGetter()) {
+            if (!invocation.isGetter) {
                 return
             }
 
             beanInvocation = MethodInvocation(
-                invocation.getName(),
-                invocation.getReturnType(),
-                invocation.getGenericReturnType(),
-                arrayOf<Class<*>>(invocation.getViewType()),
-                invocation.getView(),
-                invocation.getViewType(),
+                invocation.name,
+                invocation.returnType,
+                invocation.genericReturnType,
+                arrayOf<Class<*>>(invocation.viewType),
+                invocation.view,
+                invocation.viewType,
                 instance,
-                arrayOf<Any>(invocation.getView())
+                arrayOf<Any>(invocation.view)
             )
             next.invoke(beanInvocation)
             if (beanInvocation.found()) {
-                invocation.setResult(beanInvocation.getResult())
+                invocation.result = beanInvocation.result
             }
         }
     }
@@ -607,17 +607,17 @@ class ProtocolToModelAdapter @JvmOverloads constructor(private val targetTypePro
             }
 
             if (instance == null) {
-                instance = DirectInstantiator.INSTANCE.newInstance(mixInClass, invocation.getView())
+                instance = DirectInstantiator.INSTANCE.newInstance(mixInClass, invocation.view)
             }
             val beanInvocation = MethodInvocation(
-                invocation.getName(),
-                invocation.getReturnType(),
-                invocation.getGenericReturnType(),
-                invocation.getParameterTypes(),
-                invocation.getView(),
-                invocation.getViewType(),
+                invocation.name,
+                invocation.returnType,
+                invocation.genericReturnType,
+                invocation.parameterTypes,
+                invocation.view,
+                invocation.viewType,
                 instance!!,
-                invocation.getParameters()
+                invocation.parameters
             )
             current.set(beanInvocation)
             try {
@@ -626,7 +626,7 @@ class ProtocolToModelAdapter @JvmOverloads constructor(private val targetTypePro
                 current.set(null)
             }
             if (beanInvocation.found()) {
-                invocation.setResult(beanInvocation.getResult())
+                invocation.result = beanInvocation.result
             }
         }
     }
@@ -646,7 +646,7 @@ class ProtocolToModelAdapter @JvmOverloads constructor(private val targetTypePro
         override fun collectInvokers(sourceObject: Any, viewType: Class<*>, invokers: MutableList<MethodInvoker>) {
         }
 
-        override fun equals(obj: Any): Boolean {
+        override fun equals(obj: Any?): Boolean {
             return obj is NoOpDecoration
         }
 
@@ -654,9 +654,8 @@ class ProtocolToModelAdapter @JvmOverloads constructor(private val targetTypePro
             return 0
         }
 
-        override fun isNoOp(): Boolean {
-            return true
-        }
+        override val isNoOp: Boolean
+            get() = true
 
         override fun restrictTo(viewTypes: MutableSet<Class<*>>): ViewDecoration {
             return this
@@ -679,22 +678,23 @@ class ProtocolToModelAdapter @JvmOverloads constructor(private val targetTypePro
             return v
         }
 
-        override fun equals(obj: Any): Boolean {
-            if (obj.javaClass != MixInMappingAction::class.java) {
+        override fun equals(obj: Any?): Boolean {
+            if (obj?.javaClass != MixInMappingAction::class.java) {
                 return false
             }
             val other = obj as MixInMappingAction
             return decorations == other.decorations
         }
 
-        override fun isNoOp(): Boolean {
-            for (decoration in decorations) {
-                if (!decoration.isNoOp) {
-                    return false
+        override val isNoOp: Boolean
+            get() {
+                for (decoration in decorations) {
+                    if (!decoration.isNoOp) {
+                        return false
+                    }
                 }
+                return true
             }
-            return true
-        }
 
         override fun restrictTo(viewTypes: MutableSet<Class<*>>): ViewDecoration {
             val filtered: MutableList<ViewDecoration> = ArrayList<ViewDecoration>()
@@ -736,9 +736,8 @@ class ProtocolToModelAdapter @JvmOverloads constructor(private val targetTypePro
     }
 
     private abstract class TypeSpecificMappingAction(protected val targetType: Class<*>) : ViewDecoration, Serializable {
-        override fun isNoOp(): Boolean {
-            return false
-        }
+        override val isNoOp: Boolean
+            get() = false
 
         override fun restrictTo(viewTypes: MutableSet<Class<*>>): ViewDecoration {
             if (viewTypes.contains(targetType)) {
@@ -761,8 +760,8 @@ class ProtocolToModelAdapter @JvmOverloads constructor(private val targetTypePro
             return targetType.hashCode() xor mixIn.hashCode()
         }
 
-        override fun equals(obj: Any): Boolean {
-            if (obj.javaClass != MixInBeanMappingAction::class.java) {
+        override fun equals(obj: Any?): Boolean {
+            if (obj?.javaClass != MixInBeanMappingAction::class.java) {
                 return false
             }
             val other = obj as MixInBeanMappingAction
@@ -779,8 +778,8 @@ class ProtocolToModelAdapter @JvmOverloads constructor(private val targetTypePro
             return targetType.hashCode() xor mixInType.hashCode()
         }
 
-        override fun equals(obj: Any): Boolean {
-            if (obj.javaClass != MixInTypeMappingAction::class.java) {
+        override fun equals(obj: Any?): Boolean {
+            if (obj?.javaClass != MixInTypeMappingAction::class.java) {
                 return false
             }
             val other = obj as MixInTypeMappingAction
@@ -831,7 +830,7 @@ class ProtocolToModelAdapter @JvmOverloads constructor(private val targetTypePro
         private val NO_OP_MAPPER: ViewDecoration = NoOpDecoration()
         private val IDENTITY_TYPE_PROVIDER: TargetTypeProvider = object : TargetTypeProvider {
             override fun <T> getTargetType(initialTargetType: Class<T?>, protocolObject: Any): Class<out T> {
-                return initialTargetType
+                return initialTargetType as Class<out T>
             }
         }
 
@@ -839,8 +838,8 @@ class ProtocolToModelAdapter @JvmOverloads constructor(private val targetTypePro
         private val REFLECTION_METHOD_INVOKER = ReflectionMethodInvoker()
         private val TYPE_INSPECTOR = TypeInspector()
         private val COLLECTION_MAPPER = CollectionMapper()
-        private val EMPTY: Array<Any> = arrayOfNulls<Any>(0)
-        private val EMPTY_CLASS_ARRAY: Array<Class<*>> = arrayOfNulls<Class<*>>(0)
+        private val EMPTY: Array<Any> = emptyArray<Any>()
+        private val EMPTY_CLASS_ARRAY: Array<Class<*>> = emptyArray<Class<*>>()
         private val EQUALS_METHOD: Method
         private val HASHCODE_METHOD: Method
 
@@ -921,10 +920,10 @@ class ProtocolToModelAdapter @JvmOverloads constructor(private val targetTypePro
                 val annotations = targetType.getAnnotations()
                 for (annotation in annotations) {
                     if (annotation is ToolingModelContract) {
-                        val classes: Array<Class<*>> = annotation.subTypes
+                        val classes: Array<Class<*>> = annotation.subTypes.map { it.java }.toTypedArray()
                         for (clazz in classes) {
-                            result.put(clazz.getName(), clazz)
-                            Companion.getPotentialModelContractSubInterfaces(clazz, visited, result)
+                            result.put(clazz.name, clazz)
+                            Companion.getPotentialModelContractSubInterfaces(clazz as Class<Any?>, visited, result)
                         }
                     }
                 }
@@ -941,7 +940,7 @@ class ProtocolToModelAdapter @JvmOverloads constructor(private val targetTypePro
             // keep only those implemented interfaces which are in model contract set
             val filteredImplementedInterfaces: MutableSet<Class<*>> = HashSet<Class<*>>()
             for (i in allImplementedInterfaces) {
-                val actualSubType = potentialModelContractInterfaces.get(i.getName())
+                val actualSubType = potentialModelContractInterfaces.get(i.name)
                 if (actualSubType != null) {
                     filteredImplementedInterfaces.add(actualSubType)
                 }
@@ -979,20 +978,20 @@ class ProtocolToModelAdapter @JvmOverloads constructor(private val targetTypePro
                 literal = sourceObject.toString()
             }
 
-            val result = Companion.toEnum<Enum<*>>(targetType as Class<Enum<*>>, literal) as T?
+            val result = Companion.toEnum(targetType as Class<out Enum<*>>, literal) as T?
             return result
         }
 
         // Copied from GUtils.toEnum(). We can't use that class here as it depends on Java 8 classe
         // which breaks the TAPI build actions when the target Gradle version is running on Java 6.
-        fun <T : Enum<T?>?> toEnum(enumType: Class<out T>, literal: String): T? {
-            var match: T? = findEnumValue<T?>(enumType, literal)
+        fun toEnum(enumType: Class<out Enum<*>>, literal: String): Enum<*>? {
+            var match = findEnumValue(enumType, literal)
             if (match != null) {
                 return match
             }
 
             val alternativeLiteral: String? = toWords(literal, '_')
-            match = Companion.findEnumValue<T?>(enumType, alternativeLiteral!!)
+            match = Companion.findEnumValue(enumType, alternativeLiteral!!)
             if (match != null) {
                 return match
             }
@@ -1008,12 +1007,12 @@ class ProtocolToModelAdapter @JvmOverloads constructor(private val targetTypePro
             throw IllegalArgumentException(
                 String.format(
                     "Cannot convert string value '%s' to an enum value of type '%s' (valid case insensitive values: %s)",
-                    literal, enumType.getName(), builder.toString()
+                    literal, enumType.name, builder.toString()
                 )
             )
         }
 
-        private fun <T : Enum<T?>?> findEnumValue(enumType: Class<out T>, literal: String): T? {
+        private fun findEnumValue(enumType: Class<out Enum<*>>, literal: String): Enum<*>? {
             for (ec in enumType.getEnumConstants()) {
                 if (ec.name.equals(literal, ignoreCase = true)) {
                     return ec
@@ -1076,11 +1075,11 @@ class ProtocolToModelAdapter @JvmOverloads constructor(private val targetTypePro
                 }
             }
             if (targetType is Class<*>) {
-                val targetClassType = uncheckedNonnullCast<Class<Any>?>(targetType)
-                if (targetClassType!!.isPrimitive()) {
+                val targetClassType = uncheckedNonnullCast<Class<Any>>(targetType)
+                if (targetClassType.isPrimitive()) {
                     return sourceObject
                 }
-                return Companion.createView<Any>(targetClassType, sourceObject, decoration, graphDetails)
+                return Companion.createView<Any>(targetClassType as Class<Any?>, sourceObject, decoration, graphDetails)
             }
             throw UnsupportedOperationException(String.format("Cannot convert object of %s to %s.", sourceObject.javaClass, targetType))
         }

@@ -15,5 +15,4 @@
  */
 package org.gradle.language.base.internal.model
 
-import org.gradle.language.base.internal.compile.Compiler.execute
 

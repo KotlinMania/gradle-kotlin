@@ -18,6 +18,6 @@ package org.gradle.internal.logging.events
 import org.gradle.api.logging.LogLevel
 
 class UserInputRequestEvent : OutputEvent(), InteractiveEvent {
-    val logLevel: LogLevel
+    override val logLevel: LogLevel
         get() = LogLevel.QUIET
 }

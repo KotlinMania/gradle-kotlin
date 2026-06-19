@@ -15,16 +15,4 @@
  */
 package org.gradle.api.plugins.quality.internal
 
-import org.gradle.internal.deprecation.DeprecationLogger.whileDisabled
-import org.gradle.internal.nativeintegration.services.NativeServices.Companion.getInstance
-import org.gradle.internal.service.ServiceRegistry.get
-import org.gradle.internal.deprecation.DeprecationLogger.deprecateMethod
-import org.gradle.internal.deprecation.DeprecationMessageBuilder.withAdvice
-import org.gradle.internal.deprecation.DeprecationMessageBuilder.willBeRemovedInGradle10
-import org.gradle.internal.deprecation.Documentation.AbstractBuilder.withUpgradeGuideSection
-import org.gradle.internal.deprecation.DeprecationMessageBuilder.WithDocumentation.nagUser
-import org.gradle.internal.Cast.uncheckedCast
-import org.gradle.api.JavaVersion.toString
-import org.gradle.api.JavaVersion.Companion.toVersion
-import org.gradle.api.JavaVersion.isJava9Compatible
 

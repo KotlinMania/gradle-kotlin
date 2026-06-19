@@ -28,12 +28,12 @@ class DefaultContextAwareTaskLogger(delegate: Logger?) : ContextAwareTaskLogger 
     private var fallbackOperationIdentifier: OperationIdentifier? = null
 
     init {
-        this.delegate = Cast.cast<BuildOperationAwareLogger, Logger?>(BuildOperationAwareLogger::class.java, delegate)
+        this.delegate = Cast.cast<BuildOperationAwareLogger, Logger?>(BuildOperationAwareLogger::class.java as Class<BuildOperationAwareLogger?>, delegate)!!
     }
 
     fun getMessageRewriter(): ContextAwareTaskLogger.MessageRewriter? {
         return if (delegate is MessageRewritingBuildOperationAwareLogger)
-            (delegate as MessageRewritingBuildOperationAwareLogger).getMessageRewriter()
+            (delegate as MessageRewritingBuildOperationAwareLogger).messageRewriter
         else
             null
     }
@@ -46,13 +46,11 @@ class DefaultContextAwareTaskLogger(delegate: Logger?) : ContextAwareTaskLogger 
         this.fallbackOperationIdentifier = operationIdentifier
     }
 
-    override fun isLifecycleEnabled(): Boolean {
-        return delegate.isLifecycleEnabled()
-    }
+    override val isLifecycleEnabled: Boolean
+        get() = delegate.isLifecycleEnabled
 
-    override fun isQuietEnabled(): Boolean {
-        return delegate.isQuietEnabled()
-    }
+    override val isQuietEnabled: Boolean
+        get() = delegate.isQuietEnabled
 
     override fun isEnabled(level: LogLevel?): Boolean {
         return delegate.isEnabled(level)
@@ -132,7 +130,7 @@ class DefaultContextAwareTaskLogger(delegate: Logger?) : ContextAwareTaskLogger 
     override fun trace(marker: Marker?, msg: String?, t: Throwable?) {
     }
 
-    private fun log(logLevel: LogLevel?, throwable: Throwable?, message: String?) {
+    private fun logMessage(logLevel: LogLevel?, throwable: Throwable?, message: String?) {
         delegate.log(logLevel, throwable, message, currentBuildOperationId())
     }
 
@@ -141,313 +139,313 @@ class DefaultContextAwareTaskLogger(delegate: Logger?) : ContextAwareTaskLogger 
         return if (buildOperationId != null) buildOperationId else fallbackOperationIdentifier
     }
 
-    private fun log(logLevel: LogLevel?, throwable: Throwable?, format: String?, arg: Any?) {
-        log(logLevel, throwable, format, arrayOf<Any?>(arg))
+    private fun logOne(logLevel: LogLevel?, throwable: Throwable?, format: String?, arg: Any?) {
+        logMany(logLevel, throwable, format, arrayOf<Any?>(arg))
     }
 
-    private fun log(logLevel: LogLevel?, throwable: Throwable?, format: String?, arg1: Any?, arg2: Any?) {
-        log(logLevel, throwable, format, arrayOf<Any?>(arg1, arg2))
+    private fun logTwo(logLevel: LogLevel?, throwable: Throwable?, format: String?, arg1: Any?, arg2: Any?) {
+        logMany(logLevel, throwable, format, arrayOf<Any?>(arg1, arg2))
     }
 
-    private fun log(logLevel: LogLevel?, throwable: Throwable?, format: String?, args: Array<Any?>?) {
+    private fun logMany(logLevel: LogLevel?, throwable: Throwable?, format: String?, args: Array<out Any?>?) {
         val tuple = MessageFormatter.arrayFormat(format, args)
         val loggedThrowable = if (throwable == null) tuple.getThrowable() else throwable
 
-        log(logLevel, loggedThrowable, tuple.getMessage())
+        logMessage(logLevel, loggedThrowable, tuple.getMessage())
     }
 
     override fun debug(message: String?) {
         if (isDebugEnabled()) {
-            log(LogLevel.DEBUG, null, message)
+            logMessage(LogLevel.DEBUG, null, message)
         }
     }
 
     override fun debug(format: String?, arg: Any?) {
         if (isDebugEnabled()) {
-            log(LogLevel.DEBUG, null, format, arg)
+            logOne(LogLevel.DEBUG, null, format, arg)
         }
     }
 
     override fun debug(format: String?, arg1: Any?, arg2: Any?) {
         if (isDebugEnabled()) {
-            log(LogLevel.DEBUG, null, format, arg1, arg2)
+            logTwo(LogLevel.DEBUG, null, format, arg1, arg2)
         }
     }
 
     override fun debug(format: String?, vararg arguments: Any?) {
         if (isDebugEnabled()) {
-            log(LogLevel.DEBUG, null, format, arguments)
+            logMany(LogLevel.DEBUG, null, format, arguments)
         }
     }
 
     override fun debug(msg: String?, t: Throwable?) {
         if (isDebugEnabled()) {
-            log(LogLevel.DEBUG, t, msg)
+            logMessage(LogLevel.DEBUG, t, msg)
         }
     }
 
     override fun debug(marker: Marker?, msg: String?) {
         if (isDebugEnabled(marker)) {
-            log(LogLevel.DEBUG, null, msg)
+            logMessage(LogLevel.DEBUG, null, msg)
         }
     }
 
     override fun debug(marker: Marker?, format: String?, arg: Any?) {
         if (isDebugEnabled(marker)) {
-            log(LogLevel.DEBUG, null, format, arg)
+            logOne(LogLevel.DEBUG, null, format, arg)
         }
     }
 
     override fun debug(marker: Marker?, format: String?, arg1: Any?, arg2: Any?) {
         if (isDebugEnabled(marker)) {
-            log(LogLevel.DEBUG, null, format, arg1, arg2)
+            logTwo(LogLevel.DEBUG, null, format, arg1, arg2)
         }
     }
 
     override fun debug(marker: Marker?, format: String?, vararg argArray: Any?) {
         if (isDebugEnabled(marker)) {
-            log(LogLevel.DEBUG, null, format, argArray)
+            logMany(LogLevel.DEBUG, null, format, argArray)
         }
     }
 
     override fun debug(marker: Marker?, msg: String?, t: Throwable?) {
         if (isDebugEnabled(marker)) {
-            log(LogLevel.DEBUG, t, msg)
+            logMessage(LogLevel.DEBUG, t, msg)
         }
     }
 
     override fun info(message: String?) {
         if (isInfoEnabled()) {
-            log(LogLevel.INFO, null, message)
+            logMessage(LogLevel.INFO, null, message)
         }
     }
 
     override fun info(format: String?, arg: Any?) {
         if (isInfoEnabled()) {
-            log(LogLevel.INFO, null, format, arg)
+            logOne(LogLevel.INFO, null, format, arg)
         }
     }
 
     override fun info(format: String?, arg1: Any?, arg2: Any?) {
         if (isInfoEnabled()) {
-            log(LogLevel.INFO, null, format, arg1, arg2)
+            logTwo(LogLevel.INFO, null, format, arg1, arg2)
         }
     }
 
     override fun info(format: String?, vararg arguments: Any?) {
         if (isInfoEnabled()) {
-            log(LogLevel.INFO, null, format, arguments)
+            logMany(LogLevel.INFO, null, format, arguments)
         }
     }
 
     override fun lifecycle(message: String?) {
-        if (isLifecycleEnabled()) {
-            log(LogLevel.LIFECYCLE, null, message)
+        if (isLifecycleEnabled) {
+            logMessage(LogLevel.LIFECYCLE, null, message)
         }
     }
 
     override fun lifecycle(message: String?, vararg objects: Any?) {
-        if (isLifecycleEnabled()) {
-            log(LogLevel.LIFECYCLE, null, message, objects)
+        if (isLifecycleEnabled) {
+            logMany(LogLevel.LIFECYCLE, null, message, objects)
         }
     }
 
     override fun lifecycle(message: String?, throwable: Throwable?) {
-        if (isLifecycleEnabled()) {
-            log(LogLevel.LIFECYCLE, throwable, message)
+        if (isLifecycleEnabled) {
+            logMessage(LogLevel.LIFECYCLE, throwable, message)
         }
     }
 
 
     override fun quiet(message: String?) {
-        if (isQuietEnabled()) {
-            log(LogLevel.QUIET, null, message)
+        if (isQuietEnabled) {
+            logMessage(LogLevel.QUIET, null, message)
         }
     }
 
     override fun quiet(message: String?, vararg objects: Any?) {
-        if (isQuietEnabled()) {
-            log(LogLevel.QUIET, null, message, objects)
+        if (isQuietEnabled) {
+            logMany(LogLevel.QUIET, null, message, objects)
         }
     }
 
     override fun quiet(message: String?, throwable: Throwable?) {
-        if (isQuietEnabled()) {
-            log(LogLevel.QUIET, throwable, message)
+        if (isQuietEnabled) {
+            logMessage(LogLevel.QUIET, throwable, message)
         }
     }
 
     override fun log(level: LogLevel?, message: String?) {
         if (isEnabled(level)) {
-            log(level, null, message)
+            logMessage(level, null, message)
         }
     }
 
     override fun log(level: LogLevel?, message: String?, vararg objects: Any?) {
         if (isEnabled(level)) {
-            log(level, null, message, objects)
+            logMany(level, null, message, objects)
         }
     }
 
     override fun log(level: LogLevel?, message: String?, throwable: Throwable?) {
         if (isEnabled(level)) {
-            log(level, throwable, message)
+            logMessage(level, throwable, message)
         }
     }
 
     override fun info(msg: String?, t: Throwable?) {
         if (isInfoEnabled()) {
-            log(LogLevel.INFO, t, msg)
+            logMessage(LogLevel.INFO, t, msg)
         }
     }
 
     override fun info(marker: Marker?, msg: String?) {
         if (isInfoEnabled(marker)) {
-            log(BuildOperationAwareLogger.Companion.toLogLevel(marker), null, msg)
+            logMessage(BuildOperationAwareLogger.Companion.toLogLevel(marker), null, msg)
         }
     }
 
     override fun info(marker: Marker?, format: String?, arg: Any?) {
         if (isInfoEnabled(marker)) {
-            log(BuildOperationAwareLogger.Companion.toLogLevel(marker), null, format, arg)
+            logOne(BuildOperationAwareLogger.Companion.toLogLevel(marker), null, format, arg)
         }
     }
 
     override fun info(marker: Marker?, format: String?, arg1: Any?, arg2: Any?) {
         if (isInfoEnabled(marker)) {
-            log(BuildOperationAwareLogger.Companion.toLogLevel(marker), null, format, arg1, arg2)
+            logTwo(BuildOperationAwareLogger.Companion.toLogLevel(marker), null, format, arg1, arg2)
         }
     }
 
     override fun info(marker: Marker?, format: String?, vararg argArray: Any?) {
         if (isInfoEnabled(marker)) {
-            log(BuildOperationAwareLogger.Companion.toLogLevel(marker), null, format, argArray)
+            logMany(BuildOperationAwareLogger.Companion.toLogLevel(marker), null, format, argArray)
         }
     }
 
     override fun info(marker: Marker?, msg: String?, t: Throwable?) {
         if (isInfoEnabled(marker)) {
-            log(BuildOperationAwareLogger.Companion.toLogLevel(marker), t, msg)
+            logMessage(BuildOperationAwareLogger.Companion.toLogLevel(marker), t, msg)
         }
     }
 
     override fun warn(message: String?) {
         if (isWarnEnabled()) {
-            log(LogLevel.WARN, null, message)
+            logMessage(LogLevel.WARN, null, message)
         }
     }
 
     override fun warn(format: String?, arg: Any?) {
         if (isWarnEnabled()) {
-            log(LogLevel.WARN, null, format, arg)
+            logOne(LogLevel.WARN, null, format, arg)
         }
     }
 
     override fun warn(format: String?, arg1: Any?, arg2: Any?) {
         if (isWarnEnabled()) {
-            log(LogLevel.WARN, null, format, arg1, arg2)
+            logTwo(LogLevel.WARN, null, format, arg1, arg2)
         }
     }
 
     override fun warn(format: String?, vararg arguments: Any?) {
         if (isWarnEnabled()) {
-            log(LogLevel.WARN, null, format, arguments)
+            logMany(LogLevel.WARN, null, format, arguments)
         }
     }
 
     override fun warn(msg: String?, t: Throwable?) {
         if (isWarnEnabled()) {
-            log(LogLevel.WARN, t, msg)
+            logMessage(LogLevel.WARN, t, msg)
         }
     }
 
     override fun warn(marker: Marker?, msg: String?) {
         if (isWarnEnabled(marker)) {
-            log(LogLevel.WARN, null, msg)
+            logMessage(LogLevel.WARN, null, msg)
         }
     }
 
     override fun warn(marker: Marker?, format: String?, arg: Any?) {
         if (isWarnEnabled(marker)) {
-            log(LogLevel.WARN, null, format, arg)
+            logOne(LogLevel.WARN, null, format, arg)
         }
     }
 
     override fun warn(marker: Marker?, format: String?, arg1: Any?, arg2: Any?) {
         if (isWarnEnabled(marker)) {
-            log(LogLevel.WARN, null, format, arg1, arg2)
+            logTwo(LogLevel.WARN, null, format, arg1, arg2)
         }
     }
 
     override fun warn(marker: Marker?, format: String?, vararg argArray: Any?) {
         if (isWarnEnabled(marker)) {
-            log(LogLevel.WARN, null, format, argArray)
+            logMany(LogLevel.WARN, null, format, argArray)
         }
     }
 
     override fun warn(marker: Marker?, msg: String?, t: Throwable?) {
         if (isWarnEnabled(marker)) {
-            log(LogLevel.WARN, t, msg)
+            logMessage(LogLevel.WARN, t, msg)
         }
     }
 
     override fun error(message: String?) {
         if (isErrorEnabled()) {
-            log(LogLevel.ERROR, null, message)
+            logMessage(LogLevel.ERROR, null, message)
         }
     }
 
     override fun error(format: String?, arg: Any?) {
         if (isErrorEnabled()) {
-            log(LogLevel.ERROR, null, format, arg)
+            logOne(LogLevel.ERROR, null, format, arg)
         }
     }
 
     override fun error(format: String?, arg1: Any?, arg2: Any?) {
         if (isErrorEnabled()) {
-            log(LogLevel.ERROR, null, format, arg1, arg2)
+            logTwo(LogLevel.ERROR, null, format, arg1, arg2)
         }
     }
 
     override fun error(format: String?, vararg arguments: Any?) {
         if (isErrorEnabled()) {
-            log(LogLevel.ERROR, null, format, arguments)
+            logMany(LogLevel.ERROR, null, format, arguments)
         }
     }
 
     override fun error(msg: String?, t: Throwable?) {
         if (isErrorEnabled()) {
-            log(LogLevel.ERROR, t, msg)
+            logMessage(LogLevel.ERROR, t, msg)
         }
     }
 
     override fun error(marker: Marker?, msg: String?) {
         if (isErrorEnabled(marker)) {
-            log(LogLevel.ERROR, null, msg)
+            logMessage(LogLevel.ERROR, null, msg)
         }
     }
 
     override fun error(marker: Marker?, format: String?, arg: Any?) {
         if (isErrorEnabled(marker)) {
-            log(LogLevel.ERROR, null, format, arg)
+            logOne(LogLevel.ERROR, null, format, arg)
         }
     }
 
     override fun error(marker: Marker?, format: String?, arg1: Any?, arg2: Any?) {
         if (isErrorEnabled(marker)) {
-            log(LogLevel.ERROR, null, format, arg1, arg2)
+            logTwo(LogLevel.ERROR, null, format, arg1, arg2)
         }
     }
 
     override fun error(marker: Marker?, format: String?, vararg argArray: Any?) {
         if (isErrorEnabled(marker)) {
-            log(LogLevel.ERROR, null, format, argArray)
+            logMany(LogLevel.ERROR, null, format, argArray)
         }
     }
 
     override fun error(marker: Marker?, msg: String?, t: Throwable?) {
         if (isErrorEnabled(marker)) {
-            log(LogLevel.ERROR, t, msg)
+            logMessage(LogLevel.ERROR, t, msg)
         }
     }
 }

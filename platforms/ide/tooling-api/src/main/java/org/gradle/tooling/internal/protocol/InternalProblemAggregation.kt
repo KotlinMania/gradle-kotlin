@@ -15,6 +15,9 @@
  */
 package org.gradle.tooling.internal.protocol
 
+import org.gradle.tooling.events.problems.Problem
+import org.gradle.tooling.internal.protocol.problem.InternalLabel
+import org.gradle.tooling.internal.protocol.problem.InternalProblemCategory
 import org.jspecify.annotations.NullMarked
 
 @NullMarked

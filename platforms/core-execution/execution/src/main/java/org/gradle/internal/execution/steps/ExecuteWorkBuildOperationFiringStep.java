@@ -58,7 +58,7 @@ public class ExecuteWorkBuildOperationFiringStep<C extends IdentityContext, R ex
                         result.getExecutionReasons()
                     );
                     operationContext.setResult(operationResult);
-                    result.getExecution().failure.ifPresent(operationContext::failed);
+                    result.getExecution().getFailure().ifPresent(operationContext::failed);
                     return result;
                 },
                 BuildOperationDescriptor

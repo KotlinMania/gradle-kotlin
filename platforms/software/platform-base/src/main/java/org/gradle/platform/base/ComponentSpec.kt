@@ -28,6 +28,5 @@ interface ComponentSpec : ModelElement {
     /**
      * The path to the project containing this component.
      */
-    @JvmField
     val projectPath: String?
 }

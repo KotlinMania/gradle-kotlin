@@ -33,11 +33,10 @@ import org.gradle.internal.buildoption.Origin
 import org.gradle.internal.buildoption.StringBuildOption
 import org.gradle.util.internal.TextUtil
 import org.jspecify.annotations.NullMarked
-import java.util.Arrays
 
-class LoggingConfigurationBuildOptions : BuildOptionSet<LoggingConfiguration?>() {
+class LoggingConfigurationBuildOptions : BuildOptionSet<LoggingConfiguration>() {
     // This can be removed once we've moved to compiling for Java 8+
-    private val options: MutableList<out BuildOption<in LoggingConfiguration?>?> = Arrays.asList<AbstractBuildOption<LoggingConfiguration?, CommandLineOptionConfiguration?>?>(
+    private val options: MutableList<BuildOption<in LoggingConfiguration>> = mutableListOf(
         LogLevelOption(),
         StacktraceOption(),
         WarningsOption(),
@@ -46,19 +45,19 @@ class LoggingConfigurationBuildOptions : BuildOptionSet<LoggingConfiguration?>()
         NonInteractiveOption()
     )
 
-    override fun getAllOptions(): MutableList<out BuildOption<in LoggingConfiguration?>?> {
+    override fun getAllOptions(): MutableList<out BuildOption<in LoggingConfiguration>> {
         return options
     }
 
-    val longLogLevelOptions: MutableCollection<String?>
-        get() = Arrays.asList<String?>(
+    val longLogLevelOptions: Collection<String>
+        get() = listOf(
             LogLevelOption.Companion.DEBUG_LONG_OPTION,
             LogLevelOption.Companion.WARN_LONG_OPTION,
             LogLevelOption.Companion.INFO_LONG_OPTION,
             LogLevelOption.Companion.QUIET_LONG_OPTION
         )
 
-    class LogLevelOption : AbstractBuildOption<LoggingConfiguration?, CommandLineOptionConfiguration?>(
+    class LogLevelOption : AbstractBuildOption<LoggingConfiguration, CommandLineOptionConfiguration>(
         GRADLE_PROPERTY,
         CommandLineOptionConfiguration.create(QUIET_LONG_OPTION, QUIET_SHORT_OPTION, "Logs errors only."),
         CommandLineOptionConfiguration.create(WARN_LONG_OPTION, WARN_SHORT_OPTION, "Sets the log level to warn."),
@@ -69,7 +68,7 @@ class LoggingConfigurationBuildOptions : BuildOptionSet<LoggingConfiguration?>()
             return OptionCategory.LOGGING
         }
 
-        override fun applyFromProperty(properties: MutableMap<String?, String?>, settings: LoggingConfiguration) {
+        override fun applyFromProperty(properties: MutableMap<String, String>, settings: LoggingConfiguration) {
             val value = properties.get(property)
 
             if (value != null) {
@@ -80,7 +79,7 @@ class LoggingConfigurationBuildOptions : BuildOptionSet<LoggingConfiguration?>()
 
         override fun configure(parser: CommandLineParser) {
             for (config in commandLineOptionConfigurations) {
-                configureCommandLineOption(parser, config!!.getAllOptions(), config.getDescription(), config.isDeprecated(), config.isIncubating())
+                configureCommandLineOption(parser, config.getAllOptions(), config.getDescription(), config.isDeprecated(), config.isIncubating())
             }
 
             parser.allowOneOf(*ALL_SHORT_OPTIONS)
@@ -108,7 +107,7 @@ class LoggingConfigurationBuildOptions : BuildOptionSet<LoggingConfiguration?>()
             const val INFO_SHORT_OPTION: String = "i"
             const val DEBUG_LONG_OPTION: String = "debug"
             const val DEBUG_SHORT_OPTION: String = "d"
-            private val ALL_SHORT_OPTIONS: Array<String?> = arrayOf<String>(QUIET_SHORT_OPTION, WARN_SHORT_OPTION, INFO_SHORT_OPTION, DEBUG_SHORT_OPTION)
+            private val ALL_SHORT_OPTIONS: Array<String> = arrayOf(QUIET_SHORT_OPTION, WARN_SHORT_OPTION, INFO_SHORT_OPTION, DEBUG_SHORT_OPTION)
 
             fun parseLogLevel(value: String): LogLevel? {
                 try {
@@ -123,7 +122,7 @@ class LoggingConfigurationBuildOptions : BuildOptionSet<LoggingConfiguration?>()
         }
     }
 
-    class StacktraceOption : AbstractBuildOption<LoggingConfiguration?, CommandLineOptionConfiguration?>(
+    class StacktraceOption : AbstractBuildOption<LoggingConfiguration, CommandLineOptionConfiguration>(
         GRADLE_PROPERTY, CommandLineOptionConfiguration.create(STACKTRACE_LONG_OPTION, STACKTRACE_SHORT_OPTION, "Prints the stacktrace for all exceptions."), CommandLineOptionConfiguration.create(
             FULL_STACKTRACE_LONG_OPTION, FULL_STACKTRACE_SHORT_OPTION, "Prints the full (very verbose) stacktrace for all exceptions."
         )
@@ -132,7 +131,7 @@ class LoggingConfigurationBuildOptions : BuildOptionSet<LoggingConfiguration?>()
             return OptionCategory.LOGGING
         }
 
-        override fun applyFromProperty(properties: MutableMap<String?, String?>, settings: LoggingConfiguration) {
+        override fun applyFromProperty(properties: MutableMap<String, String>, settings: LoggingConfiguration) {
             val value = properties.get(property)
 
             if (value != null) {
@@ -150,7 +149,7 @@ class LoggingConfigurationBuildOptions : BuildOptionSet<LoggingConfiguration?>()
 
         override fun configure(parser: CommandLineParser) {
             for (config in commandLineOptionConfigurations) {
-                configureCommandLineOption(parser, config!!.getAllOptions(), config.getDescription(), config.isDeprecated(), config.isIncubating())
+                configureCommandLineOption(parser, config.getAllOptions(), config.getDescription(), config.isDeprecated(), config.isIncubating())
             }
 
             parser.allowOneOf(*ALL_SHORT_OPTIONS)
@@ -170,11 +169,11 @@ class LoggingConfigurationBuildOptions : BuildOptionSet<LoggingConfiguration?>()
             const val STACKTRACE_SHORT_OPTION: String = "s"
             const val FULL_STACKTRACE_LONG_OPTION: String = "full-stacktrace"
             const val FULL_STACKTRACE_SHORT_OPTION: String = "S"
-            private val ALL_SHORT_OPTIONS: Array<String?> = arrayOf<String>(STACKTRACE_SHORT_OPTION, FULL_STACKTRACE_SHORT_OPTION)
+            private val ALL_SHORT_OPTIONS: Array<String> = arrayOf(STACKTRACE_SHORT_OPTION, FULL_STACKTRACE_SHORT_OPTION)
         }
     }
 
-    class ConsoleOption : StringBuildOption<LoggingConfiguration?>(
+    class ConsoleOption : StringBuildOption<LoggingConfiguration>(
         GRADLE_PROPERTY,
         CommandLineOptionConfiguration.create(LONG_OPTION, "Specifies which type of console output to generate. Supported values are 'plain', 'colored', 'auto' (default), 'rich', or 'verbose'.")
     ) {
@@ -236,7 +235,7 @@ class LoggingConfigurationBuildOptions : BuildOptionSet<LoggingConfiguration?>()
         }
     }
 
-    class WarningsOption : StringBuildOption<LoggingConfiguration?>(
+    class WarningsOption : StringBuildOption<LoggingConfiguration>(
         GRADLE_PROPERTY,
         CommandLineOptionConfiguration.create(LONG_OPTION, "Specifies which mode of warnings to generate. Supported values are 'all', 'fail', 'summary' (default), or 'none'.")
     ) {

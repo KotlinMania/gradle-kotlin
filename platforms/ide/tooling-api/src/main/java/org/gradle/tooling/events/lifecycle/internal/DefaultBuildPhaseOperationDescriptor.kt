@@ -22,19 +22,15 @@ import org.gradle.tooling.internal.protocol.events.InternalBuildPhaseDescriptor
 
 class DefaultBuildPhaseOperationDescriptor(internalDescriptor: InternalBuildPhaseDescriptor, parent: OperationDescriptor?) : DefaultOperationDescriptor(internalDescriptor, parent),
     BuildPhaseOperationDescriptor {
-    private val buildPhase: String?
-    private val buildItemsCount: Int
+    override val buildPhase: String?
+    override val buildItemsCount: Int
 
     init {
         this.buildPhase = internalDescriptor.buildPhase
         this.buildItemsCount = internalDescriptor.buildItemsCount
     }
 
-    override fun getBuildPhase(): String? {
-        return buildPhase
-    }
 
-    override fun getBuildItemsCount(): Int {
-        return buildItemsCount
-    }
+
+
 }

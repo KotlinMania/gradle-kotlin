@@ -15,6 +15,8 @@
  */
 package org.gradle.testkit.runner.internal
 
+import java.io.File
+
 interface TestKitDirProvider {
     val dir: File?
 }

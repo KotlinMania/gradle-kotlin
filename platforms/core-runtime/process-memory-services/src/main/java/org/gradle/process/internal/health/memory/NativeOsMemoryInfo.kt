@@ -23,7 +23,8 @@ import org.gradle.internal.nativeintegration.services.NativeServices.Companion.g
 class NativeOsMemoryInfo : OsMemoryInfo {
     override fun getOsSnapshot(): OsMemoryStatus {
         try {
-            val memory = getInstance().get<Memory>(Memory::class.java)
+            @Suppress("UNCHECKED_CAST")
+            val memory = getInstance().get<Memory>(Memory::class.java as Class<Memory?>)!!
             val memoryInfo = memory.getMemoryInfo()
             return OsMemoryStatusSnapshot(memoryInfo.getTotalPhysicalMemory(), memoryInfo.getAvailablePhysicalMemory())
         } catch (ex: NativeException) {

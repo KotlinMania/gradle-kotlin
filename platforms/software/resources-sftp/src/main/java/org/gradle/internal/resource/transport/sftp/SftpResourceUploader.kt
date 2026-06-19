@@ -27,22 +27,22 @@ import org.gradle.internal.resource.transfer.ExternalResourceUploader
 import java.io.IOException
 import java.net.URI
 
-class SftpResourceUploader(private val sftpClientFactory: SftpClientFactory, private val credentials: PasswordCredentials?) : ExternalResourceUploader {
+class SftpResourceUploader(private val sftpClientFactory: SftpClientFactory, private val credentials: PasswordCredentials) : ExternalResourceUploader {
     @Throws(IOException::class)
     override fun upload(resource: ReadableContent, destination: ExternalResourceName) {
-        val client = sftpClientFactory.createSftpClient(destination.getUri(), credentials)
+        val client = sftpClientFactory.createSftpClient(destination.uri, credentials)
 
         try {
             val channel = client.getSftpClient()
-            ensureParentDirectoryExists(channel, destination.getUri())
+            ensureParentDirectoryExists(channel, destination.uri)
             val sourceStream = resource.open()
             try {
-                channel.put(sourceStream, destination.getPath())
+                channel.put(sourceStream, destination.path)
             } finally {
                 sourceStream.close()
             }
         } catch (e: SftpException) {
-            throw ResourceExceptions.putFailed(destination.getUri(), e)
+            throw ResourceExceptions.putFailed(destination.uri, e)
         } finally {
             sftpClientFactory.releaseSftpClient(client)
         }

@@ -19,12 +19,8 @@ import org.gradle.tooling.events.PluginIdentifier
 import org.gradle.tooling.events.configuration.ProjectConfigurationOperationResult
 import java.time.Duration
 
-class DefaultPluginApplicationResult(private val plugin: PluginIdentifier?, private val totalConfigurationTime: Duration?) : ProjectConfigurationOperationResult.PluginApplicationResult {
-    override fun getPlugin(): PluginIdentifier? {
-        return plugin
-    }
+class DefaultPluginApplicationResult(override val plugin: PluginIdentifier?, override val totalConfigurationTime: Duration?) : ProjectConfigurationOperationResult.PluginApplicationResult {
 
-    override fun getTotalConfigurationTime(): Duration? {
-        return totalConfigurationTime
-    }
+
+
 }

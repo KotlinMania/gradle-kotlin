@@ -54,32 +54,26 @@ open class JavaToolchain(
         this.isFallbackToolchain = isFallbackToolchain
     }
 
-    override fun getLanguageVersion(): JavaLanguageVersion {
-        return javaVersion
-    }
+    override val languageVersion: JavaLanguageVersion
+        get() = javaVersion
 
-    @Internal
-    override fun getJavaRuntimeVersion(): String {
-        return metadata.runtimeVersion!!
-    }
+    @get:Internal
+    override val javaRuntimeVersion: String
+        get() = metadata.runtimeVersion!!
 
-    override fun getJvmVersion(): String {
-        return metadata.jvmVersion!!
-    }
+    override val jvmVersion: String
+        get() = metadata.jvmVersion!!
 
-    @Internal
-    override fun getInstallationPath(): Directory {
-        return javaHome
-    }
+    @get:Internal
+    override val installationPath: Directory
+        get() = javaHome
 
-    @Internal
-    override fun isCurrentJvm(): Boolean {
-        return javaHome.getAsFile() == Jvm.current().getJavaHome()
-    }
+    @get:Internal
+    override val isCurrentJvm: Boolean
+        get() = javaHome.getAsFile() == Jvm.current().getJavaHome()
 
-    override fun getVendor(): String {
-        return metadata.vendor!!.displayName!!
-    }
+    override val vendor: String
+        get() = metadata.vendor!!.displayName!!
 
     @Internal
     override fun getDisplayName(): String {
@@ -87,7 +81,7 @@ open class JavaToolchain(
     }
 
     open fun findExecutable(toolName: String?): RegularFile? {
-        return getInstallationPath().file(getBinaryPath(toolName))
+        return installationPath.file(getBinaryPath(toolName))
     }
 
     override fun toString(): String {
@@ -95,7 +89,7 @@ open class JavaToolchain(
     }
 
     private fun getBinaryPath(java: String?): String {
-        return "bin/" + current()!!.getExecutableName(java)
+        return "bin/" + current()!!.getExecutableName(java!!)
     }
 
     companion object {

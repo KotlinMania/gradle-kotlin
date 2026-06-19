@@ -32,6 +32,7 @@ fun interface IoSupplier<T> {
          *
          * Any `IOException`s are rethrown as [UncheckedIOException].
          */
+        @JvmStatic
         fun <T> wrap(supplier: IoSupplier<T?>): Supplier<T?> {
             return Supplier {
                 try {

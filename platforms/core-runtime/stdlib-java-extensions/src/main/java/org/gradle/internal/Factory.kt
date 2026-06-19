@@ -15,15 +15,17 @@
  */
 package org.gradle.internal
 
+import org.jspecify.annotations.Nullable
+
 /**
  * A generic factory which creates instances of type T.
  *
  * @param <T> The type of object created.
 </T> */
-interface Factory<T : Any?> {
+interface Factory<T : @Nullable Any?> {
     /**
      * Creates a new instance of type T.
      * @return The instance.
      */
-    fun create(): T?
+    fun create(): T
 }

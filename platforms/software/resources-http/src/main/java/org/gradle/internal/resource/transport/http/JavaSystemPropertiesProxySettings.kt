@@ -20,16 +20,16 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
 abstract class JavaSystemPropertiesProxySettings internal constructor(
-    val propertyPrefix: String?,
+    val propertyPrefix: String,
     val defaultPort: Int,
     proxyHost: String?,
     proxyPortString: String?,
     proxyUser: String?,
     proxyPassword: String?
 ) : HttpProxySettings {
-    private val proxy: HttpProxySettings.HttpProxy?
+    final override val proxy: HttpProxySettings.HttpProxy?
 
-    constructor(propertyPrefix: String?, defaultPort: Int) : this(
+    constructor(propertyPrefix: String, defaultPort: Int) : this(
         propertyPrefix, defaultPort,
         getAndTrimSystemProperty(propertyPrefix + ".proxyHost"),
         getAndTrimSystemProperty(propertyPrefix + ".proxyPort"),
@@ -59,10 +59,6 @@ abstract class JavaSystemPropertiesProxySettings internal constructor(
             )
             return defaultPort
         }
-    }
-
-    override fun getProxy(): HttpProxySettings.HttpProxy? {
-        return proxy
     }
 
     companion object {

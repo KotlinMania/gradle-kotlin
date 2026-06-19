@@ -26,7 +26,5 @@ interface DeprecationData : AdditionalData {
         USER_CODE_INDIRECT,
         BUILD_INVOCATION
     }
-
-    @JvmField
-    val type: Type?
+    fun getType(): Type?
 }

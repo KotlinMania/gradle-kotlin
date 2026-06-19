@@ -18,15 +18,7 @@ package org.gradle.testkit.runner.internal
 import org.gradle.testkit.runner.BuildTask
 import org.gradle.testkit.runner.TaskOutcome
 
-class DefaultBuildTask(private val path: String?, private val outcome: TaskOutcome?) : BuildTask {
-    override fun getPath(): String? {
-        return path
-    }
-
-    override fun getOutcome(): TaskOutcome? {
-        return outcome
-    }
-
+class DefaultBuildTask(override val path: String?, override val outcome: TaskOutcome?) : BuildTask {
     override fun toString(): String {
         return path + "=" + outcome
     }

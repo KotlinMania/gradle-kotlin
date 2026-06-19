@@ -16,6 +16,8 @@
 package org.gradle.tooling.internal.protocol
 
 import org.gradle.api.Incubating
+import org.gradle.tooling.Failure
+import org.gradle.tooling.events.problems.Problem
 
 /**
  * DO NOT CHANGE THIS INTERFACE. It is part of the cross-version protocol.

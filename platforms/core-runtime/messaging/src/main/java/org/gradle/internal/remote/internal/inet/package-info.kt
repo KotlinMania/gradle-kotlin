@@ -15,5 +15,4 @@
  */
 package org.gradle.internal.remote.internal.inet
 
-import org.gradle.internal.io.BufferCaster.cast
 

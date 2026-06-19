@@ -25,7 +25,7 @@ class ProgressOperations {
         if (parentOperationId != null) {
             parent = operationsById.get(parentOperationId)
         }
-        val operation = ProgressOperation(status, category, operationId, parent!!)
+        val operation = ProgressOperation(status, category, operationId, parent)
         if (parent != null) {
             parent.addChild(operation)
         }
@@ -44,8 +44,8 @@ class ProgressOperations {
     fun complete(operationId: OperationIdentifier): ProgressOperation {
         val op: ProgressOperation = operationsById.remove(operationId)!!
         checkNotNull(op) { "Received complete event for an unknown operation (id: " + operationId + "). Currently in progress=" + operationsById.values }
-        if (op.getParent() != null) {
-            op.getParent().removeChild(op)
+        if (op.parent != null) {
+            op.parent.removeChild(op)
         }
         return op
     }

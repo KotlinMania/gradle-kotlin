@@ -18,5 +18,4 @@
  */
 package org.gradle.nativeplatform.toolchain.plugins
 
-import org.gradle.internal.Cast.uncheckedCast
 

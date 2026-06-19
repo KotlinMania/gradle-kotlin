@@ -25,6 +25,6 @@ class IdeaProjectJavaLanguageSettingsMixin(private val ideaProject: IdeaProject)
 
     class CompatibilityIdeaProjectJavaLanguageSettings(private val ideaProject: IdeaProject) : Serializable {
         val languageLevel: JavaVersion
-            get() = JavaVersion.valueOf(ideaProject.languageLevel.level.replaceFirst("JDK".toRegex(), "VERSION"))
+            get() = JavaVersion.valueOf(ideaProject.languageLevel!!.level!!.replaceFirst("JDK".toRegex(), "VERSION"))
     }
 }

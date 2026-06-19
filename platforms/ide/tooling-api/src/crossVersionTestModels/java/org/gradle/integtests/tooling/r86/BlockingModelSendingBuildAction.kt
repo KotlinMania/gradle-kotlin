@@ -15,12 +15,23 @@
  */
 package org.gradle.integtests.tooling.r86
 
+import org.gradle.tooling.*
+import org.gradle.tooling.model.*
+import org.gradle.tooling.model.build.*
+import org.gradle.tooling.model.eclipse.*
+import org.gradle.tooling.model.gradle.*
+import org.gradle.tooling.model.idea.*
+import org.gradle.tooling.model.kotlin.dsl.*
+import org.gradle.tooling.internal.adapter.ProtocolToModelAdapter
+import java.io.File
+import org.gradle.integtests.tooling.r48.*
+
 import org.gradle.tooling.BuildAction
 import java.io.IOException
 import java.net.URI
 
 internal class BlockingModelSendingBuildAction(private val uri: URI) : BuildAction<CustomModel?> {
-    public override fun execute(controller: BuildController): CustomModel {
+    public override fun execute(controller: BuildController?): CustomModel {
         println("ACTION STARTED")
         val gradleProject: GradleProject? = controller.getModel(GradleProject::class.java)
         controller.send(gradleProject)
@@ -36,6 +47,6 @@ internal class BlockingModelSendingBuildAction(private val uri: URI) : BuildActi
         println("ACTION DONE")
 
         val eclipseProject: EclipseProject = controller.getModel(EclipseProject::class.java)
-        return CustomModel(eclipseProject.getChildren().size())
+        return CustomModel(eclipseProject.getChildren().size)
     }
 }

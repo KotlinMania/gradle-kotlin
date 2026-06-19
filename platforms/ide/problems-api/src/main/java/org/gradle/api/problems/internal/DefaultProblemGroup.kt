@@ -48,7 +48,7 @@ class DefaultProblemGroup(name: String, displayName: String, parent: ProblemGrou
         return parent
     }
 
-    override fun equals(o: Any): Boolean {
+    override fun equals(o: Any?): Boolean {
         if (this === o) {
             return true
         }
@@ -56,7 +56,7 @@ class DefaultProblemGroup(name: String, displayName: String, parent: ProblemGrou
             return false
         }
         val that = o as ProblemGroup
-        return Objects.equal(parent, that.parent) && Objects.equal(name, that.name)
+        return Objects.equal(parent, that.getParent()) && Objects.equal(name, that.getName())
     }
 
     override fun hashCode(): Int {

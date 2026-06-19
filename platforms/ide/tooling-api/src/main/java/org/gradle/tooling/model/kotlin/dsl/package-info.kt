@@ -18,5 +18,4 @@
  */
 package org.gradle.tooling.model.kotlin.dsl
 
-import org.gradle.tooling.internal.consumer.versioning.ModelMapping.getVersionAdded
 

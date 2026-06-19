@@ -15,10 +15,11 @@
  */
 package org.gradle.internal.resource.transport.sftp
 
+import com.jcraft.jsch.ChannelSftp
 import org.gradle.internal.concurrent.Stoppable
 
 interface LockableSftpClient : Stoppable {
-    val host: SftpHost?
-    val sftpClient: ChannelSftp?
-    val isConnected: Boolean
+    fun getHost(): SftpHost
+    fun getSftpClient(): ChannelSftp
+    fun isConnected(): Boolean
 }

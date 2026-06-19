@@ -23,19 +23,19 @@ import java.util.Objects
 import javax.inject.Inject
 
 class DefaultJavaDebugOptions @Inject constructor(objectFactory: ObjectFactory) : JavaDebugOptions {
-    private val enabled: Property<Boolean?>
-    private val host: Property<String?>
-    private val port: Property<Int?>
-    private val server: Property<Boolean?>
-    private val suspend: Property<Boolean?>
+    private val enabled: Property<Boolean>
+    private val host: Property<String>
+    private val port: Property<Int>
+    private val server: Property<Boolean>
+    private val suspend: Property<Boolean>
 
     init {
         val defaultValues = JvmDebugSpec.DefaultJvmDebugSpec()
-        this.enabled = objectFactory.property<Boolean?>(Boolean::class.java).convention(defaultValues.isEnabled())
-        this.host = objectFactory.property<String?>(String::class.java).convention(defaultValues.getHost())
-        this.port = objectFactory.property<Int?>(Int::class.java).convention(defaultValues.getPort())
-        this.server = objectFactory.property<Boolean?>(Boolean::class.java).convention(defaultValues.isServer())
-        this.suspend = objectFactory.property<Boolean?>(Boolean::class.java).convention(defaultValues.isSuspend())
+        this.enabled = objectFactory.property<Boolean>(Boolean::class.java).convention(defaultValues.isEnabled)
+        this.host = objectFactory.property<String>(String::class.java).convention(defaultValues.host)
+        this.port = objectFactory.property<Int>(Int::class.java).convention(defaultValues.port)
+        this.server = objectFactory.property<Boolean>(Boolean::class.java).convention(defaultValues.isServer)
+        this.suspend = objectFactory.property<Boolean>(Boolean::class.java).convention(defaultValues.isSuspend)
     }
 
     override fun hashCode(): Int {
@@ -55,24 +55,24 @@ class DefaultJavaDebugOptions @Inject constructor(objectFactory: ObjectFactory) 
                 && server.get() === that.server.get() && suspend.get() === that.suspend.get()
     }
 
-    override fun getEnabled(): Property<Boolean?> {
+    override fun getEnabled(): Property<Boolean> {
         return enabled
     }
 
     @Optional
-    override fun getHost(): Property<String?> {
+    override fun getHost(): Property<String> {
         return host
     }
 
-    override fun getPort(): Property<Int?> {
+    override fun getPort(): Property<Int> {
         return port
     }
 
-    override fun getServer(): Property<Boolean?> {
+    override fun getServer(): Property<Boolean> {
         return server
     }
 
-    override fun getSuspend(): Property<Boolean?> {
+    override fun getSuspend(): Property<Boolean> {
         return suspend
     }
 }

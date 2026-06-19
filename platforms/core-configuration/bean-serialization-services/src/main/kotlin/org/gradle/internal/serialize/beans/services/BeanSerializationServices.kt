@@ -25,12 +25,13 @@ import org.gradle.internal.service.scopes.AbstractGradleModuleServices
 
 class BeanSerializationServices : AbstractGradleModuleServices() {
 
-    override fun registerGlobalServices(registration: ServiceRegistration) {
-        registration.add(BeanConstructors::class.java)
+    override fun registerGlobalServices(registration: ServiceRegistration?) {
+        registration!!.add(BeanConstructors::class.java)
     }
 
-    override fun registerBuildTreeServices(registration: ServiceRegistration) {
-        registration.add<BeanStateWriterLookup, DefaultBeanStateWriterLookup>()
-        registration.add<BeanStateReaderLookup, DefaultBeanStateReaderLookup>()
+    override fun registerBuildTreeServices(registration: ServiceRegistration?) {
+        val services = registration!!
+        services.add<BeanStateWriterLookup, DefaultBeanStateWriterLookup>()
+        services.add<BeanStateReaderLookup, DefaultBeanStateReaderLookup>()
     }
 }

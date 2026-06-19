@@ -21,6 +21,6 @@ import org.gradle.internal.logging.events.StyledTextOutputEvent
  * A label where its text can be styled.
  */
 interface StyledLabel : Label {
-    fun setText(spans: MutableList<StyledTextOutputEvent.Span?>?)
-    fun setText(span: StyledTextOutputEvent.Span?)
+    fun setText(spans: MutableList<StyledTextOutputEvent.Span>)
+    fun setText(span: StyledTextOutputEvent.Span)
 }

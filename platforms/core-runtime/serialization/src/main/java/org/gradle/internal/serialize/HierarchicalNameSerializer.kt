@@ -28,8 +28,8 @@ import java.io.IOException
  *
  * This class is stateful. Use a new one for each serialization/deserialization attempt.
  */
-class HierarchicalNameSerializer(private val interner: Interner<String>) : AbstractSerializer<String?>() {
-    private val namesById: BiMap<Int?, String?> = HashBiMap.create<Int?, String?>()
+class HierarchicalNameSerializer(private val interner: Interner<String>) : AbstractSerializer<String>() {
+    private val namesById: BiMap<Int, String> = HashBiMap.create<Int, String>()
 
     @Throws(Exception::class)
     override fun read(decoder: Decoder): String {
@@ -54,7 +54,7 @@ class HierarchicalNameSerializer(private val interner: Interner<String>) : Abstr
     }
 
     @Throws(IOException::class)
-    private fun readFirstOccurrenceOfName(decoder: Decoder): String? {
+    private fun readFirstOccurrenceOfName(decoder: Decoder): String {
         val separator = decoder.readByte()
         if (separator.toInt() == 0) {
             return decoder.readString()

@@ -39,8 +39,8 @@ class DefaultJvmMetadataDetector @Inject constructor(
     private val logger: Logger = LoggerFactory.getLogger(DefaultJvmMetadataDetector::class.java)
 
     override fun getMetadata(javaInstallationLocation: InstallationLocation): JvmInstallationMetadata {
-        val javaHome = javaInstallationLocation.getLocation()
-        if (javaHome == null || !javaHome.exists()) {
+        val javaHome = javaInstallationLocation.location
+        if (!javaHome.exists()) {
             return failure(javaHome, "No such directory: " + javaHome)
         }
         if (Jvm.current().getJavaHome() == javaHome) {
@@ -50,17 +50,17 @@ class DefaultJvmMetadataDetector @Inject constructor(
     }
 
     private fun getMetadataFromCurrentJvm(javaHome: File): JvmInstallationMetadata {
-        val result = EnumMap<ProbedSystemProperty?, String?>(ProbedSystemProperty::class.java)
+        val result = EnumMap<ProbedSystemProperty, String>(ProbedSystemProperty::class.java)
         for (type in ProbedSystemProperty.entries) {
             if (type != ProbedSystemProperty.Z_ERROR) {
-                result.put(type, System.getProperty(type.getSystemPropertyKey()))
+                result[type] = System.getProperty(type.systemPropertyKey)
             }
         }
         logger.info("Received JVM installation metadata from '{}': {}", javaHome.getAbsolutePath(), result)
         return asMetadata(javaHome, result)
     }
 
-    private fun asMetadata(javaHome: File?, metadata: EnumMap<ProbedSystemProperty?, String?>): JvmInstallationMetadata {
+    private fun asMetadata(javaHome: File, metadata: EnumMap<ProbedSystemProperty, String>): JvmInstallationMetadata {
         val javaVersion = metadata.get(ProbedSystemProperty.JAVA_VERSION)
         if (javaVersion == null) {
             return failure(javaHome, metadata.get(ProbedSystemProperty.Z_ERROR))
@@ -112,39 +112,39 @@ class DefaultJvmMetadataDetector @Inject constructor(
 
 
     private fun parseExecOutput(jdkPath: File, probeResult: String): JvmInstallationMetadata {
-        val split = Arrays.stream<String>(probeResult.split(System.lineSeparator().toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray())
-            .filter { line: String? -> line.startsWith(MetadataProbe.Companion.MARKER_PREFIX) }
-            .map<String?> { line: String? -> line.substring(MetadataProbe.Companion.MARKER_PREFIX.length) }
-            .toArray<String?> { _Dummy_.__Array__() }
+        val split = probeResult.lineSequence()
+            .filter { line: String -> line.startsWith(MetadataProbe.MARKER_PREFIX) }
+            .map { line: String -> line.substring(MetadataProbe.MARKER_PREFIX.length) }
+            .toList()
         if (split.size != ProbedSystemProperty.entries.size - 1) { // -1 because of Z_ERROR
             val errorMessage = "Unexpected command output: \n" + probeResult
             logger.info("Failed to parse JVM installation metadata output at '" + jdkPath + "'. " + errorMessage)
             return failure(jdkPath, errorMessage)
         }
-        val result = EnumMap<ProbedSystemProperty?, String?>(ProbedSystemProperty::class.java)
+        val result = EnumMap<ProbedSystemProperty, String>(ProbedSystemProperty::class.java)
         for (type in ProbedSystemProperty.entries) {
             if (type != ProbedSystemProperty.Z_ERROR) {
-                result.put(type, split[type.ordinal]!!.trim { it <= ' ' })
+                result[type] = split[type.ordinal].trim { it <= ' ' }
             }
         }
         logger.info("Received JVM installation metadata from '{}': {}", jdkPath.getAbsolutePath(), result)
         return asMetadata(jdkPath, result)
     }
 
-    private fun failure(jdkPath: File?, errorMessage: String?): JvmInstallationMetadata {
+    private fun failure(jdkPath: File, errorMessage: String?): JvmInstallationMetadata {
         return JvmInstallationMetadata.Companion.failure(jdkPath, errorMessage)
     }
 
-    private fun failure(jdkPath: File?, cause: Exception?): JvmInstallationMetadata {
+    private fun failure(jdkPath: File, cause: Exception): JvmInstallationMetadata {
         return JvmInstallationMetadata.Companion.failure(jdkPath, cause)
     }
 
-    private fun writeProbeClass(tmpDir: File?): File {
+    private fun writeProbeClass(tmpDir: File): File {
         return MetadataProbe().writeClass(tmpDir)
     }
 
     companion object {
-        private fun javaExecutable(jdkPath: File?): File {
+        private fun javaExecutable(jdkPath: File): File {
             return File(File(jdkPath, "bin"), current()!!.getExecutableName("java"))
         }
     }

@@ -22,12 +22,12 @@ import org.gradle.internal.serialize.Decoder
 import org.gradle.internal.serialize.Encoder
 import org.gradle.internal.serialize.Serializer
 
-class LogEventSerializer(private val logLevelSerializer: Serializer<LogLevel>, private val throwableSerializer: Serializer<Throwable>) : Serializer<LogEvent?> {
+class LogEventSerializer(private val logLevelSerializer: Serializer<LogLevel>, private val throwableSerializer: Serializer<Throwable?>) : Serializer<LogEvent> {
     @Throws(Exception::class)
     override fun write(encoder: Encoder, event: LogEvent) {
         encoder.writeLong(event.timestamp)
         encoder.writeString(event.category)
-        logLevelSerializer.write(encoder, event.getLogLevel())
+        logLevelSerializer.write(encoder, event.logLevel)
         encoder.writeNullableString(event.getMessage())
         throwableSerializer.write(encoder, event.getThrowable())
         if (event.buildOperationId == null) {

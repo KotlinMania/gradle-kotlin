@@ -19,7 +19,7 @@ import org.gradle.internal.remote.internal.RemoteConnection
 import org.gradle.internal.remote.internal.hub.protocol.InterHubMessage
 import org.gradle.internal.remote.internal.hub.queue.EndPointQueue
 
-internal class ConnectionState(private val owner: ConnectionSet, val connection: RemoteConnection<InterHubMessage?>?, val dispatchQueue: EndPointQueue) {
+internal class ConnectionState(private val owner: ConnectionSet, val connection: RemoteConnection<InterHubMessage?>, val dispatchQueue: EndPointQueue) {
     private var receiveFinished = false
     private var dispatchFinished = false
 

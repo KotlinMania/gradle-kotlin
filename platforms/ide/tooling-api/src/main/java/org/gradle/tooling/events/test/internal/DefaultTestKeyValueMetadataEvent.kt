@@ -23,9 +23,7 @@ import org.jspecify.annotations.NullMarked
  * Consumer implementation of key-value metadata event
  */
 @NullMarked
-class DefaultTestKeyValueMetadataEvent(eventTime: Long, descriptor: OperationDescriptor, private val values: MutableMap<String, String>) : AbstractTestMetadataEvent(eventTime, descriptor),
+class DefaultTestKeyValueMetadataEvent(eventTime: Long, descriptor: OperationDescriptor, override val values: MutableMap<String, String>) : AbstractTestMetadataEvent(eventTime, descriptor),
     TestKeyValueMetadataEvent {
-    override fun getValues(): MutableMap<String, String> {
-        return values
-    }
+
 }

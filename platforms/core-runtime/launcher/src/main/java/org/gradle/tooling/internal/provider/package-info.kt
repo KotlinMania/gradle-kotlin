@@ -15,20 +15,4 @@
  */
 package org.gradle.tooling.internal.provider
 
-import org.gradle.launcher.cli.internal.VersionInfoRenderer.renderWithLauncherJvm
-import org.gradle.launcher.cli.internal.HelpRenderer.render
-import org.gradle.tooling.internal.provider.FailsafePhasedActionResultListener.rethrowErrors
-import org.gradle.launcher.cli.converter.InitialPropertiesConverter.configure
-import org.gradle.launcher.cli.converter.BuildLayoutConverter.configure
-import org.gradle.launcher.cli.converter.InitialPropertiesConverter.convert
-import org.gradle.launcher.cli.converter.BuildLayoutConverter.convert
-import org.gradle.launcher.cli.converter.LayoutToPropertiesConverter.convert
-import org.gradle.tooling.internal.provider.connection.ProviderOperationParameters.getEnvironmentVariables
-import org.gradle.tooling.internal.provider.connection.ProviderOperationParameters.getSystemProperties
-import org.gradle.launcher.daemon.toolchain.ToolchainBuildOptions.forToolChainConfiguration
-import org.gradle.launcher.cli.converter.BuildOptionBackedConverter.convert
-import org.gradle.launcher.cli.converter.StartParameterConverter.configure
-import org.gradle.launcher.cli.converter.StartParameterConverter.convert
-import org.gradle.launcher.cli.converter.BuildLayoutConverter.defaultValues
-import org.gradle.tooling.internal.provider.connection.ProviderOperationParameters.onStreamedValue
 

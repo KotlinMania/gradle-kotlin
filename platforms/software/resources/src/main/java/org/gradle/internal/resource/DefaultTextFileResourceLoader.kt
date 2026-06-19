@@ -18,11 +18,11 @@ package org.gradle.internal.resource
 import org.gradle.internal.file.RelativeFilePathResolver
 import java.io.File
 
-class DefaultTextFileResourceLoader(private val resolver: RelativeFilePathResolver?) : TextFileResourceLoader {
-    override fun loadFile(description: String?, sourceFile: File?): TextResource {
+class DefaultTextFileResourceLoader(private val resolver: RelativeFilePathResolver) : TextFileResourceLoader {
+    override fun loadFile(description: String, sourceFile: File?): TextResource {
         if (sourceFile == null) {
             return StringTextResource(description, "")
         }
-        return UriTextResource.Companion.from(description, sourceFile, resolver)
+        return UriTextResource.from(description, sourceFile, resolver)
     }
 }

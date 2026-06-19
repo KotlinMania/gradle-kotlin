@@ -15,21 +15,32 @@
  */
 package org.gradle.integtests.tooling.r30
 
+import org.gradle.tooling.*
+import org.gradle.tooling.model.*
+import org.gradle.tooling.model.build.*
+import org.gradle.tooling.model.eclipse.*
+import org.gradle.tooling.model.gradle.*
+import org.gradle.tooling.model.idea.*
+import org.gradle.tooling.model.kotlin.dsl.*
+import org.gradle.tooling.internal.adapter.ProtocolToModelAdapter
+import java.io.File
+import org.gradle.integtests.tooling.r48.*
+
 import org.gradle.integtests.tooling.r16.CustomModel
 import org.gradle.tooling.BuildAction
 import kotlin.collections.HashMap
 import kotlin.collections.MutableMap
 
 class ComplexCustomModelBuildingAction : BuildAction<MutableMap<String?, CustomModel?>?> {
-    public override fun execute(controller: BuildController): MutableMap<String?, CustomModel> {
-        val result: MutableMap<String?, CustomModel> = HashMap<String?, CustomModel>()
+    public override fun execute(controller: BuildController?): MutableMap<String?, CustomModel?> {
+        val result: MutableMap<String?, CustomModel?> = HashMap<String?, CustomModel?>()
         for (project in controller.getBuildModel().getProjects()) {
             result.put(project.getPath(), controller.getModel(project, CustomModel::class.java))
         }
 
         val rootProjectModel: CustomModel = controller.getModel(controller.getBuildModel().getRootProject(), CustomModel::class.java)
         for (customModel in result.values) {
-            assert(customModel.getThing() === rootProjectModel.getThing())
+            assert(customModel!!.getThing() === rootProjectModel.getThing())
         }
 
         return result

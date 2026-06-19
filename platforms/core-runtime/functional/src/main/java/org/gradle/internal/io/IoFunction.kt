@@ -32,6 +32,7 @@ fun interface IoFunction<T : Any?, R : Any?> {
          *
          * Any `IOException`s are rethrown as [UncheckedIOException].
          */
+        @JvmStatic
         fun <T : Any?, R : Any?> wrap(function: IoFunction<T?, R?>): java.util.function.Function<T?, R?> {
             return Function { t: T? ->
                 try {

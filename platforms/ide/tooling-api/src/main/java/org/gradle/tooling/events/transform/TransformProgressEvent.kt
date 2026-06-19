@@ -28,5 +28,5 @@ interface TransformProgressEvent : ProgressEvent {
      *
      * @return The description of the underlying transform operation.
      */
-    override fun getDescriptor(): TransformOperationDescriptor?
+    override val descriptor: TransformOperationDescriptor?
 }

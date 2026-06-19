@@ -25,72 +25,33 @@ import javax.inject.Inject
 class DefaultToolchainConfiguration @VisibleForTesting internal constructor(
     os: OperatingSystem,
     private val systemProperties: SystemProperties,
-    private val environment: MutableMap<String?, String?>
+    private val environment: Map<String, String>
 ) : ToolchainConfiguration {
-    private var javaInstallationsFromEnvironment: MutableCollection<String?>?
-    private var installationsFromPaths: MutableCollection<String?>?
-    private var autoDetectEnabled = true
-    private var downloadEnabled = true
-    private var intellijInstallationDirectory: File?
+    override var javaInstallationsFromEnvironment: MutableCollection<String>
+    override var installationsFromPaths: MutableCollection<String>
+    override var isAutoDetectEnabled = true
+    override var isDownloadEnabled = true
+    override var intelliJdkDirectory: File?
 
     @Inject
     constructor() : this(System.getenv())
 
-    constructor(environment: MutableMap<String?, String?>) : this(current()!!, SystemProperties.getInstance(), environment)
+    constructor(environment: Map<String, String>) : this(current()!!, SystemProperties.getInstance(), environment)
 
     init {
-        this.intellijInstallationDirectory = defaultJdksDirectory(os)
-        this.javaInstallationsFromEnvironment = mutableListOf<String?>()
-        this.installationsFromPaths = mutableListOf<String?>()
+        this.intelliJdkDirectory = defaultJdksDirectory(os)
+        this.javaInstallationsFromEnvironment = mutableListOf()
+        this.installationsFromPaths = mutableListOf()
     }
 
-    override fun getJavaInstallationsFromEnvironment(): MutableCollection<String?>? {
-        return javaInstallationsFromEnvironment
-    }
-
-    override fun setJavaInstallationsFromEnvironment(javaInstallationsFromEnvironment: MutableCollection<String?>?) {
-        this.javaInstallationsFromEnvironment = javaInstallationsFromEnvironment
-    }
-
-    override fun getInstallationsFromPaths(): MutableCollection<String?>? {
-        return installationsFromPaths
-    }
-
-    override fun setInstallationsFromPaths(installationsFromPaths: MutableCollection<String?>?) {
-        this.installationsFromPaths = installationsFromPaths
-    }
-
-    override fun isAutoDetectEnabled(): Boolean {
-        return autoDetectEnabled
-    }
-
-    override fun setAutoDetectEnabled(autoDetectEnabled: Boolean) {
-        this.autoDetectEnabled = autoDetectEnabled
-    }
-
-    override fun isDownloadEnabled(): Boolean {
-        return downloadEnabled
-    }
-
-    override fun setDownloadEnabled(enabled: Boolean) {
-        this.downloadEnabled = enabled
-    }
-
-    override fun getAsdfDataDirectory(): File {
-        val asdfEnvVar = environment.get("ASDF_DATA_DIR")
-        if (asdfEnvVar != null) {
-            return File(asdfEnvVar)
+    override val asdfDataDirectory: File
+        get() {
+            val asdfEnvVar = environment["ASDF_DATA_DIR"]
+            if (asdfEnvVar != null) {
+                return File(asdfEnvVar)
+            }
+            return File(systemProperties.getUserHome(), ".asdf")
         }
-        return File(systemProperties.getUserHome(), ".asdf")
-    }
-
-    override fun getIntelliJdkDirectory(): File? {
-        return intellijInstallationDirectory
-    }
-
-    override fun setIntelliJdkDirectory(intellijInstallationDirectory: File?) {
-        this.intellijInstallationDirectory = intellijInstallationDirectory
-    }
 
     private fun defaultJdksDirectory(os: OperatingSystem): File {
         if (os.isMacOsX) {
@@ -99,23 +60,25 @@ class DefaultToolchainConfiguration @VisibleForTesting internal constructor(
         return File(systemProperties.getUserHome(), ".jdks")
     }
 
-    override fun getJabbaHomeDirectory(): File? {
-        val jabbaHome = environment.get("JABBA_HOME")
-        if (jabbaHome != null) {
-            return File(jabbaHome)
+    override val jabbaHomeDirectory: File?
+        get() {
+            val jabbaHome = environment["JABBA_HOME"]
+            if (jabbaHome != null) {
+                return File(jabbaHome)
+            }
+            return null
         }
-        return null
-    }
 
-    override fun getSdkmanCandidatesDirectory(): File {
-        val asdfEnvVar = environment.get("SDKMAN_CANDIDATES_DIR")
-        if (asdfEnvVar != null) {
-            return File(asdfEnvVar)
+    override val sdkmanCandidatesDirectory: File
+        get() {
+            val asdfEnvVar = environment["SDKMAN_CANDIDATES_DIR"]
+            if (asdfEnvVar != null) {
+                return File(asdfEnvVar)
+            }
+            return File(systemProperties.getUserHome(), ".sdkman/candidates")
         }
-        return File(systemProperties.getUserHome(), ".sdkman/candidates")
-    }
 
-    override fun getEnvironmentVariableValue(variableName: String?): String? {
-        return environment.get(variableName)
+    override fun getEnvironmentVariableValue(variableName: String): String? {
+        return environment[variableName]
     }
 }

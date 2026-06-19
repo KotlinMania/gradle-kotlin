@@ -15,6 +15,7 @@
  */
 package org.gradle.tooling.internal.protocol
 
+import org.gradle.tooling.events.problems.Problem
 import org.gradle.tooling.internal.protocol.events.InternalProgressEvent
 import org.jspecify.annotations.NullMarked
 

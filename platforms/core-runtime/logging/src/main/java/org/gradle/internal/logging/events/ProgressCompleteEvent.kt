@@ -23,6 +23,6 @@ class ProgressCompleteEvent(@JvmField val progressOperationId: OperationIdentifi
         return "ProgressComplete (" + progressOperationId + ") " + status
     }
 
-    val logLevel: LogLevel
+    override val logLevel: LogLevel
         get() = LogLevel.LIFECYCLE
 }

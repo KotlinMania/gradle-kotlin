@@ -15,6 +15,8 @@
  */
 package org.gradle.tooling.internal.consumer
 
+import org.gradle.initialization.BuildCancellationToken
+
 interface CancellationTokenInternal {
     val token: BuildCancellationToken?
 }

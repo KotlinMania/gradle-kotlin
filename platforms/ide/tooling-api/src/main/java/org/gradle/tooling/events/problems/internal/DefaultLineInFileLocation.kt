@@ -15,18 +15,13 @@
  */
 package org.gradle.tooling.events.problems.internal
 
+import java.io.File
 import org.gradle.tooling.events.problems.LineInFileLocation
 
-class DefaultLineInFileLocation(path: String, private val line: Int, private val column: Int, private val length: Int) : DefaultFileLocation(path), LineInFileLocation {
-    override fun getLine(): Int {
-        return line
-    }
+class DefaultLineInFileLocation(path: String, override val line: Int, override val column: Int, override val length: Int) : DefaultFileLocation(path), LineInFileLocation {
 
-    override fun getColumn(): Int {
-        return column
-    }
 
-    override fun getLength(): Int {
-        return length
-    }
+
+
+
 }

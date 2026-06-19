@@ -41,12 +41,12 @@ import java.io.File
 
 
 class DeclarativeDslServices : AbstractGradleModuleServices() {
-    override fun registerBuildServices(registration: ServiceRegistration) {
-        registration.addProvider(BuildServices)
+    override fun registerBuildServices(registration: ServiceRegistration?) {
+        registration!!.addProvider(BuildServices)
     }
 
-    override fun registerProjectServices(registration: ServiceRegistration) {
-        registration.addProvider(ProjectServices)
+    override fun registerProjectServices(registration: ServiceRegistration?) {
+        registration!!.addProvider(ProjectServices)
     }
 }
 
@@ -54,8 +54,9 @@ class DeclarativeDslServices : AbstractGradleModuleServices() {
 internal
 object BuildServices : ServiceRegistrationProvider {
 
+    @Suppress("UNCHECKED_CAST")
     fun configure(listenerManager: ListenerManager, serviceRegistration: ServiceRegistration) {
-        serviceRegistration.add(SettingsUnderInitialization::class.java, SettingsUnderInitialization(listenerManager))
+        serviceRegistration.add(SettingsUnderInitialization::class.java as Class<SettingsUnderInitialization?>, SettingsUnderInitialization(listenerManager))
     }
 
     @Provides

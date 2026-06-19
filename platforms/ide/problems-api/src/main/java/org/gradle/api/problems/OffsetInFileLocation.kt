@@ -33,8 +33,7 @@ interface OffsetInFileLocation : FileLocation {
      * @return the zero-indexed the offset
      * @since 8.13
      */
-    @JvmField
-    val offset: Int
+    fun getOffset(): Int
 
     /**
      * The length of the content starting from [.getOffset].
@@ -42,6 +41,5 @@ interface OffsetInFileLocation : FileLocation {
      * @return the length
      * @since 8.13
      */
-    @JvmField
-    val length: Int
+    fun getLength(): Int
 }

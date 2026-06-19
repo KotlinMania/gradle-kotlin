@@ -25,9 +25,7 @@ class DefaultJavaCompileTaskSuccessResult(
     upToDate: Boolean,
     fromCache: Boolean,
     taskExecutionDetails: TaskExecutionDetails?,
-    private val annotationProcessorResults: MutableList<JavaCompileTaskOperationResult.AnnotationProcessorResult?>?
-) : DefaultTaskSuccessResult(startTime, endTime, upToDate, fromCache, taskExecutionDetails), JavaCompileTaskOperationResult {
-    override fun getAnnotationProcessorResults(): MutableList<JavaCompileTaskOperationResult.AnnotationProcessorResult?>? {
-        return annotationProcessorResults
-    }
+    override val annotationProcessorResults: MutableList<JavaCompileTaskOperationResult.AnnotationProcessorResult?>?
+) : DefaultTaskSuccessResult(startTime, endTime, upToDate, fromCache, taskExecutionDetails ?: TaskExecutionDetails.unsupported()), JavaCompileTaskOperationResult {
+
 }

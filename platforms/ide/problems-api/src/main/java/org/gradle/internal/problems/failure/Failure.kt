@@ -15,6 +15,8 @@
  */
 package org.gradle.internal.problems.failure
 
+import org.gradle.api.problems.internal.ProblemInternal
+
 /**
  * Content of a thrown exception with classified stack frames.
  *
@@ -27,33 +29,29 @@ package org.gradle.internal.problems.failure
  * @see FailureFactory
  */
 interface Failure {
-    @JvmField
-    val exceptionType: Class<out Throwable>?
+    fun getExceptionType(): Class<out Throwable>?
 
     /**
      * The original exception.
      */
-    @JvmField
-    val original: Throwable?
+    fun getOriginal(): Throwable?
 
     /**
      * A failure summary usually containing the type of the original exception and its message.
      *
      * @see Throwable.toString
      */
-    val header: String?
+    fun getHeader(): String?
 
     /**
      * The message of the original exception.
      */
-    @JvmField
-    val message: String?
+    fun getMessage(): String?
 
     /**
      * Stack frames from the original exception.
      */
-    @JvmField
-    val stackTrace: MutableList<StackTraceElement>?
+    fun getStackTrace(): MutableList<StackTraceElement>?
 
     /**
      * Relevance of a given stack frame in the [stack trace][.getStackTrace].
@@ -63,7 +61,7 @@ interface Failure {
     /**
      * Failures suppressed in the original exception.
      */
-    val suppressed: MutableList<Failure>?
+    fun getSuppressed(): MutableList<Failure>?
 
     /**
      * List of causes for this failure.
@@ -71,8 +69,7 @@ interface Failure {
      *
      * There could be more than one cause if the failure was derived from a [org.gradle.internal.exceptions.MultiCauseException].
      */
-    @JvmField
-    val causes: MutableList<Failure>?
+    fun getCauses(): MutableList<Failure>?
 
     /**
      * Returns the index of the first matching frame in the stack trace, or `-1` if not found.
@@ -82,6 +79,5 @@ interface Failure {
     /**
      * The problems associated with the failure.
      */
-    @JvmField
-    val problems: MutableList<ProblemInternal>?
+    fun getProblems(): MutableList<ProblemInternal>?
 }

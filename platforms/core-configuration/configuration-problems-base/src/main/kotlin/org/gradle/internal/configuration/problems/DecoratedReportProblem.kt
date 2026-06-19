@@ -215,8 +215,8 @@ class FailureDecorator {
 
     private
     fun Failure.findFirstUserCode(): StackTraceElement? {
-        stackTrace.forEachIndexed { index, element ->
-            if (getStackTraceRelevance(index).isUserCode()) {
+        for ((index, element) in getStackTrace().orEmpty().withIndex()) {
+            if (getStackTraceRelevance(index)?.isUserCode() == true) {
                 return element
             }
         }

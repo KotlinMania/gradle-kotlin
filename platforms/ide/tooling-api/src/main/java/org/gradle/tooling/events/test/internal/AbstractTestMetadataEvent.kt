@@ -23,20 +23,15 @@ import org.jspecify.annotations.NullMarked
  * Base implementation of the `TestMetadataEvent` interface.
  */
 @NullMarked
-internal abstract class AbstractTestMetadataEvent(private val eventTime: Long, private val descriptor: OperationDescriptor) : TestMetadataEvent {
-    override fun getEventTime(): Long {
-        return eventTime
-    }
+abstract class AbstractTestMetadataEvent(override val eventTime: Long, override val descriptor: OperationDescriptor) : TestMetadataEvent {
 
-    override fun getDisplayName(): String {
-        return descriptor.displayName
-    }
 
-    override fun getDescriptor(): OperationDescriptor {
-        return descriptor
-    }
+    override val displayName: String
+        get() = descriptor.displayName!!
+
+
 
     override fun toString(): String {
-        return getDisplayName() // This must == displayName, see TestEventsFixture
+        return displayName // This must == displayName, see TestEventsFixture
     }
 }

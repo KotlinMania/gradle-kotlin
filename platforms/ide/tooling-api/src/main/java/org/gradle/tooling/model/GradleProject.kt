@@ -15,7 +15,9 @@
  */
 package org.gradle.tooling.model
 
+import java.io.File
 import org.gradle.api.Incubating
+import org.gradle.tooling.model.gradle.GradleScript
 
 /**
  * Represents a Gradle project.
@@ -28,22 +30,22 @@ interface GradleProject : HierarchicalElement, BuildableElement, ProjectModel {
      *
      * @since 2.13
      */
-    override fun getProjectIdentifier(): ProjectIdentifier?
+    override val projectIdentifier: ProjectIdentifier?
 
     /**
      * {@inheritDoc}
      */
-    override fun getTasks(): DomainObjectSet<out GradleTask?>?
+    override val tasks: DomainObjectSet<out GradleTask?>?
 
     /**
      * {@inheritDoc}
      */
-    override fun getParent(): GradleProject?
+    override val parent: GradleProject?
 
     /**
      * {@inheritDoc}
      */
-    override fun getChildren(): DomainObjectSet<out GradleProject?>?
+    override val children: DomainObjectSet<out GradleProject?>?
 
     /**
      * Returns the path of this project. This is a unique identifier for this project within the build.

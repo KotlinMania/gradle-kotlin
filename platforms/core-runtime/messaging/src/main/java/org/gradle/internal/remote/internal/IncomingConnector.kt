@@ -29,5 +29,5 @@ interface IncomingConnector {
      * @param allowRemote If true, only allow connections from remote machines. If false, allow only from the local machine.
      * @return the address of the endpoint which the connector is listening on.
      */
-    fun accept(action: Action<ConnectCompletion?>?, allowRemote: Boolean): ConnectionAcceptor?
+    fun accept(action: Action<ConnectCompletion>, allowRemote: Boolean): ConnectionAcceptor
 }

@@ -30,7 +30,7 @@ interface Launchable : ProjectModel {
      *
      * @since 2.13
      */
-    override fun getProjectIdentifier(): ProjectIdentifier?
+    override val projectIdentifier: ProjectIdentifier?
 
     /**
      * Returns a human-consumable display name for this launchable.

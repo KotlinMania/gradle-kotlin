@@ -34,17 +34,17 @@ class DefaultProblemFactory(
     val problemStream = problemDiagnosticsFactory.newStream()
 
     override fun locationForCaller(consumer: String?): PropertyTrace =
-        locationForCaller(consumer, userCodeContext.current()?.source)
+        locationForCaller(consumer, userCodeContext.current()?.getSource())
 
     override fun problem(message: StructuredMessage, exception: Throwable?, documentationSection: DocumentationSection?, getStackTrace: Boolean): PropertyProblem {
         val diagnostics = getProblemDiagnostics(exception, getStackTrace)
         val trace = locationForCaller(null, diagnostics)
-        return PropertyProblem(trace, message, exception, diagnostics.failure, documentationSection)
+        return PropertyProblem(trace, message, exception, diagnostics.getFailure(), documentationSection)
     }
 
     private fun getProblemDiagnostics(exception: Throwable?, getStackTrace: Boolean): ProblemDiagnostics {
         if (getStackTrace) {
-            return problemStream.forCurrentCaller(exception)
+            return problemStream!!.forCurrentCaller(exception)!!
         }
         return NoOpProblemDiagnosticsFactory.EMPTY_DIAGNOSTICS
     }
@@ -84,23 +84,23 @@ class DefaultProblemFactory(
             override fun build(): PropertyProblem {
                 val exceptionMessage = exceptionMessage
                 val diagnostics = if (exceptionMessage == null) {
-                    problemStream.forCurrentCaller()
+                    problemStream!!.forCurrentCaller()!!
                 } else {
-                    problemStream.forCurrentCaller(Supplier { InvalidUserCodeException(exceptionMessage) })
+                    problemStream!!.forCurrentCaller(Supplier { InvalidUserCodeException(exceptionMessage) })!!
                 }
                 val location = locationMapper(locationForCaller(consumer, diagnostics))
-                return PropertyProblem(location, message, diagnostics.exception, diagnostics.failure, documentationSection)
+                return PropertyProblem(location, message, diagnostics.getException(), diagnostics.getFailure(), documentationSection)
             }
         }
     }
 
     private
     fun locationForCaller(consumer: String?, diagnostics: ProblemDiagnostics): PropertyTrace {
-        val location = diagnostics.location
+        val location = diagnostics.getLocation()
         return if (location != null) {
             PropertyTrace.BuildLogic(location)
         } else {
-            locationForCaller(consumer, diagnostics.source)
+            locationForCaller(consumer, diagnostics.getSource())
         }
     }
 

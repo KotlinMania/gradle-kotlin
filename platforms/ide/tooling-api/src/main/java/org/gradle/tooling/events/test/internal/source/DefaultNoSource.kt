@@ -19,5 +19,4 @@ import org.gradle.tooling.events.test.source.NoSource
 
 
 object DefaultNoSource : NoSource {
-    val instance: DefaultNoSource = DefaultNoSource()
 }

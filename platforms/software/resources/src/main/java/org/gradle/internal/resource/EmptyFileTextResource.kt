@@ -28,7 +28,7 @@ import java.nio.charset.Charset
  * A [UriTextResource] that is empty and maps to an actual (non-null) file location
  * (which does not actually exist in the file system).
  */
-class EmptyFileTextResource internal constructor(description: String?, sourceFile: File, resolver: RelativeFilePathResolver?) : UriTextResource(description, sourceFile, resolver) {
+class EmptyFileTextResource internal constructor(description: String, sourceFile: File, resolver: RelativeFilePathResolver) : UriTextResource(description, sourceFile, resolver) {
     override fun isContentCached(): Boolean {
         return true
     }

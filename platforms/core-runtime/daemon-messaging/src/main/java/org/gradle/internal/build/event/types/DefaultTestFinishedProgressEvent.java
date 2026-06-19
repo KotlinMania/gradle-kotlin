@@ -35,6 +35,6 @@ public class DefaultTestFinishedProgressEvent extends AbstractProgressEvent<Inte
 
     @Override
     public String getDisplayName() {
-        return getDescriptor().displayName + " " + result.getOutcomeDescription();
+        return getDescriptor().getDisplayName() + " " + result.getOutcomeDescription();
     }
 }

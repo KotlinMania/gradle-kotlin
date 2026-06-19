@@ -31,12 +31,12 @@ abstract class AntWorkAction<T : AntWorkParameters?> : WorkAction<T?> {
 
         this.isolatedAntBuilder
             .withClasspath(getParameters()!!.getAntLibraryClasspath())
-            .execute(Action { antBuilder: AntBuilderDelegate? -> this.execute(antBuilder) })
+            .execute(Action { antBuilder: AntBuilderDelegate -> this.execute(antBuilder) })
     }
 
     protected abstract val actionName: String?
 
-    protected abstract fun execute(antBuilder: AntBuilderDelegate?)
+    protected abstract fun execute(antBuilder: AntBuilderDelegate)
 
     @get:Inject
     protected abstract val isolatedAntBuilder: IsolatedAntBuilder?

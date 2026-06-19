@@ -29,5 +29,5 @@ import org.gradle.internal.service.scopes.ServiceScope
 </C> */
 @ServiceScope(Scope.Build::class)
 interface LocallyAvailableResourceFinder<C> {
-    fun findCandidates(criterion: C?): LocallyAvailableResourceCandidates?
+    fun findCandidates(criterion: C): LocallyAvailableResourceCandidates
 }

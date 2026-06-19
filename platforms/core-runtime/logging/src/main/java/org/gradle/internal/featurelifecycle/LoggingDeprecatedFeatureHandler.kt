@@ -59,7 +59,7 @@ class LoggingDeprecatedFeatureHandler : FeatureHandler<DeprecatedFeatureUsage> {
 
     override fun featureUsed(usage: DeprecatedFeatureUsage) {
         deprecationsFound = true
-        val diagnostics = problemStream.forCurrentCaller(StackTraceSanitizer(usage.getCalledFrom()))
+        val diagnostics = problemStream.forCurrentCaller(StackTraceSanitizer(usage.calledFrom))!!
         if (warningMode.shouldDisplayMessages()) {
             maybeLogUsage(usage, diagnostics)
         }
@@ -75,49 +75,50 @@ class LoggingDeprecatedFeatureHandler : FeatureHandler<DeprecatedFeatureUsage> {
     }
 
     private fun reportDeprecation(usage: DeprecatedFeatureUsage, diagnostics: ProblemDiagnostics) {
-        val reporter = (problemsService as ProblemsInternal).internalReporter
+        val reporter = (problemsService as ProblemsInternal).getInternalReporter()!!
         val problem: Problem = reporter.internalCreate(object : Action<ProblemSpecInternal> {
             override fun execute(builder: ProblemSpecInternal) {
                 val problemSpec =
                     builder // usage.getKind() could be part of the problem ID, however it provides hints on the problem provenance which should be modeled differently, maybe as location data.
-                        .id(getDefaultDeprecationIdDisplayName(usage), usage.problemIdDisplayName, GradleCoreProblemGroup.deprecation())
-                        .contextualLabel(usage.getSummary())
-                        .details(usage.removalDetails)
-                        .documentedAt(usage.documentationUrl)
-                        .diagnostics(diagnostics)
-                        .additionalDataInternal<DeprecationDataSpec>(DeprecationDataSpec::class.java, object : Action<DeprecationDataSpec> {
-                            override fun execute(data: DeprecationDataSpec) {
-                                data.type(usage.type.toDeprecationDataType())
+                        .id(getDefaultDeprecationIdDisplayName(usage), usage.problemIdDisplayName, GradleCoreProblemGroup.deprecation())!!
+                        .contextualLabel(usage.summary)!!
+                        .details(usage.removalDetails)!!
+                        .documentedAt(usage.documentationUrl)!!
+                        .diagnostics(diagnostics)!!
+                        .additionalDataInternal<DeprecationDataSpec>(DeprecationDataSpec::class.java, object : Action<DeprecationDataSpec?> {
+                            override fun execute(data: DeprecationDataSpec?) {
+                                data!!.type(usage.type.toDeprecationDataType())
                             }
-                        })
+                        })!!
                 if (usage.type == DeprecatedFeatureUsage.Type.USER_CODE_DIRECT) {
                     builder.stackLocation()
                 }
                 addSolution(usage.advice, problemSpec)
                 addSolution(usage.contextualAdvice, problemSpec)
             }
-        })
+        })!!
         reporter.report(problem)
     }
 
     private fun maybeLogUsage(usage: DeprecatedFeatureUsage, diagnostics: ProblemDiagnostics) {
         val featureMessage = usage.formattedMessage()
-        val location = diagnostics.location
-        if (!loggedUsages.add(featureMessage) && location == null && diagnostics.stack.isEmpty()) {
+        val location = diagnostics.getLocation()
+        val stack = diagnostics.getStack() ?: mutableListOf()
+        if (!loggedUsages.add(featureMessage) && location == null && stack.isEmpty()) {
             // This usage does not contain any useful diagnostics and the usage has already been logged, so skip it
             return
         }
         val message = StringBuilder()
         if (location != null) {
-            message.append(location.getFormatted())
+            message.append(location.formatted)
                 .append(SystemProperties.getInstance().getLineSeparator())
         }
         message.append(featureMessage)
-        if (location != null && !loggedUsages.add(message.toString()) && diagnostics.stack.isEmpty()) {
+        if (location != null && !loggedUsages.add(message.toString()) && stack.isEmpty()) {
             // This usage has no stack trace and has already been logged with the same location, so skip it
             return
         }
-        displayDeprecationIfSameMessageNotDisplayedBefore(message, diagnostics.stack)
+        displayDeprecationIfSameMessageNotDisplayedBefore(message, stack)
     }
 
     private fun displayDeprecationIfSameMessageNotDisplayedBefore(message: StringBuilder, callStack: MutableList<StackTraceElement>) {
@@ -157,7 +158,7 @@ class LoggingDeprecatedFeatureHandler : FeatureHandler<DeprecatedFeatureUsage> {
         }
     }
 
-    val deprecationFailure: GradleException
+    val deprecationFailure: GradleException?
         get() = error
 
     companion object {

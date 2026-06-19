@@ -23,7 +23,7 @@ import org.gradle.internal.scan.UsedByScanPlugin
  *
  * @since 4.0
  */
-class ExternalResourceWriteBuildOperationType private constructor() : BuildOperationType<ExternalResourceWriteBuildOperationType.Details?, ExternalResourceWriteBuildOperationType.Result?> {
+class ExternalResourceWriteBuildOperationType private constructor() : BuildOperationType<ExternalResourceWriteBuildOperationType.Details, ExternalResourceWriteBuildOperationType.Result> {
     @UsedByScanPlugin
     interface Details {
         /**

@@ -21,7 +21,7 @@ import java.net.URI
 
 
 /**
- * Same as `resource.location.uri`.
+ * Same as `resource.getLocation()?.getURI()`.
  */
 val ScriptSource.uri: URI?
-    get() = resource.location.uri
+    get() = resource.getLocation()?.getURI()

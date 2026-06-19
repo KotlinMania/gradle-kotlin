@@ -24,9 +24,9 @@ import java.util.function.BiFunction
 import java.util.stream.Collectors
 import javax.inject.Inject
 
-class LinuxInstallationSupplier @VisibleForTesting internal constructor(os: OperatingSystem, vararg roots: File?) : InstallationSupplier {
+class LinuxInstallationSupplier @VisibleForTesting internal constructor(os: OperatingSystem, vararg roots: File) : InstallationSupplier {
     @VisibleForTesting
-    val roots: Array<File?>
+    val roots: Array<out File>
     private val os: OperatingSystem
 
     @Inject
@@ -37,22 +37,20 @@ class LinuxInstallationSupplier @VisibleForTesting internal constructor(os: Oper
         this.os = os
     }
 
-    override fun getSourceName(): String {
-        return "Common Linux Locations"
-    }
+    override val sourceName: String = "Common Linux Locations"
 
-    override fun get(): MutableSet<InstallationLocation?> {
+    override fun get(): MutableSet<InstallationLocation> {
         if (os.isLinux) {
-            return Arrays.stream<File?>(roots)
-                .map<MutableSet<InstallationLocation?>?> { root: File? ->
+            return Arrays.stream<File>(roots)
+                .map<MutableSet<InstallationLocation>> { root: File ->
                     FileBasedInstallationFactory.fromDirectory(
                         root,
-                        getSourceName(),
-                        BiFunction { location: File?, source: String? -> InstallationLocation.Companion.autoDetected(location, source) })
+                        sourceName,
+                        BiFunction { location: File, source: String -> InstallationLocation.Companion.autoDetected(location, source) })
                 }
-                .flatMap<InstallationLocation?> { obj: MutableSet<InstallationLocation?>? -> obj!!.stream() }
+                .flatMap<InstallationLocation> { obj: MutableSet<InstallationLocation> -> obj.stream() }
                 .collect(Collectors.toSet())
         }
-        return mutableSetOf<InstallationLocation?>()
+        return mutableSetOf()
     }
 }

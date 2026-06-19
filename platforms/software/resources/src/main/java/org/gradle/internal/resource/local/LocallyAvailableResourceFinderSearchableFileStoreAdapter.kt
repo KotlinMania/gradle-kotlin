@@ -24,9 +24,11 @@ import java.util.stream.Collectors
  * Makes a LocallyAvailableResourceFinder out of a FileStoreSearcher.
  * @param <C> The type of criterion the filestore can be searched for, and therefore locally available resources searched for.
 </C> */
-class LocallyAvailableResourceFinderSearchableFileStoreAdapter<C>(fileStore: FileStoreSearcher<C?>, checksumService: ChecksumService?) :
+class LocallyAvailableResourceFinderSearchableFileStoreAdapter<C>(fileStore: FileStoreSearcher<C?>, checksumService: ChecksumService) :
     AbstractLocallyAvailableResourceFinder<C?>(Function { criterion: C? ->
-        org.gradle.internal.Factory {
-            fileStore.search(criterion).stream().map<File?> { obj: LocallyAvailableResource? -> obj!!.getFile() }.collect(Collectors.toList())
+        object : org.gradle.internal.Factory<MutableList<File>> {
+            override fun create(): MutableList<File> {
+                return fileStore.search(criterion).stream().map<File> { obj: LocallyAvailableResource -> obj.getFile() }.collect(Collectors.toList())
+            }
         }
     }, checksumService)

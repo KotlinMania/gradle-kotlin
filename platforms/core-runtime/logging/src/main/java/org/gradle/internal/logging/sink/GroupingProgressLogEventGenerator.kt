@@ -71,7 +71,7 @@ class GroupingProgressLogEventGenerator(private val listener: OutputEventListene
             // Create a new group for tasks or configure project
             operationsInProgress.put(
                 progressId,
-                GroupingProgressLogEventGenerator.OperationGroup(
+                OperationGroup(
                     startEvent.category,
                     startEvent.getDescription(),
                     startEvent.timestamp,
@@ -87,7 +87,7 @@ class GroupingProgressLogEventGenerator(private val listener: OutputEventListene
         // Preserve logging of headers for progress operations started outside of the build operation executor as was done in Gradle 3.x
         // Basically, if we see an operation with a logging header and it's not grouped, just log it
         if (!isGrouped && GUtil.isTrue(startEvent.getLoggingHeader())) {
-            onUngroupedOutput(LogEvent(startEvent.timestamp, startEvent.category, startEvent.getLogLevel(), startEvent.getLoggingHeader()!!, null, null))
+            onUngroupedOutput(LogEvent(startEvent.timestamp, startEvent.category, startEvent.logLevel, startEvent.getLoggingHeader()!!, null, null))
         }
     }
 

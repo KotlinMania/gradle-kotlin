@@ -21,7 +21,7 @@ import org.gradle.process.ExecSpec
 import org.gradle.process.JavaExecSpec
 
 interface ProcessOperations {
-    fun javaexec(action: Action<in JavaExecSpec?>?): ExecResult?
+    fun javaexec(action: Action<in JavaExecSpec>): ExecResult?
 
-    fun exec(action: Action<in ExecSpec?>?): ExecResult?
+    fun exec(action: Action<in ExecSpec>): ExecResult?
 }

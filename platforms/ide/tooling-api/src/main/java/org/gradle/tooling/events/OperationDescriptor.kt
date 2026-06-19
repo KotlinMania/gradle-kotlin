@@ -43,7 +43,6 @@ interface OperationDescriptor {
      *
      * @return The display name of the operation.
      */
-    @JvmField
     val displayName: String?
 
     /**
@@ -51,6 +50,5 @@ interface OperationDescriptor {
      *
      * @return The parent operation.
      */
-    @JvmField
     val parent: OperationDescriptor?
 }

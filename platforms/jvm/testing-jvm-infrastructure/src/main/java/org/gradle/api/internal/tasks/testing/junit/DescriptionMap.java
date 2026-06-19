@@ -92,7 +92,7 @@ public final class DescriptionMap<V, DV> {
 
         public static <V> DescriptionWitness<V, SimpleValueWrapper<V>> witness() {
             // Safe due to invariant nature of witness
-            return Cast.<DescriptionWitness<V,SimpleValueWrapper<V>>>uncheckedNonnullCast(WITNESS);
+            return Cast.<DescriptionWitness<V, SimpleValueWrapper<V>>>uncheckedNonnullCast(WITNESS);
         }
 
         private final Description description;

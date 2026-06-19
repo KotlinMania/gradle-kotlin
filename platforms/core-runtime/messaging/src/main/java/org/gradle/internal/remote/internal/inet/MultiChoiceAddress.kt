@@ -20,7 +20,7 @@ import com.google.common.collect.Lists
 import java.net.InetAddress
 import java.util.UUID
 
-class MultiChoiceAddress(val canonicalAddress: UUID, private val port: Int, candidates: MutableList<InetAddress>) : InetEndpoint {
+class MultiChoiceAddress(private val canonicalAddress: UUID, private val port: Int, candidates: MutableList<InetAddress>) : InetEndpoint {
     private val candidates: MutableList<InetAddress>
 
     init {
@@ -39,11 +39,15 @@ class MultiChoiceAddress(val canonicalAddress: UUID, private val port: Int, cand
         return port
     }
 
+    fun getCanonicalAddress(): UUID {
+        return canonicalAddress
+    }
+
     override fun toString(): String {
         return getDisplayName()
     }
 
-    override fun equals(o: Any): Boolean {
+    override fun equals(o: Any?): Boolean {
         if (o === this) {
             return true
         }

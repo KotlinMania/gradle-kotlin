@@ -16,6 +16,5 @@
 package org.gradle.internal.remote.internal.hub.protocol
 
 interface Routable {
-    @JvmField
-    val channel: ChannelIdentifier?
+    fun getChannel(): ChannelIdentifier?
 }

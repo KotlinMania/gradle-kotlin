@@ -15,14 +15,16 @@
  */
 package org.gradle.process.internal
 
+import java.io.File
+
 interface ProcessSettings {
-    val directory: File?
+    fun getDirectory(): File
 
-    val command: String?
+    fun getCommand(): String
 
-    val arguments: MutableList<String?>?
+    fun getArguments(): MutableList<String>
 
-    val environment: MutableMap<String?, String?>?
+    fun getEnvironment(): MutableMap<String, String>
 
-    val redirectErrorStream: Boolean
+    fun getRedirectErrorStream(): Boolean
 }

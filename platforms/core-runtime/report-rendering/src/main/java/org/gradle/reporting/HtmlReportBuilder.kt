@@ -20,9 +20,9 @@ import java.io.Writer
 import java.net.URL
 
 interface HtmlReportBuilder {
-    fun requireResource(resource: URL?)
+    fun requireResource(resource: URL)
 
-    fun <T> renderHtmlPage(name: String?, model: T?, renderer: ReportRenderer<T?, HtmlPageBuilder<SimpleHtmlWriter?>?>?)
+    fun <T> renderHtmlPage(name: String, model: T?, renderer: ReportRenderer<T, HtmlPageBuilder<SimpleHtmlWriter>>)
 
-    fun <T> renderRawHtmlPage(name: String?, model: T?, renderer: ReportRenderer<T?, HtmlPageBuilder<Writer?>?>?)
+    fun <T> renderRawHtmlPage(name: String, model: T?, renderer: ReportRenderer<T, HtmlPageBuilder<Writer>>)
 }

@@ -74,7 +74,7 @@ class ProgressLogEventGenerator(private val listener: OutputEventListener) : Out
 
     private fun onStart(progressStartEvent: ProgressStartEvent) {
         val operation: Operation =
-            ProgressLogEventGenerator.Operation(progressStartEvent.category, progressStartEvent.getLoggingHeader(), progressStartEvent.timestamp, progressStartEvent.buildOperationId)
+            Operation(progressStartEvent.category, progressStartEvent.getLoggingHeader(), progressStartEvent.timestamp, progressStartEvent.buildOperationId)
         operations.put(progressStartEvent.getProgressOperationId(), operation)
     }
 
@@ -84,9 +84,9 @@ class ProgressLogEventGenerator(private val listener: OutputEventListener) : Out
 
     private inner class Operation(private val category: String, private val loggingHeader: String?, private val startTime: Long, private val buildOperationIdentifier: OperationIdentifier?) {
         private val hasLoggingHeader: Boolean
-        private var status = ""
+        var status = ""
         private var state = State.None
-        private var completeTime: Long = 0
+        var completeTime: Long = 0
 
         init {
             this.hasLoggingHeader = GUtil.isTrue(loggingHeader)
@@ -96,7 +96,7 @@ class ProgressLogEventGenerator(private val listener: OutputEventListener) : Out
             return StyledTextOutputEvent(timestamp, category, LogLevel.LIFECYCLE, buildOperationIdentifier, mutableListOf<StyledTextOutputEvent.Span>(StyledTextOutputEvent.Span(text)))
         }
 
-        fun styledTextEvent(timestamp: Long, vararg spans: StyledTextOutputEvent.Span?): StyledTextOutputEvent {
+        fun styledTextEvent(timestamp: Long, vararg spans: StyledTextOutputEvent.Span): StyledTextOutputEvent {
             return StyledTextOutputEvent(timestamp, category, LogLevel.LIFECYCLE, buildOperationIdentifier, Arrays.asList<StyledTextOutputEvent.Span>(*spans))
         }
 

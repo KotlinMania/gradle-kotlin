@@ -19,20 +19,16 @@ import org.gradle.tooling.model.ProjectIdentifier
 import java.io.File
 import java.io.Serializable
 
-class DefaultProjectIdentifier(private val build: DefaultBuildIdentifier, private val projectPath: String?) : Serializable, GradleProjectIdentity, ProjectIdentifier {
+class DefaultProjectIdentifier(private val build: DefaultBuildIdentifier, override val projectPath: String?) : Serializable, GradleProjectIdentity, ProjectIdentifier {
     constructor(rootDir: File, projectPath: String?) : this(DefaultBuildIdentifier(rootDir), projectPath)
 
-    override fun getBuildIdentifier(): DefaultBuildIdentifier {
-        return build
-    }
+    override val buildIdentifier: DefaultBuildIdentifier
+        get() = build
 
-    override fun getProjectPath(): String? {
-        return projectPath
-    }
 
-    override fun getRootDir(): File? {
-        return build.getRootDir()
-    }
+
+    override val rootDir: File?
+        get() = build.rootDir
 
     override fun toString(): String {
         return String.format("project=%s, %s", projectPath, build)

@@ -15,6 +15,7 @@
  */
 package org.gradle.tooling.internal.protocol.test.source
 
+import java.io.File
 import org.gradle.tooling.internal.protocol.events.InternalFilePosition
 
 /**

@@ -15,11 +15,22 @@
  */
 package org.gradle.integtests.tooling.r82
 
+import org.gradle.tooling.*
+import org.gradle.tooling.model.*
+import org.gradle.tooling.model.build.*
+import org.gradle.tooling.model.eclipse.*
+import org.gradle.tooling.model.gradle.*
+import org.gradle.tooling.model.idea.*
+import org.gradle.tooling.model.kotlin.dsl.*
+import org.gradle.tooling.internal.adapter.ProtocolToModelAdapter
+import java.io.File
+import org.gradle.integtests.tooling.r48.*
+
 import org.gradle.tooling.BuildAction
 
 internal class FetchProjectsCustomModelsAction : BuildAction<Void?> {
-    public override fun execute(controller: BuildController): Void? {
-        val projects: DomainObjectSet<out BasicGradleProject?> = controller.getModel(GradleBuild::class.java).getProjects()
+    public override fun execute(controller: BuildController?): Void? {
+        val projects: List<BasicGradleProject> = controller.getModel(GradleBuild::class.java).getProjects()
         projects.forEach({ project -> controller.getModel(project, CustomModel::class.java) })
 
         return null

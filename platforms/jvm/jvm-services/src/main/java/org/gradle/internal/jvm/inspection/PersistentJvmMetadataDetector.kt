@@ -54,11 +54,11 @@ class PersistentJvmMetadataDetector(private val delegate: JvmMetadataDetector, c
 
     override fun getMetadata(javaInstallationLocation: InstallationLocation): JvmInstallationMetadata {
         // If the Java installation was auto-provisioned, we can trust that it will not change
-        if (javaInstallationLocation.isAutoProvisioned()) {
+        if (javaInstallationLocation.isAutoProvisioned) {
             return cache.useCache<JvmInstallationMetadata>(Supplier {
                 indexedCache.get(
-                    javaInstallationLocation.getLocation(),
-                    Function { key: File? -> delegate.getMetadata(javaInstallationLocation) })
+                    javaInstallationLocation.location,
+                    Function { delegate.getMetadata(javaInstallationLocation) })
             })
         } else {
             // Otherwise, we need to reprobe each time
@@ -71,7 +71,7 @@ class PersistentJvmMetadataDetector(private val delegate: JvmMetadataDetector, c
         cache.close()
     }
 
-    private class FileSerializer : Serializer<File?> {
+    private class FileSerializer : Serializer<File> {
         @Throws(Exception::class)
         override fun read(decoder: Decoder): File {
             return File(decoder.readString())
@@ -83,7 +83,7 @@ class PersistentJvmMetadataDetector(private val delegate: JvmMetadataDetector, c
         }
     }
 
-    private class JvmInstallationMetadataSerializer : Serializer<JvmInstallationMetadata?> {
+    private class JvmInstallationMetadataSerializer : Serializer<JvmInstallationMetadata> {
         @Throws(Exception::class)
         override fun read(decoder: Decoder): JvmInstallationMetadata {
             return JvmInstallationMetadata.Companion.from(
@@ -101,15 +101,15 @@ class PersistentJvmMetadataDetector(private val delegate: JvmMetadataDetector, c
 
         @Throws(Exception::class)
         override fun write(encoder: Encoder, value: JvmInstallationMetadata) {
-            encoder.writeString(value.getJavaHome().toString())
-            encoder.writeString(value.getJavaVersion())
-            encoder.writeString(value.getVendor().getRawVendor())
-            encoder.writeString(value.getRuntimeName())
-            encoder.writeString(value.getRuntimeVersion())
-            encoder.writeString(value.getJvmName())
-            encoder.writeString(value.getJvmVersion())
-            encoder.writeString(value.getJvmVendor())
-            encoder.writeString(value.getArchitecture())
+            encoder.writeString(value.javaHome.toString())
+            encoder.writeString(value.javaVersion)
+            encoder.writeString(value.vendor.rawVendor)
+            encoder.writeString(value.runtimeName ?: "")
+            encoder.writeString(value.runtimeVersion ?: "")
+            encoder.writeString(value.jvmName ?: "")
+            encoder.writeString(value.jvmVersion ?: "")
+            encoder.writeString(value.jvmVendor ?: "")
+            encoder.writeString(value.architecture ?: "")
         }
     }
 }

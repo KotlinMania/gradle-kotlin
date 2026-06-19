@@ -15,18 +15,29 @@
  */
 package org.gradle.integtests.tooling.r81
 
+import org.gradle.tooling.*
+import org.gradle.tooling.model.*
+import org.gradle.tooling.model.build.*
+import org.gradle.tooling.model.eclipse.*
+import org.gradle.tooling.model.gradle.*
+import org.gradle.tooling.model.idea.*
+import org.gradle.tooling.model.kotlin.dsl.*
+import org.gradle.tooling.internal.adapter.ProtocolToModelAdapter
+import java.io.File
+import org.gradle.integtests.tooling.r48.*
+
 import org.gradle.tooling.BuildAction
 import kotlin.collections.ArrayList
 import kotlin.collections.MutableList
 
 class ActionRunsNestedActions : BuildAction<Models?> {
-    public override fun execute(controller: BuildController): Models {
+    public override fun execute(controller: BuildController?): Models {
         val buildModel: GradleBuild = controller.getBuildModel()
         val projectActions: MutableList<GetProjectModel?> = ArrayList<GetProjectModel?>()
         for (project in buildModel.getProjects()) {
             projectActions.add(GetProjectModel(project))
         }
-        val results: MutableList<ToolchainModel?>? = controller.run(projectActions)
+        val results: MutableList<ToolchainModel?> = controller.run(projectActions)
         return Models(controller.getCanQueryProjectModelInParallel(ToolchainModel::class.java), results)
     }
 
@@ -37,7 +48,7 @@ class ActionRunsNestedActions : BuildAction<Models?> {
             this.project = project
         }
 
-        public override fun execute(controller: BuildController): ToolchainModel {
+        public override fun execute(controller: BuildController?): ToolchainModel {
             return controller.getModel(project, ToolchainModel::class.java)
         }
     }

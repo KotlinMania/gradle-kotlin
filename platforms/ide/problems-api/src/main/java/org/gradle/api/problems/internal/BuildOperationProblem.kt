@@ -19,49 +19,54 @@ import com.google.common.collect.ImmutableList
 import org.gradle.api.problems.FileLocation
 import org.gradle.api.problems.LineInFileLocation
 import org.gradle.api.problems.OffsetInFileLocation
-import org.gradle.api.problems.ProblemDefinition
-import org.gradle.api.problems.ProblemGroup
+import org.gradle.api.problems.ProblemDefinition as ApiProblemDefinition
+import org.gradle.api.problems.ProblemGroup as ApiProblemGroup
 import org.gradle.api.problems.Severity
-import org.gradle.operations.problems.DocumentationLink
-import org.gradle.operations.problems.PluginIdLocation
-import org.gradle.operations.problems.Problem
-import org.gradle.operations.problems.ProblemLocation
+import org.gradle.operations.problems.DocumentationLink as OperationDocumentationLink
+import org.gradle.operations.problems.FileLocation as OperationFileLocation
+import org.gradle.operations.problems.LineInFileLocation as OperationLineInFileLocation
+import org.gradle.operations.problems.OffsetInFileLocation as OperationOffsetInFileLocation
+import org.gradle.operations.problems.PluginIdLocation as OperationPluginIdLocation
+import org.gradle.operations.problems.Problem as OperationProblem
+import org.gradle.operations.problems.ProblemDefinition as OperationProblemDefinition
+import org.gradle.operations.problems.ProblemGroup as OperationProblemGroup
+import org.gradle.operations.problems.ProblemLocation as OperationProblemLocation
 import org.gradle.operations.problems.ProblemSeverity
-import org.gradle.operations.problems.StackTraceLocation
+import org.gradle.operations.problems.StackTraceLocation as OperationStackTraceLocation
 
-class BuildOperationProblem(private val problem: ProblemInternal) : Problem {
-    val definition: ProblemDefinition
-        get() = BuildOperationProblemDefinition(problem.getDefinition())
+class BuildOperationProblem(private val problem: ProblemInternal) : OperationProblem {
+    override val definition: OperationProblemDefinition
+        get() = BuildOperationProblemDefinition(problem.getDefinition()!!)
 
-    val severity: ProblemSeverity
+    override val severity: ProblemSeverity
         get() {
-            when (problem.getDefinition().getSeverity()) {
+            when (problem.getDefinition()!!.getSeverity()) {
                 Severity.ADVICE -> return ProblemSeverity.ADVICE
                 Severity.WARNING -> return ProblemSeverity.WARNING
                 Severity.ERROR -> return ProblemSeverity.ERROR
-                else -> throw IllegalArgumentException("Unknown severity: " + problem.getDefinition().getSeverity())
+                else -> throw IllegalArgumentException("Unknown severity: " + problem.getDefinition()!!.getSeverity())
             }
         }
 
-    val contextualLabel: String?
+    override val contextualLabel: String?
         get() = problem.getContextualLabel()
 
-    val solutions: MutableList<String>
-        get() = problem.getSolutions()
+    override val solutions: MutableList<String>
+        get() = problem.getSolutions()!!
 
-    val details: String?
+    override val details: String?
         get() = problem.getDetails()
 
-    val originLocations: MutableList<ProblemLocation>
-        get() = convertProblemLocations(problem.getOriginLocations())
+    override val originLocations: MutableList<OperationProblemLocation>
+        get() = convertProblemLocations(problem.getOriginLocations()!!)
 
-    val contextualLocations: MutableList<ProblemLocation>
-        get() = convertProblemLocations(problem.getContextualLocations())
+    override val contextualLocations: MutableList<OperationProblemLocation>
+        get() = convertProblemLocations(problem.getContextualLocations()!!)
 
-    private fun convertProblemLocations(locations: MutableList<org.gradle.api.problems.ProblemLocation>): ImmutableList<ProblemLocation> {
-        val builder = ImmutableList.builder<ProblemLocation>()
+    private fun convertProblemLocations(locations: MutableList<org.gradle.api.problems.ProblemLocation>): ImmutableList<OperationProblemLocation> {
+        val builder = ImmutableList.builder<OperationProblemLocation>()
         for (location in locations) {
-            val buildOperationLocation: ProblemLocation? = convertToLocation(location)
+            val buildOperationLocation: OperationProblemLocation? = convertToLocation(location)
             if (buildOperationLocation != null) {
                 builder.add(buildOperationLocation)
             }
@@ -69,63 +74,64 @@ class BuildOperationProblem(private val problem: ProblemInternal) : Problem {
         return builder.build()
     }
 
-    private class BuildOperationProblemDefinition(private val definition: ProblemDefinition) : org.gradle.operations.problems.ProblemDefinition {
-        val name: String
-            get() = definition.id.name
+    private class BuildOperationProblemDefinition(private val definition: ApiProblemDefinition) : OperationProblemDefinition {
+        override val name: String?
+            get() = definition.getId()?.getName()
 
-        val displayName: String
-            get() = definition.id.displayName
+        override val displayName: String?
+            get() = definition.getId()?.getDisplayName()
 
-        val group: ProblemGroup
-            get() = BuildOperationProblemGroup(definition.id.group)
+        override val group: OperationProblemGroup?
+            get() = definition.getId()?.getGroup()?.let { BuildOperationProblemGroup(it) }
 
-        val documentationLink: DocumentationLink?
+        override val documentationLink: OperationDocumentationLink?
             get() {
-                val documentationLink = definition.documentationLink as DocLinkInternal?
+                val documentationLink = definition.getDocumentationLink() as DocLinkInternal?
                 return if (documentationLink == null) null else BuildOperationDocumentationLink(documentationLink)
             }
 
-        private class BuildOperationProblemGroup(private val currentGroup: ProblemGroup) : org.gradle.operations.problems.ProblemGroup {
-            val name: String
-                get() = currentGroup.name
+        private class BuildOperationProblemGroup(private val currentGroup: ApiProblemGroup) : OperationProblemGroup {
+            override val name: String?
+                get() = currentGroup.getName()
 
-            val displayName: String
-                get() = currentGroup.displayName
+            override val displayName: String?
+                get() = currentGroup.getDisplayName()
 
-            val parent: ProblemGroup?
+            override val parent: OperationProblemGroup?
                 get() {
-                    val parent = currentGroup.parent
+                    val parent = currentGroup.getParent()
                     return if (parent == null) null else BuildOperationProblemGroup(parent)
                 }
         }
 
-        private class BuildOperationDocumentationLink(private val documentationLink: DocLinkInternal) : DocumentationLink {
-            val url: String
+        private class BuildOperationDocumentationLink(private val documentationLink: DocLinkInternal) : OperationDocumentationLink {
+            override val url: String?
                 get() = documentationLink.getUrl()
         }
     }
 
-    private open class BuildOperationFileLocation(private val location: FileLocation) : org.gradle.operations.problems.FileLocation {
-        val path: String
+    private open class BuildOperationFileLocation(private val location: FileLocation) : OperationFileLocation {
+        override val path: String?
             get() = location.getPath()
 
-        val displayName: String
+        override val displayName: String
             get() = "file '" + path + "'"
     }
 
     private class BuildOperationLineInFileLocation(private val lineInFileLocation: LineInFileLocation) : BuildOperationFileLocation(
         lineInFileLocation
-    ), org.gradle.operations.problems.LineInFileLocation {
-        val line: Int
+    ), OperationLineInFileLocation {
+        override val line: Int
             get() = lineInFileLocation.getLine()
 
-        val column: Int?
+        override val column: Int?
             get() = if (lineInFileLocation.getColumn() <= 0) null else lineInFileLocation.getColumn()
 
-        val length: Int?
+        override val length: Int?
             get() = if (lineInFileLocation.getLength() <= 0) null else lineInFileLocation.getLength()
 
-        override fun getDisplayName(): String {
+        override val displayName: String
+            get() {
             var location = path + ":" + line
             if (column != null) {
                 location += ":" + column
@@ -134,48 +140,43 @@ class BuildOperationProblem(private val problem: ProblemInternal) : Problem {
                 location += ":" + length
             }
             return "file '" + location + "'"
-        }
+            }
     }
 
-    private class BuildOperationStackTraceLocation(private val stackTraceLocation: StackTraceLocation) : StackTraceLocation {
-        val fileLocation: FileLocation?
-            get() = if (stackTraceLocation.getFileLocation() == null)
-                null
-            else
-                Companion.convertToBuildOperationFileLocation(stackTraceLocation.getFileLocation()!!)
+    private class BuildOperationStackTraceLocation(private val stackTraceLocation: org.gradle.api.problems.internal.StackTraceLocation) : OperationStackTraceLocation {
+        override val fileLocation: OperationFileLocation?
+            get() = stackTraceLocation.getFileLocation()?.let { Companion.convertToBuildOperationFileLocation(it) }
 
-        val stackTrace: MutableList<StackTraceElement>
+        override val stackTrace: MutableList<StackTraceElement>?
             get() = stackTraceLocation.getStackTrace()
 
-        val displayName: String
+        override val displayName: String
             get() = "stack trace location " + stackTraceLocation.getFileLocation()
     }
 
     private class BuildOperationOffsetInFileLocation(private val offsetInFileLocation: OffsetInFileLocation) : BuildOperationFileLocation(
         offsetInFileLocation
-    ), org.gradle.operations.problems.OffsetInFileLocation {
-        val offset: Int
+    ), OperationOffsetInFileLocation {
+        override val offset: Int
             get() = offsetInFileLocation.getOffset()
 
-        val length: Int
+        override val length: Int
             get() = offsetInFileLocation.getLength()
 
-        override fun getDisplayName(): String {
-            return "offset in file '" + path + ":" + offset + ":" + length + "'"
-        }
+        override val displayName: String
+            get() = "offset in file '" + path + ":" + offset + ":" + length + "'"
     }
 
-    private class BuildOperationPluginIdLocation(private val pluginId: PluginIdLocation) : PluginIdLocation {
-        override fun getPluginId(): String {
-            return pluginId.getPluginId()
-        }
+    private class BuildOperationPluginIdLocation(private val pluginIdLocation: org.gradle.api.problems.internal.PluginIdLocation) : OperationPluginIdLocation {
+        override val pluginId: String?
+            get() = pluginIdLocation.getPluginId()
 
-        val displayName: String
-            get() = "plugin '" + pluginId.getPluginId() + "'"
+        override val displayName: String
+            get() = "plugin '" + pluginIdLocation.getPluginId() + "'"
     }
 
     companion object {
-        private fun convertToLocation(location: org.gradle.api.problems.ProblemLocation): ProblemLocation? {
+        private fun convertToLocation(location: org.gradle.api.problems.ProblemLocation): OperationProblemLocation? {
             if (location is FileLocation) {
                 return convertToBuildOperationFileLocation(location)
             } else if (location is TaskLocation) {
@@ -189,7 +190,7 @@ class BuildOperationProblem(private val problem: ProblemInternal) : Problem {
             throw IllegalArgumentException("Unknown location type: " + location.javaClass + ", location: '" + location + "'")
         }
 
-        private fun convertToBuildOperationFileLocation(location: org.gradle.api.problems.ProblemLocation): org.gradle.operations.problems.FileLocation {
+        private fun convertToBuildOperationFileLocation(location: org.gradle.api.problems.ProblemLocation): OperationFileLocation {
             if (location is LineInFileLocation) {
                 return BuildOperationLineInFileLocation(location)
             } else if (location is OffsetInFileLocation) {

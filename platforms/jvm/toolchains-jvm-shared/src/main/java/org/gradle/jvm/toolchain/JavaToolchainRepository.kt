@@ -17,6 +17,7 @@ package org.gradle.jvm.toolchain
 
 import org.gradle.api.Incubating
 import org.gradle.api.artifacts.repositories.AuthenticationSupported
+import org.gradle.api.provider.Property
 
 /**
  * Named configuration of [JavaToolchainResolver] implementations,
@@ -44,5 +45,5 @@ interface JavaToolchainRepository : AuthenticationSupported {
      * Class implementing the [JavaToolchainResolver] being configured.
      * Mandatory property.
      */
-    val resolverClass: Property<Class<out JavaToolchainResolver>>?
+    val resolverClass: Property<Class<out JavaToolchainResolver>>
 }

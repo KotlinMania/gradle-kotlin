@@ -35,13 +35,10 @@ class DefaultCancellationTokenSource : CancellationTokenSource {
         return tokenImpl
     }
 
-    private class CancellationTokenImpl(private val token: DefaultBuildCancellationToken) : CancellationToken, CancellationTokenInternal {
-        override fun getToken(): BuildCancellationToken {
-            return token
-        }
+    private class CancellationTokenImpl(override val token: DefaultBuildCancellationToken) : CancellationToken, CancellationTokenInternal {
 
-        override fun isCancellationRequested(): Boolean {
-            return token.isCancellationRequested()
-        }
+
+        override val isCancellationRequested: Boolean
+            get() = token.isCancellationRequested
     }
 }

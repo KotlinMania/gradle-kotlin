@@ -20,15 +20,15 @@ import org.gradle.internal.verifier.HttpRedirectVerifier
 import java.net.URI
 
 interface ResourceConnectorSpecification {
-    fun <T> getCredentials(type: Class<T?>?): T? {
+    fun <T> getCredentials(type: Class<T>): T? {
         return null
     }
 
-    val authentications: MutableCollection<Authentication?>?
-        get() = mutableListOf<Authentication?>()
+    val authentications: MutableCollection<Authentication>
+        get() = mutableListOf()
 
-    val redirectVerifier: HttpRedirectVerifier?
+    val redirectVerifier: HttpRedirectVerifier
         get() {
-            return HttpRedirectVerifier? { uris: MutableCollection<URI?>? -> }
+            return HttpRedirectVerifier { _: MutableCollection<URI> -> }
         }
 }

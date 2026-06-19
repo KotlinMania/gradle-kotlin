@@ -20,6 +20,7 @@ import org.gradle.internal.resource.ReadableContent
 import org.jspecify.annotations.NullMarked
 import java.io.Closeable
 import java.io.IOException
+import java.io.InputStream
 import java.io.OutputStream
 import java.net.URI
 
@@ -38,12 +39,12 @@ interface HttpClient : Closeable {
     /**
      * Performs a HEAD request to the given URI with the given headers.
      */
-    fun performHead(uri: URI, headers: ImmutableMap<String, String>): Response?
+    fun performHead(uri: URI, headers: ImmutableMap<String, String>): Response
 
     /**
      * Performs a GET request to the given URI with the given headers.
      */
-    fun performGet(uri: URI, headers: ImmutableMap<String, String>): Response?
+    fun performGet(uri: URI, headers: ImmutableMap<String, String>): Response
 
     /**
      * Performs a GET request to the given URI with the given headers, avoiding any
@@ -51,7 +52,7 @@ interface HttpClient : Closeable {
      * or closing the response body when unsuccessful responses are received.
      */
     @Throws(IOException::class)
-    fun performRawGet(uri: URI, headers: ImmutableMap<String, String>): Response?
+    fun performRawGet(uri: URI, headers: ImmutableMap<String, String>): Response
 
     /**
      * Performs a PUT request to the given URI with the given headers, avoiding any
@@ -59,7 +60,7 @@ interface HttpClient : Closeable {
      * or closing the response body when unsuccessful responses are received.
      */
     @Throws(IOException::class)
-    fun performRawPut(uri: URI, resource: ReadableContent): Response?
+    fun performRawPut(uri: URI, resource: ReadableContent): Response
 
     /**
      * Performs a PUT request to the given URI with the given headers, avoiding any
@@ -67,7 +68,7 @@ interface HttpClient : Closeable {
      * or closing the response body when unsuccessful responses are received.
      */
     @Throws(IOException::class)
-    fun performRawPut(uri: URI, headers: ImmutableMap<String, String>, resource: WritableContent): Response?
+    fun performRawPut(uri: URI, headers: ImmutableMap<String, String>, resource: WritableContent): Response
 
     /**
      * A response to an HTTP request.
@@ -78,31 +79,28 @@ interface HttpClient : Closeable {
          */
         fun getHeader(name: String): String?
 
-        @JvmField
         @get:Throws(IOException::class)
-        val content: InputStream?
+        val content: InputStream
 
         /**
          * Returns the HTTP status code of the response.
          */
-        @JvmField
         val statusCode: Int
 
         /**
          * Returns the HTTP status reason phrase of the response.
          */
-        @JvmField
-        val statusReason: String?
+        val statusReason: String
 
         /**
          * Returns the HTTP method used for the request.
          */
-        val method: String?
+        val method: String
 
         /**
          * Returns the effective URI of the response, after any redirects.
          */
-        val effectiveUri: URI?
+        val effectiveUri: URI
 
         val isSuccessful: Boolean
             /**

@@ -17,8 +17,6 @@ package org.gradle.tooling.events.problems.internal
 
 import org.gradle.tooling.events.problems.DocumentationLink
 
-class DefaultDocumentationLink(private val url: String) : DocumentationLink {
-    override fun getUrl(): String {
-        return url
-    }
+class DefaultDocumentationLink(override val url: String) : DocumentationLink {
+
 }

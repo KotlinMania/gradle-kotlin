@@ -30,5 +30,5 @@ interface DirectorySource : FilesystemSource {
      *
      * @since 9.4.0
      */
-    override fun getFile(): File?
+    override val file: File?
 }

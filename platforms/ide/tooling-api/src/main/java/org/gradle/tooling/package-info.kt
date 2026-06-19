@@ -18,6 +18,4 @@
  */
 package org.gradle.tooling
 
-import org.gradle.tooling.internal.consumer.ConnectorServices.createConnector
-import org.gradle.tooling.internal.consumer.ConnectorServices.createCancellationTokenSource
 

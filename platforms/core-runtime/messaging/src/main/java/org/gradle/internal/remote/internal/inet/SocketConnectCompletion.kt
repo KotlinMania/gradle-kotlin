@@ -27,6 +27,6 @@ internal class SocketConnectCompletion(private val socket: SocketChannel) : Conn
     }
 
     override fun <T> create(serializer: StatefulSerializer<T?>): RemoteConnection<T?> {
-        return SocketConnection<T?>(socket, KryoBackedMessageSerializer(), serializer)
+        return SocketConnection<T>(socket, KryoBackedMessageSerializer(), serializer)
     }
 }

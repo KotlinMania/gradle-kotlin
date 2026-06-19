@@ -100,8 +100,8 @@ class DefaultWriteContext(
     override val isolate: WriteIsolate
         get() = getIsolate()
 
-    override fun writeString(value: CharSequence) =
-        stringEncoder.writeString(encoder, value)
+    override fun writeString(value: CharSequence?) =
+        stringEncoder.writeString(encoder, requireNotNull(value) { "Cannot encode a null string." })
 
     override fun writeNullableString(value: CharSequence?) =
         stringEncoder.writeNullableString(encoder, value)
@@ -320,7 +320,8 @@ class DefaultReadContext(
         require(propertyValue != null && propertyType.isInstance(propertyValue)) {
             "A singleton property of type $propertyType has not been registered!"
         }
-        return propertyValue.uncheckedCast()
+        @Suppress("UNCHECKED_CAST")
+        return propertyValue as T
     }
 
     override fun newIsolate(owner: IsolateOwner): ReadIsolate =

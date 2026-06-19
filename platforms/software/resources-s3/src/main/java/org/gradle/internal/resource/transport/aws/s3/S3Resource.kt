@@ -23,9 +23,9 @@ import java.io.IOException
 import java.io.InputStream
 import java.net.URI
 
-class S3Resource(private val s3Object: S3Object, val uRI: URI?) : ExternalResourceReadResponse {
+class S3Resource(private val s3Object: S3Object, val uRI: URI) : ExternalResourceReadResponse {
     @Throws(IOException::class)
-    override fun openStream(): InputStream? {
+    override fun openStream(): InputStream {
         return s3Object.getObjectContent()
     }
 

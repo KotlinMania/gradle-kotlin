@@ -15,19 +15,30 @@
  */
 package org.gradle.integtests.tooling.r55
 
+import org.gradle.tooling.*
+import org.gradle.tooling.model.*
+import org.gradle.tooling.model.build.*
+import org.gradle.tooling.model.eclipse.*
+import org.gradle.tooling.model.gradle.*
+import org.gradle.tooling.model.idea.*
+import org.gradle.tooling.model.kotlin.dsl.*
+import org.gradle.tooling.internal.adapter.ProtocolToModelAdapter
+import java.io.File
+import org.gradle.integtests.tooling.r48.*
+
 import org.gradle.tooling.BuildAction
 import java.io.Serializable
 import kotlin.collections.ArrayList
 import kotlin.collections.MutableCollection
 
 class LoadCompositeEclipseModels : BuildAction<MutableCollection<EclipseProject?>?>, Serializable {
-    public override fun execute(controller: BuildController): MutableCollection<EclipseProject?> {
+    public override fun execute(controller: BuildController?): MutableCollection<EclipseProject?> {
         val models: MutableCollection<EclipseProject?> = ArrayList<EclipseProject?>()
         collectRootModels(controller, controller.getBuildModel(), models)
         return models
     }
 
-    private fun collectRootModels(controller: BuildController, build: GradleBuild, models: MutableCollection<EclipseProject?>) {
+    private fun collectRootModels(controller: BuildController?, build: GradleBuild, models: MutableCollection<EclipseProject?>) {
         models.add(controller.getModel(build.getRootProject(), EclipseProject::class.java))
 
         for (includedBuild in build.getIncludedBuilds()) {

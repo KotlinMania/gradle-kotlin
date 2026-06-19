@@ -42,7 +42,7 @@ class ConsoleProblemEmitter(private val warningMode: WarningMode) : ProblemEmitt
 
         // For now, don't write deprecation and java compilation warnings
         if (ProblemUtils.isInGroup(problem, GradleCoreProblemGroup.deprecation()) ||
-            ProblemUtils.isInGroup(problem, GradleCoreProblemGroup.compilation().java())
+            ProblemUtils.isInGroup(problem, GradleCoreProblemGroup.compilation().java()!!)
         ) {
             return false
         }

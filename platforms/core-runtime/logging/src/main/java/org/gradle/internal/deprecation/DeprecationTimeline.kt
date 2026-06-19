@@ -17,7 +17,7 @@ package org.gradle.internal.deprecation
 
 import org.gradle.util.GradleVersion
 
-internal class DeprecationTimeline private constructor(private val messagePattern: String, private val targetVersion: GradleVersion, private val message: String? = null) {
+class DeprecationTimeline private constructor(private val messagePattern: String, private val targetVersion: GradleVersion, private val message: String? = null) {
     override fun toString(): String {
         return if (message == null) String.format(messagePattern, targetVersion.getMajorVersion()) else String.format(messagePattern, targetVersion.getMajorVersion(), message)
     }

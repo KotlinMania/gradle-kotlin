@@ -16,16 +16,18 @@
 package org.gradle.internal.resource.local
 
 import org.gradle.internal.resource.Resource
+import org.gradle.internal.hash.HashCode
+import java.io.File
 
 /**
  * Represents a file backed local resource.
  */
 interface LocallyAvailableResource : Resource {
-    val file: File?
+    fun getFile(): File
 
-    val sha1: HashCode?
+    fun getSha1(): HashCode?
 
-    val lastModified: Long
+    fun getLastModified(): Long
 
-    val contentLength: Long
+    fun getContentLength(): Long
 }

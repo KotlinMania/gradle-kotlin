@@ -27,10 +27,9 @@ class DefaultProjectConfigurationOperationDescriptor(descriptor: InternalProject
     private val projectIdentifier: ProjectIdentifier
 
     init {
-        this.projectIdentifier = DefaultProjectIdentifier(descriptor.rootDir, descriptor.projectPath)
+        this.projectIdentifier = DefaultProjectIdentifier(descriptor.rootDir!!, descriptor.projectPath)
     }
 
-    override fun getProject(): ProjectIdentifier {
-        return projectIdentifier
-    }
+    override val project: ProjectIdentifier
+        get() = projectIdentifier
 }

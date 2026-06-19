@@ -34,17 +34,17 @@ object LongCommandLineDetectionUtil {
      */
     private const val NEW_NIX_LONG_COMMAND_EXCEPTION_MESSAGE = "Exec failed, error: 7 (Argument list too long)"
 
-    fun hasCommandLineExceedMaxLength(command: String, arguments: MutableList<String?>): Boolean {
-        val commandLineLength = command.length + arguments.stream().map<Int?> { obj: String? -> obj!!.length }.reduce { a: Int, b: Int -> Integer.sum(a, b) }.orElse(0) + arguments.size
+    fun hasCommandLineExceedMaxLength(command: String, arguments: MutableList<String>): Boolean {
+        val commandLineLength = command.length + arguments.sumOf { it.length } + arguments.size
         return commandLineLength > maxCommandLineLength
     }
 
     private val maxCommandLineLength: Int
         get() {
             var defaultMax = MAX_COMMAND_LINE_LENGTH_NIX
-            if (OperatingSystem.current().isMacOsX()) {
+            if (OperatingSystem.current().isMacOsX) {
                 defaultMax = MAX_COMMAND_LINE_LENGTH_OSX
-            } else if (OperatingSystem.current().isWindows()) {
+            } else if (OperatingSystem.current().isWindows) {
                 defaultMax = MAX_COMMAND_LINE_LENGTH_WINDOWS
             }
             // in chars
@@ -52,16 +52,17 @@ object LongCommandLineDetectionUtil {
         }
 
     fun hasCommandLineExceedMaxLengthException(failureCause: Throwable): Boolean {
-        var cause = failureCause
-        do {
-            val message: String = cause.message!!
+        var cause: Throwable? = failureCause
+        while (cause != null) {
+            val message: String = cause.message.orEmpty()
             if (message.contains(WINDOWS_LONG_COMMAND_EXCEPTION_MESSAGE)
                 || message.contains(NIX_LONG_COMMAND_EXCEPTION_MESSAGE)
                 || message.contains(NEW_NIX_LONG_COMMAND_EXCEPTION_MESSAGE)
             ) {
                 return true
             }
-        } while ((cause.cause.also { cause = it!! }) != null)
+            cause = cause.cause
+        }
 
         return false
     }

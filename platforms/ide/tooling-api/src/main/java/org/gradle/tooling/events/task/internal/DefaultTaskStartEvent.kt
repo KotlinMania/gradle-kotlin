@@ -22,8 +22,5 @@ import org.gradle.tooling.events.task.TaskStartEvent
 /**
  * Implementation of the `TaskStartEvent` interface.
  */
-class DefaultTaskStartEvent(eventTime: Long, displayName: String?, descriptor: TaskOperationDescriptor?) : DefaultStartEvent(eventTime, displayName, descriptor), TaskStartEvent {
-    override fun getDescriptor(): TaskOperationDescriptor? {
-        return super.getDescriptor() as TaskOperationDescriptor?
-    }
+class DefaultTaskStartEvent(eventTime: Long, displayName: String?, descriptor: TaskOperationDescriptor?) : DefaultStartEvent<TaskOperationDescriptor?>(eventTime, displayName, descriptor), TaskStartEvent {
 }

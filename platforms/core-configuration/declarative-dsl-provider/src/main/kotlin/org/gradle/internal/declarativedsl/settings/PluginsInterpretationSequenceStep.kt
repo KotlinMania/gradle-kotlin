@@ -106,14 +106,13 @@ class PluginsInterpretationSequenceStep(
                     null
                 )
             }
-            with(targetServices) {
-                val scriptHandler = get(ScriptHandlerFactory::class.java).create(scriptSource, targetScope, StandaloneDomainObjectContext.forScript(scriptSource))
-                val pluginManager = get(PluginManagerInternal::class.java)
-                val pluginApplicator = get(PluginRequestApplicator::class.java)
-                val pluginHandler = get(PluginHandler::class.java)
-                val allPluginRequests = pluginHandler.getAllPluginRequests(PluginRequests.of(pluginRequests), target)
-                pluginApplicator.applyPlugins(allPluginRequests, scriptHandler, pluginManager, targetScope)
-            }
+            val scriptHandlerFactory = targetServices.get(ScriptHandlerFactory::class.java) as ScriptHandlerFactory
+            val scriptHandler = scriptHandlerFactory.create(scriptSource, targetScope, StandaloneDomainObjectContext.forScript(scriptSource))
+            val pluginManager = targetServices.get(PluginManagerInternal::class.java) as PluginManagerInternal
+            val pluginApplicator = targetServices.get(PluginRequestApplicator::class.java) as PluginRequestApplicator
+            val pluginHandler = targetServices.get(PluginHandler::class.java) as PluginHandler
+            val allPluginRequests = pluginHandler.getAllPluginRequests(PluginRequests.of(pluginRequests), target)
+            pluginApplicator.applyPlugins(allPluginRequests, scriptHandler, pluginManager, targetScope)
             targetScope.lock()
         }
     }

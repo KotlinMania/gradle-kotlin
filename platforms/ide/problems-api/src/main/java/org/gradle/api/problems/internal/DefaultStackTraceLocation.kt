@@ -26,7 +26,7 @@ class DefaultStackTraceLocation(private val location: FileLocation?, private val
         return stackTrace
     }
 
-    override fun equals(o: Any): Boolean {
+    override fun equals(o: Any?): Boolean {
         if (o == null || javaClass != o.javaClass) {
             return false
         }

@@ -15,13 +15,24 @@
  */
 package org.gradle.integtests.tooling.r18
 
+import org.gradle.tooling.*
+import org.gradle.tooling.model.*
+import org.gradle.tooling.model.build.*
+import org.gradle.tooling.model.eclipse.*
+import org.gradle.tooling.model.gradle.*
+import org.gradle.tooling.model.idea.*
+import org.gradle.tooling.model.kotlin.dsl.*
+import org.gradle.tooling.internal.adapter.ProtocolToModelAdapter
+import java.io.File
+import org.gradle.integtests.tooling.r48.*
+
 import org.gradle.integtests.tooling.r16.CustomModel
 import org.gradle.tooling.BuildAction
 import kotlin.collections.HashMap
 import kotlin.collections.MutableMap
 
 class UseOtherTypesToFetchProjectModel : BuildAction<MutableMap<String?, CustomModel?>?> {
-    fun execute(controller: BuildController): MutableMap<String?, CustomModel?> {
+    override fun execute(controller: BuildController?): MutableMap<String?, CustomModel?> {
         // Use an IdeaModule to reference a project
         val ideaProject: IdeaProject = controller.getModel(IdeaProject::class.java)
         for (ideaModule in ideaProject.getModules()) {
@@ -39,7 +50,7 @@ class UseOtherTypesToFetchProjectModel : BuildAction<MutableMap<String?, CustomM
         return projects
     }
 
-    fun visit(element: HierarchicalElement, buildController: BuildController, results: MutableMap<String?, CustomModel?>) {
+    fun visit(element: HierarchicalElement, buildController: BuildController?, results: MutableMap<String?, CustomModel?>) {
         results.put(element.getName(), buildController.getModel(element, CustomModel::class.java))
         for (child in element.getChildren()) {
             visit(child, buildController, results)

@@ -23,7 +23,7 @@ import java.io.OutputStream
 
 internal class PayloadSerializerObjectOutputStream(outputStream: OutputStream?, private val map: SerializeMap) : ExceptionReplacingObjectOutputStream(outputStream) {
     @Throws(IOException::class)
-    override fun createNewInstance(outputStream: OutputStream?): ExceptionReplacingObjectOutputStream? {
+    override fun createNewInstance(outputStream: OutputStream?): ExceptionReplacingObjectOutputStream {
         return PayloadSerializerObjectOutputStream(outputStream, map)
     }
 

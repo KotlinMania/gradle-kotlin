@@ -16,7 +16,7 @@
 package org.gradle.process.internal
 
 interface JavaForkOptionsFactory {
-    fun newDecoratedJavaForkOptions(): JavaForkOptionsInternal?
-    fun newJavaForkOptions(): JavaForkOptionsInternal?
-    fun toEffectiveJavaForkOptions(options: JavaForkOptionsInternal?): EffectiveJavaForkOptions?
+    fun newDecoratedJavaForkOptions(): JavaForkOptionsInternal
+    fun newJavaForkOptions(): JavaForkOptionsInternal
+    fun toEffectiveJavaForkOptions(options: JavaForkOptionsInternal): EffectiveJavaForkOptions?
 }

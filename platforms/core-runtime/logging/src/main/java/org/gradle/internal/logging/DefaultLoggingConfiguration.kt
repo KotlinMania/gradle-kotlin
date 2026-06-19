@@ -26,12 +26,12 @@ import org.gradle.api.logging.configuration.WarningMode
 import java.io.Serializable
 
 class DefaultLoggingConfiguration : Serializable, LoggingConfiguration {
-    private var logLevel: LogLevel? = LogLevel.LIFECYCLE
-    private var showStacktrace: ShowStacktrace? = ShowStacktrace.INTERNAL_EXCEPTIONS
-    private var consoleOutput: ConsoleOutput? = ConsoleOutput.Auto
-    private var consoleUnicodeSupport: ConsoleUnicodeSupport? = ConsoleUnicodeSupport.Auto
-    private var isNonInteractive = false
-    private var warningMode: WarningMode? = WarningMode.Summary
+    override var logLevel: LogLevel? = LogLevel.LIFECYCLE
+    override var showStacktrace: ShowStacktrace? = ShowStacktrace.INTERNAL_EXCEPTIONS
+    override var consoleOutput: ConsoleOutput? = ConsoleOutput.Auto
+    override var consoleUnicodeSupport: ConsoleUnicodeSupport? = ConsoleUnicodeSupport.Auto
+    override var isNonInteractive = false
+    override var warningMode: WarningMode? = WarningMode.Summary
 
     override fun equals(obj: Any?): Boolean {
         return EqualsBuilder.reflectionEquals(this, obj)
@@ -41,51 +41,4 @@ class DefaultLoggingConfiguration : Serializable, LoggingConfiguration {
         return HashCodeBuilder.reflectionHashCode(this)
     }
 
-    override fun getLogLevel(): LogLevel? {
-        return logLevel
-    }
-
-    override fun setLogLevel(logLevel: LogLevel?) {
-        this.logLevel = logLevel
-    }
-
-    override fun getConsoleOutput(): ConsoleOutput? {
-        return consoleOutput
-    }
-
-    override fun getConsoleUnicodeSupport(): ConsoleUnicodeSupport? {
-        return consoleUnicodeSupport
-    }
-
-    override fun setConsoleOutput(consoleOutput: ConsoleOutput?) {
-        this.consoleOutput = consoleOutput
-    }
-
-    override fun setConsoleUnicodeSupport(consoleUnicodeSupport: ConsoleUnicodeSupport?) {
-        this.consoleUnicodeSupport = consoleUnicodeSupport
-    }
-
-    override fun isNonInteractive(): Boolean {
-        return isNonInteractive
-    }
-
-    override fun setNonInteractive(nonInteractive: Boolean) {
-        isNonInteractive = nonInteractive
-    }
-
-    override fun getWarningMode(): WarningMode? {
-        return warningMode
-    }
-
-    override fun setWarningMode(warningMode: WarningMode?) {
-        this.warningMode = warningMode
-    }
-
-    override fun getShowStacktrace(): ShowStacktrace? {
-        return showStacktrace
-    }
-
-    override fun setShowStacktrace(showStacktrace: ShowStacktrace?) {
-        this.showStacktrace = showStacktrace
-    }
 }

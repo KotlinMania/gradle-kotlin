@@ -32,7 +32,7 @@ import javax.net.ssl.X509TrustManager
 
 
 class DefaultHttpSettings private constructor(
-    authenticationSettings: MutableCollection<Authentication?>,
+    authenticationSettings: MutableCollection<Authentication>,
     sslContextFactory: SslContextFactory,
     hostnameVerifier: HostnameVerifier,
     redirectVerifier: HttpRedirectVerifier,
@@ -41,42 +41,42 @@ class DefaultHttpSettings private constructor(
     maxConnTotal: Int,
     maxConnPerRoute: Int
 ) : HttpSettings {
-    val authenticationSettings: MutableCollection<Authentication?>
-    val sslContextFactory: SslContextFactory
-    val hostnameVerifier: HostnameVerifier
-    val redirectVerifier: HttpRedirectVerifier
-    val maxRedirects: Int
-    val maxConnTotal: Int
-    val maxConnPerRoute: Int
-    val redirectMethodHandlingStrategy: HttpSettings.RedirectMethodHandlingStrategy
+    override val authenticationSettings: MutableCollection<Authentication>
+    override val sslContextFactory: SslContextFactory
+    override val hostnameVerifier: HostnameVerifier
+    override val redirectVerifier: HttpRedirectVerifier
+    override val maxRedirects: Int
+    override val maxConnTotal: Int
+    override val maxConnPerRoute: Int
+    override val redirectMethodHandlingStrategy: HttpSettings.RedirectMethodHandlingStrategy
 
-    var proxySettings: HttpProxySettings? = null
+    private var proxySettingsValue: HttpProxySettings? = null
+    override val proxySettings: HttpProxySettings
         get() {
-            if (field == null) {
-                field = org.gradle.internal.resource.transport.http.JavaSystemPropertiesHttpProxySettings()
+            if (proxySettingsValue == null) {
+                proxySettingsValue = JavaSystemPropertiesHttpProxySettings()
             }
-            return field
+            return proxySettingsValue!!
         }
-        private set
-    var secureProxySettings: HttpProxySettings? = null
+    private var secureProxySettingsValue: HttpProxySettings? = null
+    override val secureProxySettings: HttpProxySettings
         get() {
-            if (field == null) {
-                field = org.gradle.internal.resource.transport.http.JavaSystemPropertiesSecureHttpProxySettings()
+            if (secureProxySettingsValue == null) {
+                secureProxySettingsValue = JavaSystemPropertiesSecureHttpProxySettings()
             }
-            return field
+            return secureProxySettingsValue!!
         }
-        private set
-    var timeoutSettings: HttpTimeoutSettings? = null
+    private var timeoutSettingsValue: HttpTimeoutSettings? = null
+    override val timeoutSettings: HttpTimeoutSettings
         get() {
-            if (field == null) {
-                field = JavaSystemPropertiesHttpTimeoutSettings()
+            if (timeoutSettingsValue == null) {
+                timeoutSettingsValue = JavaSystemPropertiesHttpTimeoutSettings()
             }
-            return field
+            return timeoutSettingsValue!!
         }
-        private set
 
     class Builder {
-        private var authenticationSettings: MutableCollection<Authentication?>? = null
+        private var authenticationSettings: MutableCollection<Authentication>? = null
         private var sslContextFactory: SslContextFactory? = null
         private var hostnameVerifier: HostnameVerifier? = null
         private var redirectVerifier: HttpRedirectVerifier? = null
@@ -85,7 +85,7 @@ class DefaultHttpSettings private constructor(
         private var maxConnPerRoute: Int = DEFAULT_MAX_PER_ROUTE
         private var redirectMethodHandlingStrategy = HttpSettings.RedirectMethodHandlingStrategy.ALWAYS_FOLLOW_AND_PRESERVE
 
-        fun withAuthenticationSettings(authenticationSettings: MutableCollection<Authentication?>): Builder {
+        fun withAuthenticationSettings(authenticationSettings: MutableCollection<Authentication>): Builder {
             this.authenticationSettings = authenticationSettings
             return this
         }
@@ -148,11 +148,11 @@ class DefaultHttpSettings private constructor(
         Preconditions.checkArgument(maxRedirects >= 0, "maxRedirects must be positive")
         Preconditions.checkArgument(maxConnTotal > 0, "maxConnTotal must be positive")
         Preconditions.checkArgument(maxConnPerRoute > 0, "maxConnPerRoute must be positive")
-        Preconditions.checkNotNull<MutableCollection<Authentication?>?>(authenticationSettings, "authenticationSettings")
-        Preconditions.checkNotNull<SslContextFactory?>(sslContextFactory, "sslContextFactory")
-        Preconditions.checkNotNull<HostnameVerifier?>(hostnameVerifier, "hostnameVerifier")
-        Preconditions.checkNotNull<HttpRedirectVerifier?>(redirectVerifier, "redirectVerifier")
-        Preconditions.checkNotNull<HttpSettings.RedirectMethodHandlingStrategy?>(redirectMethodHandlingStrategy, "redirectMethodHandlingStrategy")
+        Preconditions.checkNotNull(authenticationSettings, "authenticationSettings")
+        Preconditions.checkNotNull(sslContextFactory, "sslContextFactory")
+        Preconditions.checkNotNull(hostnameVerifier, "hostnameVerifier")
+        Preconditions.checkNotNull(redirectVerifier, "redirectVerifier")
+        Preconditions.checkNotNull(redirectMethodHandlingStrategy, "redirectMethodHandlingStrategy")
 
         this.maxRedirects = maxRedirects
         this.maxConnTotal = maxConnTotal
@@ -207,7 +207,7 @@ class DefaultHttpSettings private constructor(
                 return sslContextSupplier.get()
             }
 
-            private val allTrustingTrustManager: Array<TrustManager?> = arrayOf<TrustManager>(object : X509TrustManager {
+            private val allTrustingTrustManager: Array<TrustManager?> = arrayOf<TrustManager?>(object : X509TrustManager {
                 override fun getAcceptedIssuers(): Array<X509Certificate?>? {
                     return null
                 }

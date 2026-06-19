@@ -47,7 +47,7 @@ public class DefaultExecutionProblemHandler implements ExecutionProblemHandler {
     @Override
     public void handleReportedProblems(Identity identity, UnitOfWork work, WorkValidationContext validationContext) {
         ProblemsInternal problemsService = validationContext.getProblemsService();
-        ProblemReporter reporter = problemsService.reporter;
+        ProblemReporter reporter = problemsService.getReporter();
         List<ProblemInternal> errors = validationContext.getErrors();
         List<ProblemInternal> warnings = validationContext.getWarnings();
 
@@ -68,7 +68,7 @@ public class DefaultExecutionProblemHandler implements ExecutionProblemHandler {
 
     private static void throwValidationException(UnitOfWork work, WorkValidationContext validationContext, List<ProblemInternal> validationErrors) {
         WorkValidationException workValidationException = WorkValidationException.withSummaryForContext(work.getDisplayName(), validationContext, validationErrors.size());
-        ProblemReporter reporter = validationContext.getProblemsService().reporter;
+        ProblemReporter reporter = validationContext.getProblemsService().getReporter();
         throw reporter.throwing(workValidationException, validationErrors);
     }
 }

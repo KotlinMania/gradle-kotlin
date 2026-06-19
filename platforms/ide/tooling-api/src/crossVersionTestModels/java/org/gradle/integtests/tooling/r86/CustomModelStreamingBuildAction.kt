@@ -15,10 +15,21 @@
  */
 package org.gradle.integtests.tooling.r86
 
+import org.gradle.tooling.*
+import org.gradle.tooling.model.*
+import org.gradle.tooling.model.build.*
+import org.gradle.tooling.model.eclipse.*
+import org.gradle.tooling.model.gradle.*
+import org.gradle.tooling.model.idea.*
+import org.gradle.tooling.model.kotlin.dsl.*
+import org.gradle.tooling.internal.adapter.ProtocolToModelAdapter
+import java.io.File
+import org.gradle.integtests.tooling.r48.*
+
 import org.gradle.tooling.BuildAction
 
 internal class CustomModelStreamingBuildAction<T>(private val type: Class<T?>?, private val value: Int) : BuildAction<T?> {
-    public override fun execute(controller: BuildController): T? {
+    public override fun execute(controller: BuildController?): T? {
         controller.send(CustomModel(value))
         return controller.getModel(type)
     }

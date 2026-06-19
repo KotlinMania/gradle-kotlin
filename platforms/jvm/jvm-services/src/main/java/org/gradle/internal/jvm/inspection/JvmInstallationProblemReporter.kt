@@ -37,9 +37,9 @@ import java.util.Objects
 @ServiceScope(Scope.BuildSession::class)
 class JvmInstallationProblemReporter {
     private class ProblemReport(// Include auto-detection as it affects visibility of the problem. We do want to report twice if a location was auto-detected and then explicitly configured.
-        private val autoDetected: Boolean, private val problem: String
+        val autoDetected: Boolean, private val problem: String
     ) {
-        override fun equals(o: Any): Boolean {
+        override fun equals(o: Any?): Boolean {
             if (this === o) {
                 return true
             }
@@ -62,7 +62,7 @@ class JvmInstallationProblemReporter {
     private val reportedProblems: MutableSet<ProblemReport> = Sets.newConcurrentHashSet<ProblemReport>()
 
     fun reportProblemIfNeeded(targetLogger: Logger, installationLocation: InstallationLocation, message: String) {
-        val key = ProblemReport(installationLocation.isAutoDetected(), message)
+        val key = ProblemReport(installationLocation.isAutoDetected, message)
         if (!reportedProblems.add(key)) {
             return
         }

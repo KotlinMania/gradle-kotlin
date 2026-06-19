@@ -21,13 +21,9 @@ import org.gradle.tooling.events.test.Destination
 import org.gradle.tooling.events.test.TestOutputDescriptor
 import org.gradle.tooling.internal.protocol.events.InternalOperationDescriptor
 
-class DefaultTestOutputOperationDescriptor(internalDescriptor: InternalOperationDescriptor, parent: OperationDescriptor?, private val destination: Destination?, private val message: String?) :
+class DefaultTestOutputOperationDescriptor(internalDescriptor: InternalOperationDescriptor, parent: OperationDescriptor?, override val destination: Destination?, override val message: String?) :
     DefaultOperationDescriptor(internalDescriptor, parent), TestOutputDescriptor {
-    override fun getDestination(): Destination? {
-        return destination
-    }
 
-    override fun getMessage(): String? {
-        return message
-    }
+
+
 }

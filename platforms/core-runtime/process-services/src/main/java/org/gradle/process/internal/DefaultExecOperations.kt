@@ -31,12 +31,14 @@ import org.gradle.internal.jvm.JavaModuleDetector
 import org.gradle.internal.process.ArgWriter
 import org.gradle.process.JavaDebugOptions
 import org.gradle.process.JavaForkOptions
+import org.gradle.process.CommandLineArgumentProvider
 import org.gradle.process.internal.util.LongCommandLineDetectionUtil
 import org.gradle.util.internal.CollectionUtils
 import org.jspecify.annotations.NullMarked
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
+import java.io.InputStream
 import java.io.OutputStream
 import java.net.URI
 import java.util.jar.Attributes
@@ -144,7 +146,7 @@ class JavaExecHandleBuilder(
         return this
     }
 
-    fun jvmArgs(vararg arguments: Any): JavaExecHandleBuilder {
+    fun jvmArgs(vararg arguments: Any?): JavaExecHandleBuilder {
         javaOptions.jvmArgs(*arguments)
         return this
     }
@@ -171,7 +173,7 @@ class JavaExecHandleBuilder(
             javaOptions.setBootstrapClasspath(classpath)
         }
 
-    fun bootstrapClasspath(vararg classpath: Any): JavaExecHandleBuilder {
+    fun bootstrapClasspath(vararg classpath: Any?): JavaExecHandleBuilder {
         javaOptions.bootstrapClasspath(*classpath)
         return this
     }
@@ -214,25 +216,24 @@ class JavaExecHandleBuilder(
     }
 
 
-    override fun getExecutable(): String {
-        return javaOptions.getExecutable()
-    }
-
-    override fun setExecutable(executable: Any) {
-        javaOptions.setExecutable(executable)
-    }
-
-    fun setExecutable(executable: String) {
-        javaOptions.setExecutable(executable)
-    }
-
-    var workingDir: File?
-        get() = javaOptions.getWorkingDir()
-        set(dir) {
-            javaOptions.setWorkingDir(dir)
+    override var executable: String?
+        get() = javaOptions.getExecutable()
+        set(value) {
+            javaOptions.setExecutable(value)
         }
 
+    fun setExecutable(executable: Any?) {
+        javaOptions.setExecutable(executable)
+    }
+
+    val workingDir: File?
+        get() = javaOptions.getWorkingDir()
+
     fun setWorkingDir(dir: File?) {
+        javaOptions.setWorkingDir(dir)
+    }
+
+    fun setWorkingDir(dir: Any?) {
         javaOptions.setWorkingDir(dir)
     }
 
@@ -267,8 +268,8 @@ class JavaExecHandleBuilder(
         return this
     }
 
-    fun args(vararg args: Any): JavaExecHandleBuilder {
-        execHandleBuilder.args(*args)
+    fun args(vararg args: Any?): JavaExecHandleBuilder {
+        execHandleBuilder.args(*args.filterNotNull().toTypedArray())
         return this
     }
 
@@ -288,8 +289,8 @@ class JavaExecHandleBuilder(
         return this
     }
 
-    fun classpath(vararg paths: Any): JavaExecHandleBuilder {
-        this.classpath.from(*paths)
+    fun classpath(vararg paths: Any?): JavaExecHandleBuilder {
+        this.classpath.from(*paths.filterNotNull().toTypedArray())
         return this
     }
 
@@ -334,7 +335,7 @@ class JavaExecHandleBuilder(
     val commandLine: MutableList<String>
         get() {
             val commandLine: MutableList<String> = ArrayList<String>()
-            commandLine.add(getExecutable())
+            commandLine.add(executable!!)
             commandLine.addAll(this.allArguments)
             return commandLine
         }
@@ -354,7 +355,7 @@ class JavaExecHandleBuilder(
             val arguments = this.allArguments
 
             // Try to shorten command-line if necessary
-            if (LongCommandLineDetectionUtil.hasCommandLineExceedMaxLength(getExecutable(), arguments)) {
+            if (LongCommandLineDetectionUtil.hasCommandLineExceedMaxLength(executable!!, arguments)) {
                 // TODO: This is an ugly check that relies on Java 9 command-line
                 // arguments to detect that we're about to run on Java 9+
                 // This should actually base this decision (and support for modules)
@@ -445,7 +446,7 @@ class JavaExecHandleBuilder(
     override fun build(): ExecHandle {
         // We delegate properties that are also on ProcessForkOptions interface to JavaForkOptions
         // to support copy from JavaOptions, and thus we have to copy them to execHandleBuilder here
-        execHandleBuilder.setExecutable(getExecutable())
+        execHandleBuilder.setExecutable(executable!!)
         execHandleBuilder.setWorkingDir(this.workingDir)
         execHandleBuilder.setEnvironment(this.environment)
         return execHandleBuilder.buildWithEffectiveArguments(this.effectiveArguments)

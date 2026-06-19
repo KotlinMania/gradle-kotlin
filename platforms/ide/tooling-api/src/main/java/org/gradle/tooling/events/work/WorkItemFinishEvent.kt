@@ -23,5 +23,5 @@ import org.gradle.tooling.events.FinishEvent
  * @since 5.1
  */
 interface WorkItemFinishEvent : WorkItemProgressEvent, FinishEvent {
-    override fun getResult(): WorkItemOperationResult?
+    override val result: WorkItemOperationResult?
 }

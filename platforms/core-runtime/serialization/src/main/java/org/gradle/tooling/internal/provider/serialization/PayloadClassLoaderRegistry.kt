@@ -27,11 +27,11 @@ interface PayloadClassLoaderRegistry {
      * Starts serializing an object graph.
      * The returned value is not required to be thread-safe.
      */
-    fun newSerializeSession(): SerializeMap?
+    fun newSerializeSession(): SerializeMap
 
     /**
      * Starts deserializing an object graph.
      * The returned value is not required to be thread-safe.
      */
-    fun newDeserializeSession(): DeserializeMap?
+    fun newDeserializeSession(): DeserializeMap
 }

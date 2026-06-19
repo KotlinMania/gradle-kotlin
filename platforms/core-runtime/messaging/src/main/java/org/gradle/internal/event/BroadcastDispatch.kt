@@ -26,9 +26,7 @@ import org.gradle.util.internal.CollectionUtils
  * An immutable composite [Dispatch] implementation. Optimized for a small number of elements, and for infrequent modification.
  */
 abstract class BroadcastDispatch<T> private constructor(type: Class<T?>) : AbstractBroadcastDispatch<T?>(type) {
-    val type: Class<T?>
-
-    abstract val isEmpty: Boolean
+    abstract fun isEmpty(): Boolean
 
     abstract fun size(): Int
 
@@ -63,7 +61,7 @@ abstract class BroadcastDispatch<T> private constructor(type: Class<T?>) : Abstr
 
     abstract fun remove(listener: Any): BroadcastDispatch<T?>?
 
-    abstract fun addAll(listeners: MutableCollection<out T>): BroadcastDispatch<T?>?
+    abstract fun addAll(listeners: MutableCollection<out T?>): BroadcastDispatch<T?>?
 
     abstract fun removeAll(listeners: MutableCollection<*>): BroadcastDispatch<T?>?
 
@@ -72,8 +70,8 @@ abstract class BroadcastDispatch<T> private constructor(type: Class<T?>) : Abstr
     abstract fun visitListenersUntyped(visitor: Action<Any>)
 
     private class ActionInvocationHandler(private val methodName: String, private val action: Action<Any>) : Dispatch<MethodInvocation?> {
-        override fun dispatch(message: MethodInvocation) {
-            if (message.methodName == methodName) {
+        override fun dispatch(message: MethodInvocation?) {
+            if (message!!.methodName == methodName) {
                 action.execute(message.arguments[0])
             }
         }
@@ -110,7 +108,7 @@ abstract class BroadcastDispatch<T> private constructor(type: Class<T?>) : Abstr
         override fun visitListenersUntyped(visitor: Action<Any>) {
         }
 
-        override fun addAll(listeners: MutableCollection<out T>): BroadcastDispatch<T?> {
+        override fun addAll(listeners: MutableCollection<out T?>): BroadcastDispatch<T?> {
             val result: MutableList<SingletonDispatch<T?>> = ArrayList<SingletonDispatch<T?>>()
             for (listener in listeners) {
                 val dispatch = BroadcastDispatch.SingletonDispatch<T?>(type, listener!!, ReflectionDispatch(listener))
@@ -127,16 +125,16 @@ abstract class BroadcastDispatch<T> private constructor(type: Class<T?>) : Abstr
             return CompositeDispatch<T?>(type, result)
         }
 
-        override fun dispatch(message: MethodInvocation) {
+        override fun dispatch(message: MethodInvocation?) {
         }
     }
 
-    private class SingletonDispatch<T>(type: Class<T?>, private val handler: Any, private val dispatch: Dispatch<MethodInvocation?>) : BroadcastDispatch<T?>(type) {
+    private class SingletonDispatch<T>(type: Class<T?>, val handler: Any, private val dispatch: Dispatch<MethodInvocation?>) : BroadcastDispatch<T?>(type) {
         override fun toString(): String {
             return handler.toString()
         }
 
-        override fun equals(obj: Any): Boolean {
+        override fun equals(obj: Any?): Boolean {
             val other = Cast.uncheckedNonnullCast<SingletonDispatch<T?>>(obj)
             return sameOrEquals(handler, other.handler)
         }
@@ -150,14 +148,14 @@ abstract class BroadcastDispatch<T> private constructor(type: Class<T?>) : Abstr
                 return this
             }
             val result: MutableList<SingletonDispatch<T?>> = ArrayList<SingletonDispatch<T?>>()
-            result.add(this)
+            result.add(Cast.uncheckedNonnullCast<SingletonDispatch<T?>>(this))
             result.add(SingletonDispatch<T?>(type, handler, dispatch))
             return CompositeDispatch<T?>(type, result)
         }
 
-        override fun addAll(listeners: MutableCollection<out T>): BroadcastDispatch<T?> {
+        override fun addAll(listeners: MutableCollection<out T?>): BroadcastDispatch<T?> {
             val result: MutableList<SingletonDispatch<T?>> = ArrayList<SingletonDispatch<T?>>()
-            result.add(this)
+            result.add(Cast.uncheckedNonnullCast<SingletonDispatch<T?>>(this))
             for (listener in listeners) {
                 if (Companion.sameOrEquals(handler, listener!!)) {
                     continue
@@ -207,8 +205,8 @@ abstract class BroadcastDispatch<T> private constructor(type: Class<T?>) : Abstr
             visitor.execute(handler)
         }
 
-        override fun dispatch(message: MethodInvocation) {
-            dispatch(message, dispatch)
+        override fun dispatch(message: MethodInvocation?) {
+            dispatch(message!!, dispatch)
         }
     }
 
@@ -229,7 +227,7 @@ abstract class BroadcastDispatch<T> private constructor(type: Class<T?>) : Abstr
             return CompositeDispatch<T?>(type, result)
         }
 
-        override fun addAll(listeners: MutableCollection<out T>): BroadcastDispatch<T?> {
+        override fun addAll(listeners: MutableCollection<out T?>): BroadcastDispatch<T?> {
             val result: MutableList<SingletonDispatch<T?>> = ArrayList<SingletonDispatch<T?>>(dispatchers)
             for (listener in listeners) {
                 val dispatch = BroadcastDispatch.SingletonDispatch<T?>(type, listener!!, ReflectionDispatch(listener))
@@ -302,8 +300,8 @@ abstract class BroadcastDispatch<T> private constructor(type: Class<T?>) : Abstr
             return dispatchers.size
         }
 
-        override fun dispatch(message: MethodInvocation) {
-            dispatch(message, dispatchers)
+        override fun dispatch(message: MethodInvocation?) {
+            dispatch(message!!, dispatchers)
         }
     }
 

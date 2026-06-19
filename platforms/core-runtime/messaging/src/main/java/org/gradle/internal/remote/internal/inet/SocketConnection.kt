@@ -63,9 +63,9 @@ class SocketConnection<T>(private val socket: SocketChannel, streamSerializer: M
         localAddress = SocketInetAddress(localSocketAddress.getAddress(), localSocketAddress.getPort())
         val remoteSocketAddress = socket.socket().getRemoteSocketAddress() as InetSocketAddress
         remoteAddress = SocketInetAddress(remoteSocketAddress.getAddress(), remoteSocketAddress.getPort())
-        objectReader = messageSerializer.newReader(streamSerializer.newDecoder(instr))
+        objectReader = messageSerializer.newReader(streamSerializer.newDecoder(instr))!!
         encoder = streamSerializer.newEncoder(outstr)
-        objectWriter = messageSerializer.newWriter(encoder)
+        objectWriter = messageSerializer.newWriter(encoder)!!
     }
 
     override fun toString(): String {

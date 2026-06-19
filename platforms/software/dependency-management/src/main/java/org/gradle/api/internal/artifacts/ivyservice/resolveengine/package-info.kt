@@ -15,14 +15,4 @@
  */
 package org.gradle.api.internal.artifacts.ivyservice.resolveengine
 
-import org.gradle.internal.resolve.result.ResolveResult.hasResult
-import org.gradle.internal.resolve.resolver.ComponentMetaDataResolver.resolve
-import org.gradle.internal.resolve.resolver.ComponentMetaDataResolver.isFetchingMetadataCheap
-import org.gradle.internal.resolve.resolver.ArtifactResolver.resolveArtifact
-import org.gradle.internal.resolve.resolver.ArtifactResolver.resolveArtifactsWithType
-import org.gradle.internal.resolve.resolver.DependencyToComponentIdResolver.resolve
-import org.gradle.internal.component.model.ComponentGraphResolveMetadata.getStatus
-import org.gradle.internal.component.model.ComponentGraphResolveMetadata.getModuleVersionId
-import org.gradle.internal.Cast.uncheckedCast
-import org.gradle.internal.resolve.result.BuildableComponentResolveResult.notFound
 

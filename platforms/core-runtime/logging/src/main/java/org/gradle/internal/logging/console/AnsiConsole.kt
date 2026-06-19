@@ -27,13 +27,17 @@ class AnsiConsole private constructor(target: Appendable, private val flushable:
             buildStatusArea.redraw(ansiContext)
             // When build output area is not visible, position the cursor at the end of the output area
             if (!buildStatusArea.isVisible()) {
-                ansiContext.cursorAt(buildOutputArea.getWritePosition())
+                ansiContext.cursorAt(buildOutputArea.writePosition)
             }
         }
     }
     private val buildStatusArea = MultiLineBuildProgressArea()
-    private val buildOutputArea: DefaultTextArea
+    override val buildOutputArea: DefaultTextArea
     private val ansiExecutor: AnsiExecutor
+    override val statusBar: StyledLabel
+        get() = buildStatusArea.progressBar
+    override val buildProgressArea: BuildProgressArea
+        get() = buildStatusArea
 
     constructor(target: Appendable, flushable: Flushable, colorMap: ColorMap, consoleMetaData: ConsoleMetaData, forceAnsi: Boolean) : this(
         target,
@@ -44,7 +48,7 @@ class AnsiConsole private constructor(target: Appendable, private val flushable:
     )
 
     init {
-        this.ansiExecutor = DefaultAnsiExecutor(target, colorMap, factory, consoleMetaData, Cursor.Companion.newBottomLeft(), AnsiConsole.Listener())
+        this.ansiExecutor = DefaultAnsiExecutor(target, colorMap, factory, consoleMetaData, Cursor.Companion.newBottomLeft(), Listener())
 
         buildOutputArea = DefaultTextArea(ansiExecutor)
     }
@@ -60,13 +64,13 @@ class AnsiConsole private constructor(target: Appendable, private val flushable:
 
     private fun redraw() {
         // Calculate how many rows of the status area overlap with the text area
-        var numberOfOverlappedRows: Int = buildStatusArea.getWritePosition().row - buildOutputArea.getWritePosition().row
+        var numberOfOverlappedRows: Int = buildStatusArea.writePosition.row - buildOutputArea.writePosition.row
 
         // If textArea is on a status line but nothing was written, this means a new line was just written. While
         // we wait for additional text, we assume this row doesn't count as overlapping and use it as a status
         // line. In the opposite case, we want to scroll the progress area one more line. This avoid having an one
         // line gap between the text area and the status area.
-        if (buildOutputArea.getWritePosition().col > 0) {
+        if (buildOutputArea.writePosition.col > 0) {
             numberOfOverlappedRows++
         }
 
@@ -75,18 +79,6 @@ class AnsiConsole private constructor(target: Appendable, private val flushable:
         }
 
         ansiExecutor.write(redrawAction)
-    }
-
-    override fun getStatusBar(): StyledLabel {
-        return buildStatusArea.getProgressBar()
-    }
-
-    override fun getBuildProgressArea(): BuildProgressArea {
-        return buildStatusArea
-    }
-
-    override fun getBuildOutputArea(): TextArea {
-        return buildOutputArea
     }
 
     private inner class Listener : DefaultAnsiExecutor.NewLineListener {

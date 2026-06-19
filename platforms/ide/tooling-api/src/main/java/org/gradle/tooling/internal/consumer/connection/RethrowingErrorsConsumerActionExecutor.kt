@@ -20,15 +20,14 @@ class RethrowingErrorsConsumerActionExecutor(private val delegate: ConsumerActio
         delegate.stop()
     }
 
-    override fun getDisplayName(): String {
-        return delegate.getDisplayName()
-    }
+    override val displayName: String?
+        get() = delegate.displayName
 
     @Throws(UnsupportedOperationException::class, IllegalStateException::class)
     override fun <T> run(action: ConsumerAction<T?>): T? {
         val result = delegate.run<T?>(action)
-        action.getParameters().getBuildProgressListener().rethrowErrors()
-        action.getParameters().getStreamedValueListener().rethrowErrors()
+        action.parameters!!.buildProgressListener.rethrowErrors()
+        action.parameters!!.streamedValueListener.rethrowErrors()
         return result
     }
 

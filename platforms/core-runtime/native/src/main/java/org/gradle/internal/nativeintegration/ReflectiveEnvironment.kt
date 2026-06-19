@@ -24,7 +24,7 @@ class ReflectiveEnvironment {
     fun unsetenv(name: String?) {
         val map = this.env
         map.remove(name)
-        if (OperatingSystem.current().isWindows()) {
+        if (OperatingSystem.current().isWindows) {
             val env2 = this.windowsEnv
             env2.remove(name)
         }
@@ -33,7 +33,7 @@ class ReflectiveEnvironment {
     fun setenv(name: String?, value: String?) {
         val map = this.env
         map.put(name, value)
-        if (OperatingSystem.current().isWindows()) {
+        if (OperatingSystem.current().isWindows) {
             val env2 = this.windowsEnv
             env2.put(name, value)
         }

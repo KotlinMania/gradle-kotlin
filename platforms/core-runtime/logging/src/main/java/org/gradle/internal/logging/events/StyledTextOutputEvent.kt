@@ -29,7 +29,7 @@ class StyledTextOutputEvent(timestamp: Long, category: String, logLevel: LogLeve
     private val spans: MutableList<Span>
 
     constructor(timestamp: Long, category: String, logLevel: LogLevel, buildOperationIdentifier: OperationIdentifier?, text: String) : this(
-        timestamp, category, logLevel, buildOperationIdentifier, mutableListOf<Span?>(
+        timestamp, category, logLevel, buildOperationIdentifier, mutableListOf(
             Span(StyledTextOutput.Style.Normal, text)
         )
     )
@@ -40,7 +40,7 @@ class StyledTextOutputEvent(timestamp: Long, category: String, logLevel: LogLeve
 
     override fun toString(): String {
         val builder = StringBuilder()
-        builder.append('[').append(getLogLevel()).append("] [")
+        builder.append('[').append(logLevel).append("] [")
         builder.append(category).append("] ")
         for (span in spans) {
             builder.append('<')
@@ -58,8 +58,8 @@ class StyledTextOutputEvent(timestamp: Long, category: String, logLevel: LogLeve
         return StyledTextOutputEvent(timestamp, category, logLevel, buildOperationId, spans)
     }
 
-    public override fun withBuildOperationId(buildOperationId: OperationIdentifier?): StyledTextOutputEvent? {
-        return StyledTextOutputEvent(timestamp, category, getLogLevel(), buildOperationId, spans)
+    public override fun withBuildOperationId(buildOperationId: OperationIdentifier): StyledTextOutputEvent {
+        return StyledTextOutputEvent(timestamp, category, logLevel, buildOperationId, spans)
     }
 
     override fun getSpans(): MutableList<Span> {
@@ -74,7 +74,7 @@ class StyledTextOutputEvent(timestamp: Long, category: String, logLevel: LogLeve
     }
 
     override fun getLevel(): LogEventLevel {
-        return convert(getLogLevel())
+        return convert(logLevel)
     }
 
     class Span : StyledTextBuildOperationProgressDetails.Span {

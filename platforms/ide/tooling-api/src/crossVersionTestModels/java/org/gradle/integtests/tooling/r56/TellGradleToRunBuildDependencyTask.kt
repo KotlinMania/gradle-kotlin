@@ -15,6 +15,17 @@
  */
 package org.gradle.integtests.tooling.r56
 
+import org.gradle.tooling.*
+import org.gradle.tooling.model.*
+import org.gradle.tooling.model.build.*
+import org.gradle.tooling.model.eclipse.*
+import org.gradle.tooling.model.gradle.*
+import org.gradle.tooling.model.idea.*
+import org.gradle.tooling.model.kotlin.dsl.*
+import org.gradle.tooling.internal.adapter.ProtocolToModelAdapter
+import java.io.File
+import org.gradle.integtests.tooling.r48.*
+
 import org.gradle.api.Action
 import java.io.Serializable
 
@@ -25,7 +36,7 @@ class TellGradleToRunBuildDependencyTask(workspace: EclipseWorkspace?) : BuildAc
         this.workspace = workspace
     }
 
-    public override fun execute(controller: BuildController): Void? {
+    public override fun execute(controller: BuildController?): Void? {
         if (workspace != null) {
             controller.getModel(RunClosedProjectBuildDependencies::class.java, EclipseRuntime::class.java, EclipseRuntimeAction(workspace))
         } else {
@@ -41,7 +52,7 @@ class TellGradleToRunBuildDependencyTask(workspace: EclipseWorkspace?) : BuildAc
             this.workspace = workspace
         }
 
-        public override fun execute(eclipseRuntime: EclipseRuntime) {
+        public override fun execute(eclipseRuntime: EclipseRuntime?) {
             eclipseRuntime.setWorkspace(workspace)
         }
     }

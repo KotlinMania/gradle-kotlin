@@ -20,16 +20,10 @@ import org.gradle.tooling.events.task.TaskSkippedResult
 /**
  * Implementation of the `TaskSkippedResult` interface.
  */
-class DefaultTaskSkippedResult(private val startTime: Long, private val endTime: Long, private val skipMessage: String?) : TaskSkippedResult {
-    override fun getStartTime(): Long {
-        return startTime
-    }
+class DefaultTaskSkippedResult(override val startTime: Long, override val endTime: Long, override val skipMessage: String?) : TaskSkippedResult {
 
-    override fun getEndTime(): Long {
-        return endTime
-    }
 
-    override fun getSkipMessage(): String? {
-        return this.skipMessage
-    }
+
+
+
 }

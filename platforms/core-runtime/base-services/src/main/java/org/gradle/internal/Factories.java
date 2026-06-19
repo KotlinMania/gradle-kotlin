@@ -15,18 +15,17 @@
  */
 package org.gradle.internal;
 
-import org.jspecify.annotations.Nullable;
-
 public final class Factories {
 
     private Factories() {
         /* no-op */
     }
 
-    public static <T> Factory<@Nullable T> toFactory(final Runnable runnable) {
-        return new Factory<@Nullable T>() {
+    @SuppressWarnings("NullAway")
+    public static <T> Factory<T> toFactory(final Runnable runnable) {
+        return new Factory<T>() {
             @Override
-            public @Nullable T create() {
+            public T create() {
                 runnable.run();
                 return null;
             }

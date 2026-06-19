@@ -51,25 +51,25 @@ class SortedCollectionBenchmark {
     @Param("8", "64")
     var size: Int = 0
 
-    private var map: MutableMap<String?, MutableSet<String?>?>? = null
-    private var set: MutableSet<String?>? = null
+    private lateinit var map: MutableMap<String, MutableSet<String>>
+    private lateinit var set: MutableSet<String>
 
     @Setup(Level.Iteration)
     fun setup() {
         val rng = Random(42)
-        map = HashMap<String?, MutableSet<String?>?>(size)
-        set = HashSet<String?>(size)
+        map = HashMap<String, MutableSet<String>>(size)
+        set = HashSet<String>(size)
         for (i in 0..<size) {
             // Simulate class-name-like keys (the real-world usage)
             val key = "org/gradle/internal/Class" + rng.nextInt(100000)
-            set!!.add(key)
+            set.add(key)
 
-            val values: MutableSet<String?> = HashSet<String?>()
+            val values: MutableSet<String> = HashSet<String>()
             val valueCount = 1 + rng.nextInt(5)
             for (j in 0..<valueCount) {
                 values.add("org/gradle/api/Type" + rng.nextInt(100000))
             }
-            map!!.put(key, values)
+            map[key] = values
         }
     }
 
@@ -80,28 +80,28 @@ class SortedCollectionBenchmark {
         // K[] sortedKeys = (K[]) value.keySet().toArray(new Comparable[0]);
         // The unchecked cast to K[] is erased at runtime, so the actual
         // array type is Comparable[].
-        val sortedKeys = map!!.keys.toTypedArray<Comparable<*>?>()
+        val sortedKeys = map.keys.toTypedArray()
         Arrays.sort(sortedKeys)
         for (key in sortedKeys) {
             bh.consume(key)
-            bh.consume(map!!.get(key))
+            bh.consume(map[key])
         }
     }
 
     @Benchmark
     fun mapKeys_listSorted(bh: Blackhole) {
-        val sortedKeys: MutableList<String?> = ArrayList<String?>(map!!.keys)
-        sortedKeys.sort(null)
+        val sortedKeys: MutableList<String> = ArrayList<String>(map.keys)
+        sortedKeys.sort()
         for (key in sortedKeys) {
             bh.consume(key)
-            bh.consume(map!!.get(key))
+            bh.consume(map[key])
         }
     }
 
     // ---- Set element sorting ----
     @Benchmark
     fun setElements_arraySorted(bh: Blackhole) {
-        val sorted = set!!.toTypedArray<Comparable<*>?>()
+        val sorted = set.toTypedArray()
         Arrays.sort(sorted)
         for (elem in sorted) {
             bh.consume(elem)
@@ -110,8 +110,8 @@ class SortedCollectionBenchmark {
 
     @Benchmark
     fun setElements_listSorted(bh: Blackhole) {
-        val sorted: MutableList<String?> = ArrayList<String?>(set)
-        sorted.sort(null)
+        val sorted: MutableList<String> = ArrayList<String>(set)
+        sorted.sort()
         for (elem in sorted) {
             bh.consume(elem)
         }

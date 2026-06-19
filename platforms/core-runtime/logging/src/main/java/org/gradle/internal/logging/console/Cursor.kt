@@ -40,7 +40,7 @@ class Cursor {
         row = 0
     }
 
-    override fun equals(obj: Any): Boolean {
+    override fun equals(obj: Any?): Boolean {
         if (obj == null) {
             return false
         }

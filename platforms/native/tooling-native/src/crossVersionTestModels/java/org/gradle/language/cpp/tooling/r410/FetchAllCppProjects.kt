@@ -24,7 +24,7 @@ import kotlin.collections.ArrayList
 import kotlin.collections.MutableList
 
 class FetchAllCppProjects : BuildAction<MutableList<CppProject?>?>, Serializable {
-    public override fun execute(controller: BuildController): MutableList<CppProject?> {
+    public override fun execute(controller: BuildController?): MutableList<CppProject?> {
         val projects: MutableList<CppProject?> = ArrayList<CppProject?>()
         collectModelsForBuild(controller, controller.getBuildModel(), projects)
         for (build in controller.getBuildModel().getEditableBuilds()) {
@@ -33,7 +33,7 @@ class FetchAllCppProjects : BuildAction<MutableList<CppProject?>?>, Serializable
         return projects
     }
 
-    private fun collectModelsForBuild(controller: BuildController, build: GradleBuild, projects: MutableList<CppProject?>) {
+    private fun collectModelsForBuild(controller: BuildController?, build: GradleBuild, projects: MutableList<CppProject?>) {
         for (project in build.getProjects()) {
             projects.add(controller.getModel(project, CppProject::class.java))
         }

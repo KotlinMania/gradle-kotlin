@@ -86,17 +86,17 @@ public class AbiExtractingClasspathResourceHasher implements ResourceHasher {
     public HashCode hash(ZipEntryContext zipEntryContext) throws IOException {
         ZipEntry zipEntry = zipEntryContext.getEntry();
 
-        if (isNotClassFile(zipEntry.name)) {
+        if (isNotClassFile(zipEntry.getName())) {
             return null;
         }
 
         // A failure to read the zip entry content is a failure to read from the zip stream and should
         // be handled as a failure at the file level rather than at the entry level
-        byte[] content = zipEntry.content;
+        byte[] content = zipEntry.getContent();
 
         // If there is a problem with hashing the public api of the zip entry, use a fallback strategy (if available) to
         // calculate a fallback hash for the entry
-        return fallbackStrategy.handle(new ZipEntryContent(zipEntry.name, content), entry -> hashClassBytes(content));
+        return fallbackStrategy.handle(new ZipEntryContent(zipEntry.getName(), content), entry -> hashClassBytes(content));
     }
 
     private static boolean isNotClassFile(String name) {

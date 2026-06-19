@@ -40,7 +40,7 @@ import javax.xml.xpath.XPathExpressionException
 import javax.xml.xpath.XPathFactory
 
 class MavenToolchainsInstallationSupplier @Inject constructor(private val providerFactory: ProviderFactory, private val fileResolver: FileResolver) : InstallationSupplier {
-    private val toolchainLocation: Provider<String?>
+    private val toolchainLocation: Provider<String>
     private val xPathFactory: XPathFactory
     private val documentBuilderFactory: DocumentBuilderFactory
 
@@ -50,11 +50,9 @@ class MavenToolchainsInstallationSupplier @Inject constructor(private val provid
         this.documentBuilderFactory = XmlFactories.newDocumentBuilderFactory()
     }
 
-    override fun getSourceName(): String {
-        return "Maven Toolchains"
-    }
+    override val sourceName: String = "Maven Toolchains"
 
-    override fun get(): MutableSet<InstallationLocation?> {
+    override fun get(): MutableSet<InstallationLocation> {
         val toolchainFile = fileResolver.resolve(toolchainLocation.get())
         if (toolchainFile.exists()) {
             try {
@@ -87,7 +85,8 @@ class MavenToolchainsInstallationSupplier @Inject constructor(private val provid
                         }
                     }
                     return locations.stream()
-                        .map<InstallationLocation?> { jdkHome: String? -> InstallationLocation.Companion.autoDetected(File(jdkHome), getSourceName()) }
+                        .filter { jdkHome: String? -> jdkHome != null }
+                        .map<InstallationLocation> { jdkHome: String? -> InstallationLocation.Companion.autoDetected(File(jdkHome!!), sourceName) }
                         .collect(Collectors.toSet())
                 }
             } catch (e: IOException) {
@@ -116,7 +115,7 @@ class MavenToolchainsInstallationSupplier @Inject constructor(private val provid
                 }
             }
         }
-        return mutableSetOf<InstallationLocation?>()
+        return mutableSetOf()
     }
 
     private fun defaultMavenToolchainsDefinitionsLocation(): String {

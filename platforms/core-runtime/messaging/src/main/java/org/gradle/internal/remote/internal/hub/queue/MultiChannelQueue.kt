@@ -20,7 +20,7 @@ import org.gradle.internal.remote.internal.hub.protocol.InterHubMessage
 import org.gradle.internal.remote.internal.hub.protocol.Routable
 import java.util.concurrent.locks.Lock
 
-open class MultiChannelQueue(private val lock: Lock?) {
+open class MultiChannelQueue(private val lock: Lock) {
     private val channels: MutableMap<ChannelIdentifier?, MultiEndPointQueue> = HashMap<ChannelIdentifier?, MultiEndPointQueue>()
     private val initializer = QueueInitializer()
 
@@ -35,13 +35,13 @@ open class MultiChannelQueue(private val lock: Lock?) {
     }
 
     fun queue(message: InterHubMessage) {
-        if (message.delivery === InterHubMessage.Delivery.Stateful) {
+        if (message.getDelivery() === InterHubMessage.Delivery.Stateful) {
             initializer.onStatefulMessage(message)
         }
         if (message is Routable) {
             val routableMessage = message as Routable
-            getChannel(routableMessage.channel).dispatch(message)
-        } else if (message.delivery === InterHubMessage.Delivery.Stateful || message.delivery === InterHubMessage.Delivery.AllHandlers) {
+            getChannel(routableMessage.getChannel()).dispatch(message)
+        } else if (message.getDelivery() === InterHubMessage.Delivery.Stateful || message.getDelivery() === InterHubMessage.Delivery.AllHandlers) {
             for (queue in channels.values) {
                 queue.dispatch(message)
             }

@@ -15,14 +15,15 @@
  */
 package org.gradle.tooling.events.download.internal
 
+import java.io.File
+import java.net.URI
 import org.gradle.tooling.events.OperationDescriptor
 import org.gradle.tooling.events.download.FileDownloadOperationDescriptor
 import org.gradle.tooling.events.internal.DefaultOperationDescriptor
 import org.gradle.tooling.internal.protocol.events.InternalFileDownloadDescriptor
-import java.net.URI
 
 class DefaultFileDownloadOperationDescriptor : DefaultOperationDescriptor, FileDownloadOperationDescriptor {
-    private val uri: URI?
+    override val uri: URI?
 
     constructor(descriptor: InternalFileDownloadDescriptor, parent: OperationDescriptor?) : super(descriptor, parent) {
         this.uri = descriptor.uri
@@ -32,7 +33,5 @@ class DefaultFileDownloadOperationDescriptor : DefaultOperationDescriptor, FileD
         this.uri = uri
     }
 
-    override fun getUri(): URI? {
-        return uri
-    }
+
 }

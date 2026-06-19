@@ -58,7 +58,7 @@ class DefaultJdkCacheDirectory(
     // This is a prerequisite for atomic moves in most cases, which are used in the provisionFromArchive method
     private val temporaryFileProvider: GradleUserHomeTemporaryFileProvider
 ) : JdkCacheDirectory {
-    private class UnpackedRoot(private val dir: File, private val metadata: JvmInstallationMetadata)
+    private class UnpackedRoot(val dir: File, val metadata: JvmInstallationMetadata)
 
     val downloadLocation: File
 
@@ -201,7 +201,6 @@ class DefaultJdkCacheDirectory(
      */
     init {
         this.downloadLocation = File(homeDirProvider.getGradleUserHomeDirectory(), "jdks")
-        this.temporaryFileProvider = temporaryFileProvider
     }
 
     private fun unpack(jdkArchive: File): File {
@@ -259,7 +258,7 @@ class DefaultJdkCacheDirectory(
         private const val MAC_OS_JAVA_HOME_FOLDER = "Contents/Home"
 
         private val JDK_CAPABILITIES_DISPLAY: String = JavaInstallationCapability.JDK_CAPABILITIES.stream()
-            .map<String> { cap: JavaInstallationCapability? -> "the " + cap!!.toDisplayName() }
+            .map<String> { cap: JavaInstallationCapability -> "the " + cap.toDisplayName() }
             .collect(RenderingUtils.oxfordJoin("and"))
 
         /**

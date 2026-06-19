@@ -15,32 +15,4 @@
  */
 package org.gradle.api.internal.artifacts.ivyservice.projectmodule
 
-import org.gradle.internal.event.ListenerManager.getBroadcaster
-import org.gradle.internal.deprecation.DeprecationLogger.deprecateAction
-import org.gradle.internal.deprecation.DeprecationMessageBuilder.withContext
-import org.gradle.internal.deprecation.DeprecationMessageBuilder.withAdvice
-import org.gradle.internal.deprecation.DeprecationMessageBuilder.willBecomeAnErrorInGradle10
-import org.gradle.internal.deprecation.Documentation.AbstractBuilder.withUpgradeGuideSection
-import org.gradle.internal.deprecation.DeprecationMessageBuilder.WithDocumentation.nagUser
-import org.gradle.internal.logging.text.TreeFormatter.node
-import org.gradle.internal.logging.text.TreeFormatter.startChildren
-import org.gradle.internal.logging.text.TreeFormatter.endChildren
-import org.gradle.internal.logging.text.TreeFormatter.toString
-import org.gradle.internal.lazy.Lazy.Companion.locking
-import org.gradle.internal.lazy.Lazy.Factory.of
-import org.gradle.internal.Cast.uncheckedCast
-import org.gradle.internal.component.model.ComponentArtifactMetadata.getId
-import org.gradle.internal.component.model.ComponentArtifactMetadata.getComponentId
-import org.gradle.internal.component.local.model.LocalComponentArtifactMetadata.file
-import org.gradle.internal.component.model.ComponentArtifactResolveMetadata.getModuleVersionId
-import org.gradle.internal.component.model.ComponentArtifactMetadata.getName
-import org.gradle.internal.component.model.ComponentArtifactMetadata.getBuildDependencies
-import org.gradle.internal.resolve.result.BuildableTypedResolveResult.resolved
-import org.gradle.internal.resolve.result.BuildableArtifactResolveResult.notFound
-import org.gradle.internal.component.local.model.DefaultProjectComponentSelector.toIdentifier
-import org.gradle.internal.component.local.model.LocalComponentGraphResolveState.moduleVersionId
-import org.gradle.internal.resolve.result.BuildableComponentIdResolveResult.rejected
-import org.gradle.internal.resolve.result.BuildableComponentIdResolveResult.resolved
-import org.gradle.internal.resolve.result.BuildableComponentResolveResult.resolved
-import org.gradle.internal.component.model.ComponentArtifactResolveMetadata.getId
 

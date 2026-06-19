@@ -18,14 +18,4 @@
  */
 package org.gradle.ide.visualstudio.internal.plugins
 
-import org.gradle.internal.service.ServiceRegistry.get
-import org.gradle.internal.Cast.uncheckedCast
-import org.gradle.api.internal.resolve.ProjectModelResolver.resolveProjectModel
-import org.gradle.ide.visualstudio.internal.VisualStudioTargetBinary.projectPath
-import org.gradle.ide.visualstudio.internal.VisualStudioTargetBinary.componentName
-import org.gradle.ide.visualstudio.internal.VisualStudioTargetBinary.projectType
-import org.gradle.ide.visualstudio.internal.VisualStudioTargetBinary.variantDimensions
-import org.gradle.ide.visualstudio.internal.VisualStudioTargetBinary.isExecutable
-import org.gradle.nativeplatform.toolchain.internal.MacroArgsConverter.transform
-import org.gradle.util.internal.CollectionUtils.filter
 

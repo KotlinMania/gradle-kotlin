@@ -32,7 +32,7 @@ class DefaultExecAction(private val execHandleBuilder: ClientExecHandleBuilder) 
     private var ignoreExitValue = false
 
     override fun execute(): ExecResult {
-        val execHandle = execHandleBuilder.build()
+        val execHandle = execHandleBuilder.build()!!
         val execResult = execHandle.start().waitForFinish()
         if (!isIgnoreExitValue()) {
             execResult.assertNormalExitValue()
@@ -41,7 +41,7 @@ class DefaultExecAction(private val execHandleBuilder: ClientExecHandleBuilder) 
     }
 
     override fun getExecutable(): String {
-        return execHandleBuilder.getExecutable()
+        return execHandleBuilder.executable!!
     }
 
     override fun setExecutable(executable: String) {
@@ -69,7 +69,7 @@ class DefaultExecAction(private val execHandleBuilder: ClientExecHandleBuilder) 
         execHandleBuilder.setWorkingDir(dir)
     }
 
-    override fun commandLine(vararg arguments: Any?): ExecAction {
+    override fun commandLine(vararg arguments: Any): ExecAction {
         execHandleBuilder.commandLine(*arguments)
         return this
     }
@@ -79,11 +79,11 @@ class DefaultExecAction(private val execHandleBuilder: ClientExecHandleBuilder) 
         return this
     }
 
-    override fun setCommandLine(args: MutableList<String?>) {
+    override fun setCommandLine(args: MutableList<String>) {
         execHandleBuilder.commandLine(args)
     }
 
-    override fun setCommandLine(vararg args: Any?) {
+    override fun setCommandLine(vararg args: Any) {
         execHandleBuilder.commandLine(*args)
     }
 
@@ -91,7 +91,7 @@ class DefaultExecAction(private val execHandleBuilder: ClientExecHandleBuilder) 
         execHandleBuilder.commandLine(args)
     }
 
-    override fun args(vararg args: Any?): ExecAction {
+    override fun args(vararg args: Any): ExecAction {
         execHandleBuilder.args(*args)
         return this
     }
@@ -101,7 +101,7 @@ class DefaultExecAction(private val execHandleBuilder: ClientExecHandleBuilder) 
         return this
     }
 
-    override fun setArgs(arguments: MutableList<String?>): ExecAction {
+    override fun setArgs(arguments: MutableList<String>): ExecAction {
         execHandleBuilder.setArgs(arguments)
         return this
     }
@@ -111,11 +111,11 @@ class DefaultExecAction(private val execHandleBuilder: ClientExecHandleBuilder) 
         return this
     }
 
-    override fun getArgs(): MutableList<String?> {
+    override fun getArgs(): MutableList<String> {
         return execHandleBuilder.getArgs()
     }
 
-    override fun getArgumentProviders(): MutableList<CommandLineArgumentProvider?> {
+    override fun getArgumentProviders(): MutableList<CommandLineArgumentProvider> {
         return execHandleBuilder.getArgumentProviders()
     }
 
@@ -138,15 +138,15 @@ class DefaultExecAction(private val execHandleBuilder: ClientExecHandleBuilder) 
         return this
     }
 
-    override fun getEnvironment(): MutableMap<String?, Any?> {
+    override fun getEnvironment(): MutableMap<String, Any> {
         return execHandleBuilder.getEnvironment()
     }
 
-    override fun setEnvironment(environmentVariables: MutableMap<String?, *>) {
+    override fun setEnvironment(environmentVariables: MutableMap<String, *>) {
         execHandleBuilder.setEnvironment(environmentVariables)
     }
 
-    override fun environment(environmentVariables: MutableMap<String?, *>): ExecAction {
+    override fun environment(environmentVariables: MutableMap<String, *>): ExecAction {
         execHandleBuilder.environment(environmentVariables)
         return this
     }
@@ -169,7 +169,7 @@ class DefaultExecAction(private val execHandleBuilder: ClientExecHandleBuilder) 
         return execHandleBuilder.getErrorOutput()
     }
 
-    override fun getCommandLine(): MutableList<String?> {
+    override fun getCommandLine(): MutableList<String> {
         return execHandleBuilder.getCommandLine()
     }
 
@@ -182,12 +182,14 @@ class DefaultExecAction(private val execHandleBuilder: ClientExecHandleBuilder) 
         return this
     }
 
-    override fun listener(listener: ExecHandleListener): ExecAction {
-        execHandleBuilder.listener(listener)
+    override fun listener(listener: ExecHandleListener?): ExecAction {
+        if (listener != null) {
+            execHandleBuilder.listener(listener)
+        }
         return this
     }
 
-    override fun copyTo(options: ProcessForkOptions?): ExecAction? {
+    override fun copyTo(options: ProcessForkOptions): ExecAction {
         throw UnsupportedOperationException("Copy to ProcessForkOptions is not supported for ExecAction")
     }
 }

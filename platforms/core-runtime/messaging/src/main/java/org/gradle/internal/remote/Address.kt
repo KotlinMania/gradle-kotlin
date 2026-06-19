@@ -26,5 +26,5 @@ interface Address : Serializable {
      *
      * @return The display name.
      */
-    val displayName: String?
+    fun getDisplayName(): String?
 }

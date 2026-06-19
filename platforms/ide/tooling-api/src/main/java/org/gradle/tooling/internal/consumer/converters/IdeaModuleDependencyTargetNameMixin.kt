@@ -26,7 +26,7 @@ class IdeaModuleDependencyTargetNameMixin(private val ideaModuleDependency: Idea
             if (ideaModuleDependency is BackwardsCompatibleIdeaModuleDependency) {
                 val dependency =
                     ideaModuleDependency
-                return dependency.getDependencyModule().getName()
+                return dependency.dependencyModule!!.name
             }
             return null
         }

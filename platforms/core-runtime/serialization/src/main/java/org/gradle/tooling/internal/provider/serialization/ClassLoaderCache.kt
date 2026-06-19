@@ -37,20 +37,20 @@ class ClassLoaderCache {
          * @param in The object to transform.
          * @return The transformed object.
          */
-        fun transform(`in`: IN?): OUT?
+        fun transform(`in`: IN): OUT
     }
 
 
     private val lock: Lock = ReentrantLock()
-    private val classLoaderDetails: Cache<ClassLoader?, ClassLoaderDetails?>
-    private val classLoaderIds: Cache<UUID?, ClassLoader?>
+    private val classLoaderDetails: Cache<ClassLoader, ClassLoaderDetails>
+    private val classLoaderIds: Cache<UUID, ClassLoader>
 
     init {
-        classLoaderDetails = CacheBuilder.newBuilder().weakKeys().build<ClassLoader?, ClassLoaderDetails?>()
-        classLoaderIds = CacheBuilder.newBuilder().softValues().build<UUID?, ClassLoader?>()
+        classLoaderDetails = CacheBuilder.newBuilder().weakKeys().build<ClassLoader, ClassLoaderDetails>()
+        classLoaderIds = CacheBuilder.newBuilder().softValues().build<UUID, ClassLoader>()
     }
 
-    fun getClassLoader(details: ClassLoaderDetails, factory: Transformer<ClassLoader?, ClassLoaderDetails?>): ClassLoader {
+    fun getClassLoader(details: ClassLoaderDetails, factory: Transformer<ClassLoader, ClassLoaderDetails>): ClassLoader {
         lock.lock()
         try {
             var classLoader = classLoaderIds.getIfPresent(details.uuid)
@@ -61,7 +61,7 @@ class ClassLoaderCache {
             classLoader = factory.transform(details)
             classLoaderIds.put(details.uuid, classLoader)
             classLoaderDetails.put(classLoader, details)
-            return classLoader!!
+            return classLoader
         } finally {
             lock.unlock()
         }
@@ -76,7 +76,7 @@ class ClassLoaderCache {
         }
     }
 
-    fun getDetails(classLoader: ClassLoader, factory: Transformer<ClassLoaderDetails?, ClassLoader?>): ClassLoaderDetails {
+    fun getDetails(classLoader: ClassLoader, factory: Transformer<ClassLoaderDetails, ClassLoader>): ClassLoaderDetails {
         lock.lock()
         try {
             var details = classLoaderDetails.getIfPresent(classLoader)
@@ -86,7 +86,7 @@ class ClassLoaderCache {
 
             details = factory.transform(classLoader)
             classLoaderDetails.put(classLoader, details)
-            classLoaderIds.put(details!!.uuid, classLoader)
+            classLoaderIds.put(details.uuid, classLoader)
             return details
         } finally {
             lock.unlock()

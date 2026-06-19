@@ -15,7 +15,9 @@
  */
 package org.gradle.tooling.events
 
+import java.io.File
 import org.gradle.api.Incubating
+import org.gradle.tooling.events.problems.Problem
 
 /**
  * Enumerates the different types of operations for which progress events can be received.

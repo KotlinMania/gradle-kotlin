@@ -24,13 +24,12 @@ interface OsMemoryStatus {
      *
      * @return the physical memory information
      */
-    @JvmField
-    val physicalMemory: OsMemoryStatusAspect.Available?
+    fun getPhysicalMemory(): OsMemoryStatusAspect.Available
 
     /**
      * Get the virtual memory information.
      *
      * @return the virtual memory information
      */
-    val virtualMemory: OsMemoryStatusAspect?
+    fun getVirtualMemory(): OsMemoryStatusAspect
 }

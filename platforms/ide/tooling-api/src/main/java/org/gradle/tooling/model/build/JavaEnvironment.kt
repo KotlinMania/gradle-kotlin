@@ -15,6 +15,8 @@
  */
 package org.gradle.tooling.model.build
 
+import java.io.File
+
 /**
  * Informs about the Java environment, for example the Java home or the JVM args used. See example in [BuildEnvironment].
  *

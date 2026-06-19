@@ -29,5 +29,5 @@ interface Resource : Describable {
      *
      * @return the display name
      */
-    override fun getDisplayName(): String?
+    override fun getDisplayName(): String
 }

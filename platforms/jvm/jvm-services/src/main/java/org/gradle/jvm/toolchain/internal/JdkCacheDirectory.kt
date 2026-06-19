@@ -28,5 +28,5 @@ import java.io.File
  */
 @ServiceScope(Scope.Build::class)
 interface JdkCacheDirectory {
-    fun listJavaHomes(): MutableSet<File?>?
+    fun listJavaHomes(): MutableSet<File>
 }

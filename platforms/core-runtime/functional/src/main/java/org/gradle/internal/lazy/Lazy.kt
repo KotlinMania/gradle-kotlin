@@ -73,6 +73,7 @@ interface Lazy<T : Any?> : Supplier<T?> {
          *
          * @param <V> the type of the lazy value
         </V> */
+        @JvmStatic
         fun <V> fixed(value: V?): Lazy<V?> {
             return FixedLazy<V?>(value)
         }

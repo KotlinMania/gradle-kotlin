@@ -141,7 +141,7 @@ public class TomlCatalogFileParser {
     }
 
     private ProblemReporterInternal getInternalReporter() {
-        return getInternalProblems().internalReporter;
+        return getInternalProblems().getInternalReporter();
     }
 
     @NullMarked
@@ -172,7 +172,7 @@ public class TomlCatalogFileParser {
                     .details("TOML syntax invalid")
                     .solution("Fix the TOML file according to the syntax described at https://toml.io")))
             .collect(toList());
-        throw getInternalProblems().reporter.throwing(new InvalidUserDataException(), problems);
+        throw getInternalProblems().getReporter().throwing(new InvalidUserDataException(), problems);
     }
 
     private ProblemsInternal getInternalProblems() {
@@ -603,6 +603,6 @@ public class TomlCatalogFileParser {
     }
 
     private RuntimeException throwVersionCatalogProblemException(Action<ProblemSpecInternal> action) {
-        throw getInternalProblems().reporter.throwing(new InvalidUserDataException(), getInternalReporter().internalCreate(action));
+        throw getInternalProblems().getReporter().throwing(new InvalidUserDataException(), getInternalReporter().internalCreate(action));
     }
 }

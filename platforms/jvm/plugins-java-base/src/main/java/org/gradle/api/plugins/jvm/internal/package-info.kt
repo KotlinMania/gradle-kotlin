@@ -20,45 +20,4 @@
  */
 package org.gradle.api.plugins.jvm.internal
 
-import org.gradle.api.tasks.SourceSet.Companion.isMain
-import org.gradle.internal.service.ServiceRegistry.get
-import org.gradle.api.internal.tasks.DefaultSourceSet.configurationNameOf
-import org.gradle.api.plugins.jvm.internal.JvmLanguageUtilities.useDefaultTargetPlatformInference
-import org.gradle.api.plugins.jvm.internal.JvmPluginServices.configureAsApiElements
-import org.gradle.api.plugins.jvm.internal.JvmPluginServices.configureAsRuntimeElements
-import org.gradle.api.plugins.jvm.internal.JvmPluginServices.configureClassesDirectoryVariant
-import org.gradle.api.plugins.jvm.internal.JvmPluginServices.configureResourcesDirectoryVariant
-import org.gradle.api.plugins.jvm.internal.JvmPluginServices.configureAsSources
-import org.gradle.internal.Cast.uncheckedCast
-import org.gradle.api.internal.jvm.JavaVersionParser.parseMajorVersion
-import org.gradle.api.tasks.compile.AbstractCompile.classpath
-import org.gradle.api.plugins.jvm.internal.JvmLanguageSourceDirectoryBuilder.compiledBy
-import org.gradle.internal.Cast.cast
-import org.gradle.api.internal.tasks.DefaultSourceSetOutput.getClassesDirs
-import org.gradle.api.internal.tasks.DefaultSourceSetOutput.getGeneratedSourcesDirs
-import org.gradle.api.JavaVersion.toString
-import org.gradle.api.JavaVersion.Companion.toVersion
-import org.gradle.internal.deprecation.DeprecationLogger.deprecateBehaviour
-import org.gradle.internal.deprecation.DeprecationMessageBuilder.withAdvice
-import org.gradle.internal.deprecation.DeprecationMessageBuilder.willBecomeAnErrorInGradle10
-import org.gradle.internal.deprecation.Documentation.AbstractBuilder.withUpgradeGuideSection
-import org.gradle.internal.deprecation.DeprecationMessageBuilder.WithDocumentation.nagUser
-import org.gradle.api.plugins.jvm.internal.JvmFeatureInternal.withApi
-import org.gradle.internal.service.ServiceRegistration.add
-import org.gradle.jvm.toolchain.JavaLanguageVersion.toString
-import org.gradle.api.JavaVersion.Companion.current
-import org.gradle.api.plugins.jvm.internal.JvmFeatureInternal.maybeRegisterJavadocElements
-import org.gradle.api.plugins.jvm.internal.JvmFeatureInternal.maybeRegisterSourcesElements
-import org.gradle.util.internal.CollectionUtils.join
-import org.gradle.internal.deprecation.DeprecationMessageBuilder.withContext
-import org.gradle.api.internal.tasks.compile.CompilationSourceDirs.Companion.inferSourceRoots
-import org.gradle.api.tasks.compile.JavaCompile.getOptions
-import org.gradle.api.internal.tasks.compile.JavaCompileExecutableUtils.getExecutableOverrideToolchainSpec
-import org.gradle.api.internal.tasks.DefaultSourceSetOutput.setResourcesContributor
-import org.gradle.api.tasks.SourceSet.compiledBy
-import org.gradle.api.plugins.jvm.internal.JvmPluginServices.configureAsCompileClasspath
-import org.gradle.api.plugins.jvm.internal.JvmEcosystemUtilities.configureAsRuntimeClasspath
-import org.gradle.internal.deprecation.DeprecationLogger.deprecateTask
-import org.gradle.internal.deprecation.DeprecationMessageBuilder.willBeRemovedInGradle10
-import org.gradle.api.tasks.internal.JavaExecExecutableUtils.getExecutableOverrideToolchainSpec
 

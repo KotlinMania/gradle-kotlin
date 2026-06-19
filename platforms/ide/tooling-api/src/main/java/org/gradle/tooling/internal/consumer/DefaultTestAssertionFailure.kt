@@ -21,25 +21,17 @@ import org.gradle.tooling.TestAssertionFailure
 open class DefaultTestAssertionFailure(
     message: String?,
     description: String?,
-    private val expected: String?,
-    private val actual: String?,
+    override val expected: String?,
+    override val actual: String?,
     causes: MutableList<out Failure?>?,
-    private val className: String?,
-    private val stacktrace: String?
+    override val className: String?,
+    override val stacktrace: String?
 ) : DefaultFailure(message, description, causes), TestAssertionFailure {
-    override fun getExpected(): String? {
-        return expected
-    }
 
-    override fun getActual(): String? {
-        return actual
-    }
 
-    override fun getClassName(): String? {
-        return className
-    }
 
-    override fun getStacktrace(): String? {
-        return stacktrace
-    }
+
+
+
+
 }

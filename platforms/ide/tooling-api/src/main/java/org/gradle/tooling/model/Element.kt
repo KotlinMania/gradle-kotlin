@@ -27,7 +27,6 @@ interface Element : Model {
      * @return The name of the element.
      * @since 1.0-milestone-5
      */
-    @JvmField
     val name: String?
 
     /**

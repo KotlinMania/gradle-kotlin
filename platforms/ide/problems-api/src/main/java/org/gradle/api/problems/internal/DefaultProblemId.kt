@@ -49,7 +49,7 @@ class DefaultProblemId(name: String, displayName: String, parent: ProblemGroup) 
         return groupPath(getGroup()) + getName()
     }
 
-    override fun equals(o: Any): Boolean {
+    override fun equals(o: Any?): Boolean {
         if (this === o) {
             return true
         }
@@ -59,10 +59,10 @@ class DefaultProblemId(name: String, displayName: String, parent: ProblemGroup) 
 
         val that = o as ProblemId
 
-        if (name != that.name) {
+        if (name != that.getName()) {
             return false
         }
-        return parent == that.group
+        return parent == that.getGroup()
     }
 
     override fun hashCode(): Int {
@@ -80,8 +80,8 @@ class DefaultProblemId(name: String, displayName: String, parent: ProblemGroup) 
             if (group == null) {
                 return ""
             }
-            val parent = group.parent
-            return groupPath(parent) + group.name + ":"
+            val parent = group.getParent()
+            return groupPath(parent) + group.getName() + ":"
         }
     }
 }

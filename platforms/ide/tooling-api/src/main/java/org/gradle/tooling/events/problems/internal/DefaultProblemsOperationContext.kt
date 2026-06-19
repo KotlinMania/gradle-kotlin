@@ -19,37 +19,28 @@ import org.gradle.tooling.Failure
 import org.gradle.tooling.events.problems.AdditionalData
 import org.gradle.tooling.events.problems.Details
 import org.gradle.tooling.events.problems.Location
+import org.gradle.tooling.events.problems.Problem
 import org.gradle.tooling.events.problems.ProblemContext
 import org.gradle.tooling.events.problems.Solution
 import org.jspecify.annotations.NullMarked
 
 @NullMarked
 class DefaultProblemsOperationContext(
-    private val details: Details?,
-    private val originLocations: MutableList<Location>,
-    private val contextualLocations: MutableList<Location>,
-    private val solutions: MutableList<Solution>,
+    override val details: Details?,
+    override val originLocations: MutableList<Location>,
+    override val contextualLocations: MutableList<Location>,
+    override val solutions: MutableList<Solution>,
     val additionalData: AdditionalData,
-    private val failure: Failure?
+    override val failure: Failure?
 ) : ProblemContext {
-    override fun getDetails(): Details? {
-        return details
-    }
 
 
-    override fun getOriginLocations(): MutableList<Location> {
-        return originLocations
-    }
 
-    override fun getContextualLocations(): MutableList<Location> {
-        return contextualLocations
-    }
 
-    override fun getSolutions(): MutableList<Solution> {
-        return solutions
-    }
 
-    override fun getFailure(): Failure? {
-        return failure
-    }
+
+
+
+
+
 }

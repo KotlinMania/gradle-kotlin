@@ -18,21 +18,4 @@
  */
 package org.gradle.jvm.toolchain.internal.install
 
-import org.gradle.internal.service.ServiceRegistration.add
-import org.gradle.internal.service.ServiceRegistration.addProvider
-import org.gradle.internal.os.OperatingSystem.Companion.current
-import org.gradle.internal.os.OperatingSystem.isMacOsX
-import org.gradle.api.internal.StartParameterInternal.projectPropertiesUntracked
-import org.gradle.api.internal.StartParameterInternal.isDaemonJvmCriteriaConfigured
-import org.gradle.internal.deprecation.DeprecationLogger.deprecateAction
-import org.gradle.internal.deprecation.DeprecationMessageBuilder.withAdvice
-import org.gradle.internal.deprecation.DeprecationMessageBuilder.willBeRemovedInGradle10
-import org.gradle.internal.deprecation.Documentation.AbstractBuilder.withUpgradeGuideSection
-import org.gradle.internal.deprecation.DeprecationMessageBuilder.WithDocumentation.nagUser
-import org.gradle.internal.logging.text.StyledTextOutputFactory.create
-import org.gradle.internal.logging.text.StyledTextOutput.println
-import org.gradle.internal.logging.text.StyledTextOutput.withStyle
-import org.gradle.internal.logging.text.StyledTextOutput.format
-import org.gradle.internal.jvm.inspection.JavaInstallationRegistry.toolchains
-import org.gradle.platform.internal.CurrentBuildPlatform.toBuildPlatform
 

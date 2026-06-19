@@ -36,5 +36,6 @@ inline fun <reified T : Any> GradleInternal.serviceOf(): T =
     services.get()
 
 
+@Suppress("UNCHECKED_CAST")
 inline fun <reified T : Any> ServiceRegistry.get(): T =
-    this[T::class.java]
+    get(T::class.java as Class<T?>)!!

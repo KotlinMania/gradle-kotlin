@@ -27,7 +27,7 @@ import org.gradle.tooling.internal.consumer.connection.RethrowingErrorsConsumerA
 import org.gradle.tooling.internal.consumer.loader.ToolingImplementationLoader
 
 class ConnectionFactory(private val toolingImplementationLoader: ToolingImplementationLoader, private val executorFactory: ExecutorFactory, private val loggingProvider: LoggingProvider) {
-    fun create(distribution: Distribution, parameters: ConnectionParameters, listener: ProjectConnectionCloseListener?): ProjectConnection {
+    fun create(distribution: Distribution, parameters: ConnectionParameters, listener: ProjectConnectionCloseListener): ProjectConnection {
         val lazyConnection: ConsumerActionExecutor = LazyConsumerActionExecutor(distribution, toolingImplementationLoader, loggingProvider, parameters)
         val cancellableConnection: ConsumerActionExecutor = CancellableConsumerActionExecutor(lazyConnection)
         val progressLoggingConnection: ConsumerActionExecutor = ProgressLoggingConsumerActionExecutor(cancellableConnection, loggingProvider)

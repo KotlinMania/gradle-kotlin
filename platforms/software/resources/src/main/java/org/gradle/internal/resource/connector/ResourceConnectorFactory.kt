@@ -15,15 +15,16 @@
  */
 package org.gradle.internal.resource.connector
 
+import org.gradle.authentication.Authentication
 import org.gradle.internal.resource.transfer.ExternalResourceConnector
 import org.gradle.internal.service.scopes.Scope
 import org.gradle.internal.service.scopes.ServiceScope
 
 @ServiceScope(Scope.Global::class)
 interface ResourceConnectorFactory {
-    val supportedProtocols: MutableSet<String?>?
+    fun getSupportedProtocols(): MutableSet<String>
 
-    val supportedAuthentication: MutableSet<Class<out Authentication?>?>?
+    fun getSupportedAuthentication(): MutableSet<Class<out Authentication>>
 
-    fun createResourceConnector(connectionDetails: ResourceConnectorSpecification?): ExternalResourceConnector?
+    fun createResourceConnector(connectionDetails: ResourceConnectorSpecification): ExternalResourceConnector
 }

@@ -31,19 +31,17 @@ class SynchronizedLogging(private val clock: Clock, private val buildOperationId
     //TODO: evaluate errorprone suppression (https://github.com/gradle/gradle/issues/35864)
     private val services = ThreadLocal<ThreadLoggingServices?>()
 
-    override fun getListenerManager(): ListenerManager? {
-        return services().listenerManager
-    }
+    override val listenerManager: ListenerManager?
+        get() = services().listenerManager
 
-    override fun getProgressLoggerFactory(): ProgressLoggerFactory? {
-        return services().progressLoggerFactory
-    }
+    override val progressLoggerFactory: ProgressLoggerFactory?
+        get() = services().progressLoggerFactory
 
     private fun services(): ThreadLoggingServices {
         var threadServices = services.get()
         if (threadServices == null) {
             val manager = DefaultListenerManager(Scope.Global::class.java)
-            val progressLoggerFactory = DefaultProgressLoggerFactory(manager.getBroadcaster<ProgressListener?>(ProgressListener::class.java)!!, clock, buildOperationIdFactory)
+            val progressLoggerFactory = DefaultProgressLoggerFactory(manager.getBroadcaster<ProgressListener?>(ProgressListener::class.java as Class<ProgressListener?>)!!, clock, buildOperationIdFactory)
             threadServices = ThreadLoggingServices(manager, progressLoggerFactory)
             services.set(threadServices)
         }

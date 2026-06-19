@@ -21,13 +21,11 @@ import org.gradle.tooling.events.work.WorkItemOperationDescriptor
 import org.gradle.tooling.internal.protocol.events.InternalWorkItemDescriptor
 
 class DefaultWorkItemOperationDescriptor(descriptor: InternalWorkItemDescriptor, parent: OperationDescriptor?) : DefaultOperationDescriptor(descriptor, parent), WorkItemOperationDescriptor {
-    private val className: String?
+    override val className: String?
 
     init {
         this.className = descriptor.className
     }
 
-    override fun getClassName(): String? {
-        return className
-    }
+
 }

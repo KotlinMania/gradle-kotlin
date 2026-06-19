@@ -32,12 +32,10 @@ interface InternalPhasedAction : InternalProtocolInterface, Serializable {
     /**
      * Internal version of the action to be run after projects are loaded.
      */
-    @JvmField
     val projectsLoadedAction: InternalBuildActionVersion2<*>?
 
     /**
      * Internal version of the action to be run after tasks are run.
      */
-    @JvmField
     val buildFinishedAction: InternalBuildActionVersion2<*>?
 }

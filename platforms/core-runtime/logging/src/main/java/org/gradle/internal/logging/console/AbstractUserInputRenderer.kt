@@ -111,7 +111,7 @@ abstract class AbstractUserInputRenderer(@JvmField protected val delegate: Outpu
                 overflowFile!!.deleteOnExit()
                 overflowEncoder = KryoBackedEncoder(Files.newOutputStream(overflowFile!!.toPath()))
             }
-            outputEventSerializer.write(overflowEncoder, event)
+            outputEventSerializer.write(overflowEncoder!!, event)
             overflowEventCount++
         } catch (e: Exception) {
             LOGGER.warn("Failed to write overflow event to disk, falling back to in-memory buffer", e)

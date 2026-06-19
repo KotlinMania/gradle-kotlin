@@ -27,11 +27,12 @@ class UsedGradleVersionsFromGradleUserHomeCaches(cacheBuilderFactory: GlobalScop
         directoryScanner = VersionSpecificCacheDirectoryScanner(cacheBuilderFactory.getRootDir())
     }
 
-    override fun getUsedGradleVersions(): SortedSet<GradleVersion> {
+    override val usedGradleVersions: SortedSet<GradleVersion>
+        get() {
         val result: SortedSet<GradleVersion> = TreeSet<GradleVersion>()
-        for (cacheDir in directoryScanner.getExistingDirectories()) {
-            result.add(cacheDir.getVersion())
+        for (cacheDir in directoryScanner.existingDirectories) {
+            result.add(cacheDir.version)
         }
         return result
-    }
+        }
 }

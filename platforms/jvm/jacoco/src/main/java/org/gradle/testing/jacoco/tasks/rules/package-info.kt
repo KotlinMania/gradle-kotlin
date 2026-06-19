@@ -18,6 +18,4 @@
  */
 package org.gradle.testing.jacoco.tasks.rules
 
-import org.gradle.internal.service.ServiceRegistry.get
-import org.gradle.api.logging.Logging.getLogger
 

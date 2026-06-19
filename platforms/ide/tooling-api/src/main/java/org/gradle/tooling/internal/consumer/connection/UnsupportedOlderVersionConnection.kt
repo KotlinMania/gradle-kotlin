@@ -37,16 +37,15 @@ class UnsupportedOlderVersionConnection(delegate: ConnectionVersion4, private va
     private val metaData: ConnectionMetaDataVersion1
 
     init {
-        this.version = delegate.metaData.version
-        this.metaData = delegate.metaData
+        this.version = delegate.metaData!!.version!!
+        this.metaData = delegate.metaData!!
     }
 
     override fun stop() {
     }
 
-    override fun getDisplayName(): String {
-        return metaData.displayName
-    }
+    override val displayName: String?
+        get() = metaData.displayName
 
     @Throws(UnsupportedOperationException::class, IllegalStateException::class)
     override fun <T> run(type: Class<T?>, operationParameters: ConsumerOperationParameters): T? {

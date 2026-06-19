@@ -24,7 +24,7 @@ class MultiLineBuildProgressArea : BuildProgressArea {
     private val entries: MutableList<DefaultRedrawableLabel> = ArrayList<DefaultRedrawableLabel>(2)
     private val progressBarLabel: DefaultRedrawableLabel
 
-    private val buildProgressLabels: MutableList<StyledLabel> = ArrayList<StyledLabel>()
+    private val mutableBuildProgressLabels: MutableList<StyledLabel> = ArrayList<StyledLabel>()
     private val parkingLabel: DefaultRedrawableLabel
 
     /**
@@ -43,32 +43,31 @@ class MultiLineBuildProgressArea : BuildProgressArea {
         entries.add(parkingLabel)
     }
 
-    public override fun getBuildProgressLabels(): MutableList<StyledLabel> {
-        return Collections.unmodifiableList<StyledLabel>(buildProgressLabels)
-    }
+    override val buildProgressLabels: MutableList<StyledLabel>
+        get() = Collections.unmodifiableList<StyledLabel>(mutableBuildProgressLabels)
 
-    val progressBar: StyledLabel
+    override val progressBar: StyledLabel
         get() = progressBarLabel
 
-    val cursorParkLine: StyledLabel
+    override val cursorParkLine: StyledLabel
         get() = parkingLabel
 
     val height: Int
         get() = entries.size
 
     override fun resizeBuildProgressTo(buildProgressLabelCount: Int) {
-        var delta = buildProgressLabelCount - buildProgressLabels.size
+        var delta = buildProgressLabelCount - mutableBuildProgressLabels.size
         if (delta <= 0) {
             // We don't support shrinking at the moment
             return
         }
 
-        var row = parkingLabel.getWritePosition().row
+        var row = parkingLabel.writePosition.row
         parkingLabel.scrollDownBy(delta)
         while (delta-- > 0) {
             val label: DefaultRedrawableLabel = newLabel(row--)
             entries.add(entries.size - 1, label)
-            buildProgressLabels.add(label)
+            mutableBuildProgressLabels.add(label)
         }
     }
 
@@ -113,10 +112,10 @@ class MultiLineBuildProgressArea : BuildProgressArea {
 
             // Ensure a clean end of the line when the area scrolls
             if (isVisible && newLines > 0 && (i + newLines) < entries.size) {
-                val currentLength = label.getWritePosition().col
-                val previousLength = entries.get(i + newLines).getWritePosition().col
+                val currentLength = label.writePosition.col
+                val previousLength = entries.get(i + newLines).writePosition.col
                 if (currentLength < previousLength) {
-                    ansi.writeAt(label.getWritePosition())!!.eraseForward()
+                    ansi.writeAt(label.writePosition)!!.eraseForward()
                 }
             }
         }

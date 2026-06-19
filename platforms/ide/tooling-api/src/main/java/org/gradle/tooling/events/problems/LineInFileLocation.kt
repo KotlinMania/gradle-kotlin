@@ -15,6 +15,7 @@
  */
 package org.gradle.tooling.events.problems
 
+import java.io.File
 import org.gradle.api.Incubating
 
 /**

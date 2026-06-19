@@ -32,23 +32,23 @@ import java.util.concurrent.Callable
 import java.util.concurrent.ExecutionException
 
 class CachingToolingImplementationLoader(private val loader: ToolingImplementationLoader) : ToolingImplementationLoader, Closeable {
-    private val connections: Cache<ClassPath?, ConsumerConnection> = CacheBuilder.newBuilder()
+    private val connections: Cache<ClassPath, ConsumerConnection> = CacheBuilder.newBuilder()
         .maximumSize(15)
-        .build<ClassPath?, ConsumerConnection?>()
+        .build<ClassPath, ConsumerConnection>()
 
     override fun create(
-        distribution: Distribution,
-        progressLoggerFactory: ProgressLoggerFactory,
-        progressListener: InternalBuildProgressListener,
-        connectionParameters: ConnectionParameters,
-        cancellationToken: BuildCancellationToken
-    ): ConsumerConnection {
-        val classpath = distribution.getToolingImplementationClasspath(progressLoggerFactory, progressListener, connectionParameters, cancellationToken)
+        distribution: Distribution?,
+        progressLoggerFactory: ProgressLoggerFactory?,
+        progressListener: InternalBuildProgressListener?,
+        connectionParameters: ConnectionParameters?,
+        cancellationToken: BuildCancellationToken?
+    ): ConsumerConnection? {
+        val classpath = distribution!!.getToolingImplementationClasspath(progressLoggerFactory, progressListener, connectionParameters, cancellationToken)!!
 
         try {
             return connections.get(
                 classpath,
-                CachingToolingImplementationLoader.ConsumerConnectionCreator(distribution, progressLoggerFactory, progressListener, connectionParameters, cancellationToken)
+                ConsumerConnectionCreator(distribution, progressLoggerFactory!!, progressListener!!, connectionParameters!!, cancellationToken!!)
             )
         } catch (e: ExecutionException) {
             throw GradleConnectionException(String.format("Could not create an instance of Tooling API implementation using the specified %s.", distribution.displayName), e)
@@ -73,7 +73,7 @@ class CachingToolingImplementationLoader(private val loader: ToolingImplementati
     ) : Callable<ConsumerConnection> {
         @Throws(Exception::class)
         override fun call(): ConsumerConnection {
-            return loader.create(distribution, progressLoggerFactory, progressListener, connectionParameters, cancellationToken)
+            return loader.create(distribution, progressLoggerFactory, progressListener, connectionParameters, cancellationToken)!!
         }
     }
 }

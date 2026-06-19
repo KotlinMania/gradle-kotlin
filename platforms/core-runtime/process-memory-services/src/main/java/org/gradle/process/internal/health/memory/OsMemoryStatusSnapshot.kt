@@ -15,7 +15,7 @@
  */
 package org.gradle.process.internal.health.memory
 
-class OsMemoryStatusSnapshot private constructor(private val physicalMemory: OsMemoryStatusAspect.Available?, private val virtualMemory: OsMemoryStatusAspect?) : OsMemoryStatus {
+class OsMemoryStatusSnapshot private constructor(private val physicalMemory: OsMemoryStatusAspect.Available, private val virtualMemory: OsMemoryStatusAspect) : OsMemoryStatus {
     /**
      * Create a new snapshot with unknown virtual memory.
      *
@@ -42,11 +42,11 @@ class OsMemoryStatusSnapshot private constructor(private val physicalMemory: OsM
         DefaultAvailableOsMemoryStatusAspect("virtual", totalVirtualMemory, freeVirtualMemory)
     )
 
-    override fun getPhysicalMemory(): OsMemoryStatusAspect.Available? {
+    override fun getPhysicalMemory(): OsMemoryStatusAspect.Available {
         return physicalMemory
     }
 
-    override fun getVirtualMemory(): OsMemoryStatusAspect? {
+    override fun getVirtualMemory(): OsMemoryStatusAspect {
         return virtualMemory
     }
 

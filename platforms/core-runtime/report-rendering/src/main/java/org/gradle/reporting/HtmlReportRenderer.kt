@@ -32,7 +32,7 @@ class HtmlReportRenderer {
     /**
      * Renders a multi-page HTML report from the given model, into the given directory.
      */
-    fun <T> render(model: T?, renderer: ReportRenderer<T?, HtmlReportBuilder?>, outputDirectory: File) {
+    fun <T> render(model: T?, renderer: ReportRenderer<T, HtmlReportBuilder>, outputDirectory: File) {
         try {
             outputDirectory.mkdirs()
             val context = DefaultHtmlReportContext(outputDirectory)
@@ -51,10 +51,10 @@ class HtmlReportRenderer {
     /**
      * Renders a single page HTML report from the given model, into the given output file.
      */
-    fun <T> renderSinglePage(model: T?, renderer: ReportRenderer<T?, HtmlPageBuilder<SimpleHtmlWriter?>?>?, outputFile: File) {
-        render<T?>(model, object : ReportRenderer<T?, HtmlReportBuilder?>() {
-            override fun render(model: T?, output: HtmlReportBuilder) {
-                output.renderHtmlPage<T?>(outputFile.getName(), model, renderer)
+    fun <T> renderSinglePage(model: T?, renderer: ReportRenderer<T, HtmlPageBuilder<SimpleHtmlWriter>>, outputFile: File) {
+        render<T>(model, object : ReportRenderer<T, HtmlReportBuilder>() {
+            override fun render(model: T?, output: HtmlReportBuilder?) {
+                output!!.renderHtmlPage(outputFile.getName(), model, renderer)
             }
         }, outputFile.getParentFile())
     }
@@ -62,10 +62,10 @@ class HtmlReportRenderer {
     /**
      * Renders a single page HTML report from the given model, into the given output file.
      */
-    fun <T> renderRawSinglePage(model: T?, renderer: ReportRenderer<T?, HtmlPageBuilder<Writer?>?>?, outputFile: File) {
-        render<T?>(model, object : ReportRenderer<T?, HtmlReportBuilder?>() {
-            override fun render(model: T?, output: HtmlReportBuilder) {
-                output.renderRawHtmlPage<T?>(outputFile.getName(), model, renderer)
+    fun <T> renderRawSinglePage(model: T?, renderer: ReportRenderer<T, HtmlPageBuilder<Writer>>, outputFile: File) {
+        render<T>(model, object : ReportRenderer<T, HtmlReportBuilder>() {
+            override fun render(model: T?, output: HtmlReportBuilder?) {
+                output!!.renderRawHtmlPage(outputFile.getName(), model, renderer)
             }
         }, outputFile.getParentFile())
     }
@@ -73,7 +73,7 @@ class HtmlReportRenderer {
     private class Resource(val source: URL?, val path: String)
 
     private class DefaultHtmlReportContext(private val outputDirectory: File?) : HtmlReportBuilder {
-        private val resources: MutableMap<String?, Resource> = HashMap<String?, Resource>()
+        val resources: MutableMap<String?, Resource> = HashMap<String?, Resource>()
 
         fun addResource(source: URL): Resource {
             val urlString: String? = source.toString()
@@ -95,25 +95,25 @@ class HtmlReportRenderer {
             addResource(source)
         }
 
-        override fun <T> renderHtmlPage(name: String, model: T?, renderer: ReportRenderer<T?, HtmlPageBuilder<SimpleHtmlWriter?>?>) {
+        override fun <T> renderHtmlPage(name: String, model: T?, renderer: ReportRenderer<T, HtmlPageBuilder<SimpleHtmlWriter>>) {
             val outputFile = File(outputDirectory, name)
-            IoActions.writeTextFile(outputFile, "utf-8", object : ErroringAction<Writer?>() {
+            IoActions.writeTextFile(outputFile, "utf-8", object : ErroringAction<Writer>() {
                 @Throws(Exception::class)
                 override fun doExecute(writer: Writer) {
                     val htmlWriter = SimpleHtmlWriter(writer, outputFile.getParentFile().toPath(), "")
                     htmlWriter.startElement("html")
-                    renderer.render(model, DefaultHtmlReportContext.DefaultHtmlPageBuilder<SimpleHtmlWriter?>(prefix(name), htmlWriter))
+                    renderer.render(model, DefaultHtmlPageBuilder(prefix(name), htmlWriter))
                     htmlWriter.endElement()
                 }
             })
         }
 
-        override fun <T> renderRawHtmlPage(name: String, model: T?, renderer: ReportRenderer<T?, HtmlPageBuilder<Writer?>?>) {
+        override fun <T> renderRawHtmlPage(name: String, model: T?, renderer: ReportRenderer<T, HtmlPageBuilder<Writer>>) {
             val outputFile = File(outputDirectory, name)
-            IoActions.writeTextFile(outputFile, "utf-8", object : ErroringAction<Writer?>() {
+            IoActions.writeTextFile(outputFile, "utf-8", object : ErroringAction<Writer>() {
                 @Throws(Exception::class)
                 override fun doExecute(writer: Writer) {
-                    renderer.render(model, DefaultHtmlReportContext.DefaultHtmlPageBuilder<Writer?>(prefix(name), writer))
+                    renderer.render(model, DefaultHtmlPageBuilder(prefix(name), writer))
                 }
             })
         }
@@ -132,18 +132,14 @@ class HtmlReportRenderer {
             return builder.toString()
         }
 
-        private inner class DefaultHtmlPageBuilder<D>(private val prefix: String?, private val output: D?) : HtmlPageBuilder<D?> {
+        private inner class DefaultHtmlPageBuilder<D>(private val prefix: String, override val output: D) : HtmlPageBuilder<D> {
             override fun requireResource(source: URL): String {
                 val resource = addResource(source)
                 return prefix + resource.path
             }
 
-            override fun formatDate(date: Date?): String? {
+            override fun formatDate(date: Date): String {
                 return DateFormat.getDateTimeInstance().format(date)
-            }
-
-            override fun getOutput(): D? {
-                return output
             }
         }
     }

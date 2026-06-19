@@ -17,6 +17,7 @@ package org.gradle.tooling.model.gradle
 
 import org.gradle.tooling.model.BuildIdentifier
 import org.gradle.tooling.model.BuildModel
+import org.gradle.tooling.model.DomainObjectSet
 import org.gradle.tooling.model.Model
 
 /**
@@ -30,7 +31,7 @@ interface GradleBuild : Model, BuildModel {
      *
      * @since 2.13
      */
-    override fun getBuildIdentifier(): BuildIdentifier?
+    override val buildIdentifier: BuildIdentifier?
 
     /**
      * Returns the root project for this build.
@@ -44,7 +45,6 @@ interface GradleBuild : Model, BuildModel {
      *
      * @return The set of all projects.
      */
-    @kotlin.jvm.JvmField
     val projects: DomainObjectSet<out BasicGradleProject?>?
 
     /**

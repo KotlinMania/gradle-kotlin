@@ -22,10 +22,10 @@ import java.io.IOException
 import java.io.InputStream
 import java.net.URI
 
-class GcsResource(private val gcsClient: GcsClient, private val gcsObject: StorageObject, private val uri: URI?) : ExternalResourceReadResponse {
+class GcsResource(private val gcsClient: GcsClient, private val gcsObject: StorageObject, private val uri: URI) : ExternalResourceReadResponse {
     @Throws(IOException::class)
-    override fun openStream(): InputStream? {
-        return gcsClient.getResourceStream(uri)
+    override fun openStream(): InputStream {
+        return gcsClient.getResourceStream(uri)!!
     }
 
     override fun getMetaData(): ExternalResourceMetaData {

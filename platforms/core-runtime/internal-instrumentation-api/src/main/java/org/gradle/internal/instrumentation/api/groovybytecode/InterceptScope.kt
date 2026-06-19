@@ -86,6 +86,7 @@ abstract class InterceptScope protected constructor(protected val descriptorStri
          * @param constructorClass the class whose constructors are to be intercepted
          * @return the scope object
          */
+        @JvmStatic
         fun constructorsOf(constructorClass: Class<*>): InterceptScope {
             return ConstructorScope(constructorClass)
         }

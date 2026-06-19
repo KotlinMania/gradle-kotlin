@@ -21,23 +21,25 @@ import org.gradle.api.credentials.PasswordCredentials
 import org.gradle.api.resources.ResourceException
 import org.gradle.internal.resource.ExternalResourceName
 import org.gradle.internal.resource.transfer.ExternalResourceLister
+import java.util.Vector
 
-class SftpResourceLister(private val sftpClientFactory: SftpClientFactory, private val credentials: PasswordCredentials?) : ExternalResourceLister {
+class SftpResourceLister(private val sftpClientFactory: SftpClientFactory, private val credentials: PasswordCredentials) : ExternalResourceLister {
     override fun list(directory: ExternalResourceName): MutableList<String?>? {
-        val client = sftpClientFactory.createSftpClient(directory.getUri(), credentials)
+        val client = sftpClientFactory.createSftpClient(directory.uri, credentials)
 
         try {
-            val entries = client.getSftpClient().ls(directory.getPath())
+            @Suppress("UNCHECKED_CAST")
+            val entries = client.getSftpClient().ls(directory.path) as Vector<ChannelSftp.LsEntry>
             val list: MutableList<String?> = ArrayList<String?>()
             for (entry in entries) {
-                list.add(entry.getFilename())
+                list.add(entry.filename)
             }
             return list
         } catch (e: SftpException) {
             if (e.id == ChannelSftp.SSH_FX_NO_SUCH_FILE) {
                 return null
             }
-            throw ResourceException(directory.getUri(), String.format("Could not list children for resource '%s'.", directory.getUri()), e)
+            throw ResourceException(directory.uri, String.format("Could not list children for resource '%s'.", directory.uri), e)
         } finally {
             sftpClientFactory.releaseSftpClient(client)
         }

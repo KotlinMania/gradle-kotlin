@@ -31,7 +31,7 @@ class ModelMapping {
         if (modelType == Void::class.java) {
             return DefaultModelIdentifier(ModelIdentifier.NULL_MODEL)
         }
-        return DefaultModelIdentifier(modelType.getName())
+        return DefaultModelIdentifier(modelType.name)
     }
 
     fun getVersionAdded(modelType: Class<*>?): String? {
@@ -43,9 +43,8 @@ class ModelMapping {
             return "tooling model " + model
         }
 
-        override fun getName(): String {
-            return model
-        }
+        override val name: String
+            get() = model
     }
 
     companion object {

@@ -56,7 +56,7 @@ object SecuritySupport {
 
     @JvmStatic
     @Throws(PGPException::class)
-    fun verify(file: File, signature: PGPSignature, publicKey: PGPPublicKey?): Boolean {
+    fun verify(file: File, signature: PGPSignature, publicKey: PGPPublicKey): Boolean {
         signature.init(createContentVerifier(), publicKey)
         val buffer = ByteArray(BUFFER)
         var len: Int
@@ -110,14 +110,14 @@ object SecuritySupport {
         return String.format("%016X", key).trim { it <= ' ' }
     }
 
-    fun toHexString(fingerprint: ByteArray?): String? {
-        return Fingerprint.Companion.wrap(fingerprint).toString()
+    fun toHexString(fingerprint: ByteArray): String {
+        return Fingerprint.wrap(fingerprint).toString()
     }
 
     @JvmStatic
     @Throws(IOException::class)
-    fun loadKeyRingFile(keyringFile: File): MutableList<PGPPublicKeyRing?> {
-        val existingRings: MutableList<PGPPublicKeyRing?> = ArrayList<PGPPublicKeyRing?>()
+    fun loadKeyRingFile(keyringFile: File): MutableList<PGPPublicKeyRing> {
+        val existingRings: MutableList<PGPPublicKeyRing> = ArrayList()
         PGPUtil.getDecoderStream(createInputStreamFor(keyringFile)).use { ins ->
             val objectFactory: PGPObjectFactory = JcaPGPObjectFactory(ins)
             val fingerprintCalculator: KeyFingerPrintCalculator = JcaKeyFingerprintCalculator()

@@ -15,6 +15,9 @@
  */
 package org.gradle.problems
 
+import org.gradle.internal.code.UserCodeSource
+import org.gradle.internal.problems.failure.Failure
+
 /**
  * An immutable set of diagnostic information for a problem.
  */
@@ -30,7 +33,7 @@ interface ProblemDiagnostics {
      *
      * The failure can also be omitted due to limits. Its absence does not mean there was no exception causing the problem.
      */
-    val failure: Failure?
+    fun getFailure(): Failure?
 
     /**
      * Returns an exception that can be thrown when this problem should result in an error.
@@ -38,7 +41,7 @@ interface ProblemDiagnostics {
      *
      * Not every problem has a useful exception associated with it.
      */
-    val exception: Throwable?
+    fun getException(): Throwable?
 
     /**
      * Returns the stack trace that can be reported to the user about where the problem occurred.
@@ -46,16 +49,15 @@ interface ProblemDiagnostics {
      *
      * Not every problem has a meaningful stack, even when the problem has an associated exception. Returns an empty list in this case.
      */
-    val stack: MutableList<StackTraceElement>?
+    fun getStack(): MutableList<StackTraceElement>?
 
     /**
      * Returns the location of the problem, if known.
      */
-    @JvmField
-    val location: Location?
+    fun getLocation(): Location?
 
     /**
      * Returns the user code context when this problem was triggered.
      */
-    val source: UserCodeSource?
+    fun getSource(): UserCodeSource?
 }

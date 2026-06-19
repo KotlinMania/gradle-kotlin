@@ -15,6 +15,8 @@
  */
 package org.gradle.tooling.model.gradle
 
+import java.io.File
+
 /**
  * Represents a Gradle script. A Gradle script may be a build script, settings script or initialization script.
  *

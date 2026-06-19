@@ -15,6 +15,8 @@
  */
 package org.gradle.tooling.internal.protocol.events
 
+import org.gradle.tooling.Failure
+
 /**
  * DO NOT CHANGE THIS INTERFACE. It is part of the cross-version protocol.
  *

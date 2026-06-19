@@ -18,11 +18,4 @@
  */
 package org.gradle.api.tasks.compile
 
-import org.gradle.internal.UncheckedException.Companion.throwAsUncheckedException
-import org.gradle.process.internal.util.MergeOptionsUtil.mergeHeapSize
-import org.gradle.process.internal.util.MergeOptionsUtil.normalized
-import org.gradle.api.tasks.compile.BaseForkOptions.jvmArgs
-import org.gradle.process.internal.JavaForkOptionsFactory.newJavaForkOptions
-import org.gradle.internal.service.ServiceRegistration.addProvider
-import org.gradle.internal.service.ServiceRegistration.add
 

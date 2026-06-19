@@ -22,12 +22,10 @@ interface JvmMemoryStatus {
     /**
      * @return Current JVM maximum heap size in bytes
      */
-    @JvmField
-    val maxMemory: Long
+    fun getMaxMemory(): Long
 
     /**
      * @return Current JVM committed heap size in bytes
      */
-    @JvmField
-    val committedMemory: Long
+    fun getCommittedMemory(): Long
 }

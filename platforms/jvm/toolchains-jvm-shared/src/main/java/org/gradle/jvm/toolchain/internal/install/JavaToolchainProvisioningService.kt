@@ -29,7 +29,7 @@ import org.gradle.jvm.toolchain.internal.install.exceptions.ToolchainProvisionin
 import java.io.File
 import java.net.URI
 
-@ServiceScope([Scope.Build::class])
+@ServiceScope(Scope.Build::class)
 interface JavaToolchainProvisioningService {
     @Throws(ToolchainDownloadException::class, ToolchainProvisioningException::class)
     fun tryInstall(spec: JavaToolchainSpec): File?
@@ -61,7 +61,7 @@ interface JavaToolchainProvisioningService {
 
     fun buildFileNameWithDetails(uri: URI, resource: ExternalResource, spec: JavaToolchainSpec): String {
         val originalFileName = getFileName(uri, resource)
-        val id = "-" + spec.getVendor().get() + '-' + spec.getLanguageVersion().get().asInt()
+        val id = "-" + spec.vendor.get() + '-' + spec.languageVersion.get().asInt()
         val nameWithIdUnsafe = FileUtils.addSuffixToName(originalFileName, id)
         return SafeFileLocationUtils.toSafeFileName(nameWithIdUnsafe, false)
     }

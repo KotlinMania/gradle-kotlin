@@ -18,8 +18,5 @@ package org.gradle.tooling.events.test.internal.source
 import org.gradle.tooling.events.test.source.DirectorySource
 import java.io.File
 
-class DefaultDirectorySource(private val file: File) : DirectorySource {
-    override fun getFile(): File {
-        return this.file
-    }
+class DefaultDirectorySource(override val file: File) : DirectorySource {
 }

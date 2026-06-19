@@ -157,10 +157,12 @@ abstract class Either<L, R> {
     }
 
     companion object {
+        @JvmStatic
         fun <L, R> left(value: L?): Either<L?, R?> {
             return Left<L?, R?>(value)
         }
 
+        @JvmStatic
         fun <L, R> right(value: R?): Either<L?, R?> {
             return Right<L?, R?>(value)
         }

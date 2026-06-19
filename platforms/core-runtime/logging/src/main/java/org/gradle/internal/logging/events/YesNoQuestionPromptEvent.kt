@@ -21,7 +21,7 @@ import org.apache.commons.lang3.StringUtils
 import org.gradle.internal.logging.events.PromptOutputEvent.PromptResult.Companion.newPrompt
 
 class YesNoQuestionPromptEvent(timestamp: Long, @JvmField val question: String?) : PromptOutputEvent(timestamp) {
-    val prompt: String?
+    override val prompt: String
         get() {
             val builder = StringBuilder()
             builder.append(question)
@@ -31,15 +31,15 @@ class YesNoQuestionPromptEvent(timestamp: Long, @JvmField val question: String?)
             return builder.toString()
         }
 
-    public override fun convert(text: String): PromptResult<Boolean?>? {
+    public override fun convert(text: String): PromptResult<Boolean> {
         val trimmed = text.trim { it <= ' ' }
         if (YES_NO_CHOICES.contains(trimmed)) {
             return PromptResult.response(BooleanUtils.toBoolean(trimmed))
         }
-        return newPrompt<Boolean?>("Please enter 'yes' or 'no': ")
+        return newPrompt<Boolean>("Please enter 'yes' or 'no': ")
     }
 
     companion object {
-        val YES_NO_CHOICES: MutableList<String?> = ImmutableList.of<String?>("yes", "no")
+        val YES_NO_CHOICES: MutableList<String> = ImmutableList.of("yes", "no")
     }
 }

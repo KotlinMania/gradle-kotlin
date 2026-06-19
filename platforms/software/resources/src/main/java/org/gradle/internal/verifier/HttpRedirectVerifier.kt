@@ -24,5 +24,5 @@ fun interface HttpRedirectVerifier {
     /**
      * Perform verification on the URI's in an HTTP request's redirect chain.
      */
-    fun validateRedirects(redirectLocations: MutableCollection<URI?>?)
+    fun validateRedirects(redirectLocations: MutableCollection<URI>)
 }

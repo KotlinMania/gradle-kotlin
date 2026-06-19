@@ -15,7 +15,4 @@
  */
 package org.gradle.internal.file.nio
 
-import org.gradle.internal.file.impl.DefaultFileMetadata.Companion.missing
-import org.gradle.internal.file.impl.DefaultFileMetadata.Companion.directory
-import org.gradle.internal.file.impl.DefaultFileMetadata.Companion.file
 

@@ -51,11 +51,11 @@ public class CachingState {
     }
 
     public Optional<Enabled> whenEnabled() {
-        return delegate.left;
+        return delegate.getLeft();
     }
 
     public Optional<Disabled> whenDisabled() {
-        return delegate.right;
+        return delegate.getRight();
     }
 
     public <T> T fold(Function<Enabled, T> enabled, Function<Disabled, T> disabled) {

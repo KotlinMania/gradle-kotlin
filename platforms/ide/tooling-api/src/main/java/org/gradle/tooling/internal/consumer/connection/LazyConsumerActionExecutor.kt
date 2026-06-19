@@ -92,18 +92,17 @@ class LazyConsumerActionExecutor(
         builder.setParameters(connectionParameters)
         builder.setEntryPoint("Request daemon shutdown when idle")
 
-        run<Void>(object : ConsumerAction<Void> {
-            override fun getParameters(): ConsumerOperationParameters {
-                return builder.build()
-            }
+        run<Void?>(object : ConsumerAction<Void?> {
+            override val parameters: ConsumerOperationParameters?
+                get() = builder.build()
 
             //TODO: evaluate errorprone suppression (https://github.com/gradle/gradle/issues/35864)
-            override fun run(c: ConsumerConnection): Void {
+            override fun run(c: ConsumerConnection): Void? {
                 val executor = Executors.newFixedThreadPool(1) as ThreadPoolExecutor
                 val executorService = MoreExecutors.getExitingExecutorService(executor, 3, TimeUnit.SECONDS)
                 executorService.submit(object : Runnable {
                     override fun run() {
-                        c.stopWhenIdle(getParameters())
+                        c.stopWhenIdle(parameters!!)
                     }
                 })
                 executor.shutdown()
@@ -112,16 +111,15 @@ class LazyConsumerActionExecutor(
         })
     }
 
-    override fun getDisplayName(): String {
-        return "connection to " + distribution.displayName
-    }
+    override val displayName: String
+        get() = "connection to " + distribution.displayName
 
     @Throws(UnsupportedOperationException::class, IllegalStateException::class)
     override fun <T> run(action: ConsumerAction<T?>): T? {
         try {
-            val parameters = action.getParameters()
+            val parameters = action.parameters!!
             this.cancellationToken = parameters.getCancellationToken()
-            val buildProgressListener: InternalBuildProgressListener = parameters.getBuildProgressListener()
+            val buildProgressListener: InternalBuildProgressListener = parameters.buildProgressListener
             val connection = onStartAction(cancellationToken!!, buildProgressListener)
             return action.run(connection)
         } finally {

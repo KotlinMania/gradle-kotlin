@@ -43,7 +43,6 @@ interface InternalJvmTestDescriptor : InternalTestDescriptor {
      *
      * @return The name of the test class, can be null.
      */
-    @JvmField
     val className: String?
 
     /**
@@ -51,7 +50,6 @@ interface InternalJvmTestDescriptor : InternalTestDescriptor {
      *
      * @return The name of the test method, can be null.
      */
-    @JvmField
     val methodName: String?
 
     companion object {

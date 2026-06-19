@@ -37,15 +37,15 @@ interface JvmVendor {
 
         private val indicatorString: String
         private val indicatorPattern: Pattern
-        private val displayName: String?
+        val displayName: String
 
-        constructor(indicatorString: String, displayName: String?) {
+        constructor(indicatorString: String, displayName: String) {
             this.indicatorString = indicatorString
             this.indicatorPattern = Pattern.compile(indicatorString, Pattern.CASE_INSENSITIVE)
             this.displayName = displayName
         }
 
-        constructor(indicatorString: String, pattern: String, displayName: String?) {
+        constructor(indicatorString: String, pattern: String, displayName: String) {
             this.indicatorString = indicatorString
             this.indicatorPattern = Pattern.compile(pattern, Pattern.CASE_INSENSITIVE)
             this.displayName = displayName
@@ -76,32 +76,22 @@ interface JvmVendor {
         }
     }
 
-    @JvmField
-    val rawVendor: String?
+    val rawVendor: String
 
-    val knownVendor: KnownJvmVendor?
+    val knownVendor: KnownJvmVendor
 
-    @JvmField
-    val displayName: String?
+    val displayName: String
 
     companion object {
-        fun fromString(vendor: String): JvmVendor {
+        fun fromString(vendor: String?): JvmVendor {
+            val rawVendor = vendor ?: ""
             return object : JvmVendor {
-                override fun getRawVendor(): String {
-                    return vendor
-                }
+                override val rawVendor: String = rawVendor
 
-                override fun getKnownVendor(): KnownJvmVendor {
-                    return KnownJvmVendor.Companion.parse(vendor)
-                }
+                override val knownVendor: KnownJvmVendor = KnownJvmVendor.Companion.parse(vendor)
 
-                override fun getDisplayName(): String? {
-                    val knownVendor = getKnownVendor()
-                    if (knownVendor != KnownJvmVendor.UNKNOWN) {
-                        return knownVendor.displayName
-                    }
-                    return getRawVendor()
-                }
+                override val displayName: String
+                    get() = if (knownVendor != KnownJvmVendor.UNKNOWN) knownVendor.displayName else rawVendor
             }
         }
     }

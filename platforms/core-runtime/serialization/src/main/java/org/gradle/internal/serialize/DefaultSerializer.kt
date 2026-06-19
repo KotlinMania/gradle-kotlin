@@ -22,14 +22,14 @@ import java.io.ObjectOutputStream
 import java.io.StreamCorruptedException
 
 class DefaultSerializer<T> : AbstractSerializer<T?> {
-    var classLoader: ClassLoader?
+    var classLoader: ClassLoader
 
     constructor() {
-        classLoader = javaClass.getClassLoader()
+        classLoader = requireNotNull(javaClass.getClassLoader())
     }
 
     constructor(classLoader: ClassLoader?) {
-        this.classLoader = if (classLoader != null) classLoader else javaClass.getClassLoader()
+        this.classLoader = classLoader ?: requireNotNull(javaClass.getClassLoader())
     }
 
     @Throws(Exception::class)

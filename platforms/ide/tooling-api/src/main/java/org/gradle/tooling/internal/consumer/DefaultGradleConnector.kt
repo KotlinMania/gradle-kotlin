@@ -53,17 +53,17 @@ class DefaultGradleConnector(private val connectionFactory: ConnectionFactory, p
     }
 
     override fun useInstallation(gradleHome: File?): GradleConnector {
-        distribution = distributionFactory.getDistribution(gradleHome)
+        distribution = distributionFactory.getDistribution(gradleHome!!)
         return this
     }
 
     override fun useGradleVersion(gradleVersion: String?): GradleConnector {
-        distribution = distributionFactory.getDistribution(gradleVersion)
+        distribution = distributionFactory.getDistribution(gradleVersion!!)
         return this
     }
 
     override fun useDistribution(gradleDistribution: URI?): GradleConnector {
-        distribution = distributionFactory.getDistribution(gradleDistribution)
+        distribution = distributionFactory.getDistribution(gradleDistribution!!)
         return this
     }
 
@@ -117,19 +117,19 @@ class DefaultGradleConnector(private val connectionFactory: ConnectionFactory, p
     }
 
     @Throws(GradleConnectionException::class)
-    override fun connect(): ProjectConnection? {
+    override fun connect(): ProjectConnection {
         LOGGER.debug("Connecting from tooling API consumer version {}", GradleVersion.current().getVersion())
 
         val connectionParameters: ConnectionParameters = connectionParamsBuilder.build()
-        checkNotNull(connectionParameters.getProjectDir()) { "A project directory must be specified before creating a connection." }
+        checkNotNull(connectionParameters.projectDir) { "A project directory must be specified before creating a connection." }
         if (distribution == null) {
             distribution =
-                distributionFactory.getDefaultDistribution(connectionParameters.getProjectDir(), if (connectionParameters.isSearchUpwards() != null) connectionParameters.isSearchUpwards() else true)
+                distributionFactory.getDefaultDistribution(connectionParameters.projectDir!!, connectionParameters.isSearchUpwards ?: true)
         }
 
         synchronized(connections) {
             check(!stopped) { "Tooling API client has been disconnected. No other connections may be used." }
-            val connection = connectionFactory.create(distribution, connectionParameters, this)
+            val connection = connectionFactory.create(distribution!!, connectionParameters, this)
             connections.add((connection as org.gradle.tooling.internal.consumer.DefaultProjectConnection?)!!)
             return connection
         }
@@ -139,7 +139,6 @@ class DefaultGradleConnector(private val connectionFactory: ConnectionFactory, p
         private val LOGGER: Logger = LoggerFactory.getLogger(GradleConnector::class.java)
 
         const val MINIMAL_CLIENT_MAJOR_VERSION: Int = 4
-        @JvmField
         val MINIMUM_SUPPORTED_GRADLE_VERSION: GradleVersion = GradleVersion.version(MINIMAL_CLIENT_MAJOR_VERSION.toString() + ".0")
 
         /**

@@ -42,6 +42,5 @@ interface Problems {
      * @return The problem reporter.
      * @since 8.11
      */
-    @JvmField
-    val reporter: ProblemReporter?
+    fun getReporter(): ProblemReporter?
 }

@@ -46,14 +46,14 @@ class StyledTextOutputBackedRenderer(textOutput: StyledTextOutput) : OutputEvent
         }
         if (event is RenderableOutputEvent) {
             val outputEvent = event
-            textOutput.style(if (outputEvent.getLogLevel() == LogLevel.ERROR) StyledTextOutput.Style.Error else StyledTextOutput.Style.Normal)
+            textOutput.style(if (outputEvent.logLevel == LogLevel.ERROR) StyledTextOutput.Style.Error else StyledTextOutput.Style.Normal)
             if (debugOutput && (textOutput.atEndOfLine || lastEvent == null || (lastEvent!!.category != outputEvent.category))) {
                 if (!textOutput.atEndOfLine) {
                     textOutput.println()
                 }
                 textOutput.text(dateFormat!!.format(Date(outputEvent.timestamp)))
                 textOutput.text(" [")
-                textOutput.text(outputEvent.getLogLevel())
+                textOutput.text(outputEvent.logLevel)
                 textOutput.text("] [")
                 textOutput.text(outputEvent.category)
                 textOutput.text("] ")
@@ -65,7 +65,8 @@ class StyledTextOutputBackedRenderer(textOutput: StyledTextOutput) : OutputEvent
     }
 
     private class OutputEventTextOutputImpl(private val textOutput: StyledTextOutput) : AbstractLineChoppingStyledTextOutput() {
-        private var atEndOfLine = true
+        var atEndOfLine = true
+            private set
 
         override fun doStyleChange(style: StyledTextOutput.Style?) {
             textOutput.style(style)

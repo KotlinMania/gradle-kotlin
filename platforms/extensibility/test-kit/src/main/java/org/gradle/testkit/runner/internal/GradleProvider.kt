@@ -26,32 +26,32 @@ abstract class GradleProvider private constructor() {
     abstract fun applyTo(gradleRunner: GradleRunner?)
 
     private class InstallationGradleProvider(private val gradleHome: File?) : GradleProvider() {
-        override fun applyTo(gradleConnector: GradleConnector) {
-            gradleConnector.useInstallation(gradleHome)
+        override fun applyTo(gradleConnector: GradleConnector?) {
+            gradleConnector!!.useInstallation(gradleHome)
         }
 
-        override fun applyTo(gradleRunner: GradleRunner) {
-            gradleRunner.withGradleInstallation(gradleHome)
+        override fun applyTo(gradleRunner: GradleRunner?) {
+            gradleRunner!!.withGradleInstallation(gradleHome)
         }
     }
 
     private class UriGradleProvider(private val uri: URI?) : GradleProvider() {
-        override fun applyTo(gradleConnector: GradleConnector) {
-            gradleConnector.useDistribution(uri)
+        override fun applyTo(gradleConnector: GradleConnector?) {
+            gradleConnector!!.useDistribution(uri)
         }
 
-        override fun applyTo(gradleRunner: GradleRunner) {
-            gradleRunner.withGradleDistribution(uri)
+        override fun applyTo(gradleRunner: GradleRunner?) {
+            gradleRunner!!.withGradleDistribution(uri)
         }
     }
 
     private class VersionGradleProvider(private val gradleVersion: String?) : GradleProvider() {
-        override fun applyTo(gradleConnector: GradleConnector) {
-            gradleConnector.useGradleVersion(gradleVersion)
+        override fun applyTo(gradleConnector: GradleConnector?) {
+            gradleConnector!!.useGradleVersion(gradleVersion)
         }
 
-        override fun applyTo(gradleRunner: GradleRunner) {
-            gradleRunner.withGradleVersion(gradleVersion)
+        override fun applyTo(gradleRunner: GradleRunner?) {
+            gradleRunner!!.withGradleVersion(gradleVersion)
         }
     }
 

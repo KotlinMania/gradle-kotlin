@@ -15,6 +15,8 @@
  */
 package org.gradle.tooling
 
+import java.io.File
+
 /**
  * A `ModelBuilder` allows you to fetch a snapshot of some model for a project or a build.
  * Instances of `ModelBuilder` are not thread-safe.

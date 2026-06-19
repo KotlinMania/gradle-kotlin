@@ -20,11 +20,11 @@ import org.gradle.internal.logging.text.Style
 import org.gradle.internal.logging.text.StyledTextOutput
 
 interface ColorMap {
-    fun getColourFor(style: StyledTextOutput.Style): Color?
+    fun getColourFor(style: StyledTextOutput.Style): Color
 
-    fun getColourFor(style: Style): Color?
+    fun getColourFor(style: Style): Color
 
-    val statusBarColor: Color?
+    val statusBarColor: Color
 
     interface Color {
         fun on(ansi: Ansi)

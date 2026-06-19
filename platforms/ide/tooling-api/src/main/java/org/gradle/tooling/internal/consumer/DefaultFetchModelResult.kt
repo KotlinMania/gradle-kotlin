@@ -26,20 +26,17 @@ import org.jspecify.annotations.NullMarked
 import java.util.function.Supplier
 
 @NullMarked
-class DefaultFetchModelResult<M> private constructor(private val model: M?, failures: Supplier<MutableCollection<out Failure>>) : FetchModelResult<M?> {
-    private val failures: Lazy<MutableCollection<out Failure>?>
+class DefaultFetchModelResult<M> private constructor(override val model: M?, failures: Supplier<MutableCollection<out Failure>>) : FetchModelResult<M?> {
+    private val failuresSupplier: Lazy<MutableCollection<out Failure>?>
 
     init {
-        this.failures = locking().of<MutableCollection<out Failure>?>(failures)
+        this.failuresSupplier = locking().of<MutableCollection<out Failure>?>(failures as Supplier<MutableCollection<out Failure>?>)
     }
 
-    override fun getModel(): M? {
-        return model
-    }
 
-    override fun getFailures(): MutableCollection<out Failure> {
-        return failures.get()!!
-    }
+
+    override val failures: MutableCollection<out Failure>
+        get() = failuresSupplier.get()!!
 
     companion object {
         fun <M> of(model: M?, failures: MutableCollection<out InternalFailure>): DefaultFetchModelResult<M?> {

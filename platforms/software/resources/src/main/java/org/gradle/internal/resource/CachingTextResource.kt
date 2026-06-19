@@ -29,7 +29,7 @@ class CachingTextResource(private val resource: TextResource) : TextResource {
     private var content: String? = null
     private var contentHash: HashCode? = null
 
-    override fun getDisplayName(): String? {
+    override fun getDisplayName(): String {
         return resource.getDisplayName()
     }
 

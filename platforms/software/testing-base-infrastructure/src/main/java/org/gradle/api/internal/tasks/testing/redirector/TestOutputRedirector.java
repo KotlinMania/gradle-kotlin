@@ -74,7 +74,7 @@ public class TestOutputRedirector {
             if (outputOwner == null) {
                 throw new RuntimeException("Unable send output event from test executor. Please report this problem. Destination: " + dest + ", event: " + output.toString());
             }
-            processor.output(outputOwner, new DefaultTestOutputEvent(clock.currentTime, dest, output.toString()));
+            processor.output(outputOwner, new DefaultTestOutputEvent(clock.getCurrentTime(), dest, output.toString()));
         }
     }
 }

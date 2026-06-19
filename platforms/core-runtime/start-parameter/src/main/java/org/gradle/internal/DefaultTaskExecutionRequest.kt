@@ -22,15 +22,15 @@ import java.io.File
 import java.io.Serializable
 
 class DefaultTaskExecutionRequest @JvmOverloads constructor(args: Iterable<String?>, private val projectPath: String? = null, private val rootDir: File? = null) : TaskExecutionRequest, Serializable {
-    private val args: MutableList<String?>
+    private val args: MutableList<String>
 
     init {
-        this.args = Lists.newArrayList<String?>(args)
+        this.args = args.filterNotNull().toMutableList()
         // Use RunDefaultTasksExecutionRequest instead
         assert(!this.args.isEmpty())
     }
 
-    override fun getArgs(): MutableList<String?> {
+    override fun getArgs(): MutableList<String> {
         return args
     }
 

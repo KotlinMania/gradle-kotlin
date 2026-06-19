@@ -37,7 +37,7 @@ class DefaultJvmVendorSpec : JvmVendorSpec, Predicate<JvmInstallationMetadata?>,
     private constructor(match: String?, description: String?) {
         this.match = match
         this.matchingVendor = null
-        this.matcher = Predicate { vendor: JvmVendor? -> Strings.CI.contains(vendor!!.getRawVendor(), match) }
+        this.matcher = Predicate { vendor: JvmVendor? -> Strings.CI.contains(vendor!!.rawVendor, match) }
         this.description = description
     }
 
@@ -45,7 +45,7 @@ class DefaultJvmVendorSpec : JvmVendorSpec, Predicate<JvmInstallationMetadata?>,
     private constructor(knownVendor: JvmVendor.KnownJvmVendor?, description: String?) {
         this.match = null
         this.matchingVendor = knownVendor
-        this.matcher = Predicate { vendor: JvmVendor? -> vendor!!.getKnownVendor() == matchingVendor }
+        this.matcher = Predicate { vendor: JvmVendor? -> vendor!!.knownVendor == matchingVendor }
         this.description = description
     }
 
@@ -61,13 +61,13 @@ class DefaultJvmVendorSpec : JvmVendorSpec, Predicate<JvmInstallationMetadata?>,
         if (match != null) {
             return match
         } else if (matchingVendor != null) {
-            return matchingVendor.asJvmVendor().getKnownVendor().name
+            return matchingVendor.asJvmVendor().knownVendor.name
         }
         throw IllegalStateException("No matching vendor was specified")
     }
 
-    override fun test(metadata: JvmInstallationMetadata): Boolean {
-        val vendor = metadata.getVendor()
+    override fun test(metadata: JvmInstallationMetadata?): Boolean {
+        val vendor = metadata!!.vendor
         return test(vendor)
     }
 
@@ -102,9 +102,9 @@ class DefaultJvmVendorSpec : JvmVendorSpec, Predicate<JvmInstallationMetadata?>,
     private fun readObject(`in`: ObjectInputStream) {
         `in`.defaultReadObject()
         if (match != null) {
-            matcher = Predicate { vendor: JvmVendor? -> Strings.CI.contains(vendor!!.getRawVendor(), match) }
+            matcher = Predicate { vendor: JvmVendor? -> Strings.CI.contains(vendor!!.rawVendor, match) }
         } else if (matchingVendor != null) {
-            matcher = Predicate { vendor: JvmVendor? -> vendor!!.getKnownVendor() == matchingVendor }
+            matcher = Predicate { vendor: JvmVendor? -> vendor!!.knownVendor == matchingVendor }
         } else {
             matcher = Predicate { vendor: JvmVendor? -> true }
         }
@@ -118,7 +118,7 @@ class DefaultJvmVendorSpec : JvmVendorSpec, Predicate<JvmInstallationMetadata?>,
         }
 
         fun of(knownVendor: JvmVendor.KnownJvmVendor): JvmVendorSpec {
-            return DefaultJvmVendorSpec(knownVendor, knownVendor.asJvmVendor().getDisplayName())
+            return DefaultJvmVendorSpec(knownVendor, knownVendor.asJvmVendor().displayName)
         }
 
         @JvmStatic

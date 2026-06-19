@@ -15,8 +15,17 @@
  */
 package org.gradle.integtests.tooling.r56
 
+import org.gradle.tooling.*
+import org.gradle.tooling.model.*
+import org.gradle.tooling.model.build.*
+import org.gradle.tooling.model.eclipse.*
+import org.gradle.tooling.model.gradle.*
+import org.gradle.tooling.model.idea.*
+import org.gradle.tooling.model.kotlin.dsl.*
+
 import org.gradle.tooling.model.eclipse.EclipseWorkspaceProject
 import java.io.File
+import org.gradle.integtests.tooling.r48.*
 import java.io.Serializable
 
-class DefaultEclipseWorkspaceProject @kotlin.jvm.JvmOverloads constructor(val name: String?, val location: File?, val isOpen: Boolean = true) : EclipseWorkspaceProject, Serializable
+class DefaultEclipseWorkspaceProject @kotlin.jvm.JvmOverloads constructor(override val name: String?, override val location: File?, override val isOpen: Boolean = true) : EclipseWorkspaceProject, Serializable

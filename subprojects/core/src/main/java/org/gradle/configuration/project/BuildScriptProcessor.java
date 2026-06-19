@@ -46,7 +46,7 @@ public class BuildScriptProcessor implements ProjectConfigureAction {
             project.getOwner().applyToMutableState(configurer::apply);
         } finally {
             if (LOGGER.isDebugEnabled()) {
-                LOGGER.debug("Timing: Running the build script took {}", clock.elapsed);
+                LOGGER.debug("Timing: Running the build script took {}", clock.getElapsed());
             }
         }
     }

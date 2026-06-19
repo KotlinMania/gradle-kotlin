@@ -33,7 +33,7 @@ internal class RedirectVerifyingStrategyDecorator(private val delegate: Redirect
     @Throws(ProtocolException::class)
     override fun getRedirect(request: HttpRequest?, response: HttpResponse?, context: HttpContext?): HttpUriRequest {
         val redirectRequest = delegate.getRedirect(request, response, context)
-        verifier.validateRedirects(mutableListOf<URI?>(redirectRequest.getURI()))
+        verifier.validateRedirects(mutableListOf<URI>(redirectRequest.getURI()))
         return redirectRequest
     }
 }

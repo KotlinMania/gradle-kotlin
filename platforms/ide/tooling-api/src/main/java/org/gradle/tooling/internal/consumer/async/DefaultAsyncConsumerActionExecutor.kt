@@ -18,6 +18,7 @@ package org.gradle.tooling.internal.consumer.async
 import org.gradle.internal.concurrent.CompositeStoppable
 import org.gradle.internal.concurrent.ExecutorFactory
 import org.gradle.internal.concurrent.ManagedExecutor
+import org.gradle.tooling.Failure
 import org.gradle.tooling.internal.consumer.connection.ConsumerAction
 import org.gradle.tooling.internal.consumer.connection.ConsumerActionExecutor
 import org.gradle.tooling.internal.protocol.ResultHandlerVersion1
@@ -31,12 +32,11 @@ class DefaultAsyncConsumerActionExecutor(private val actionExecutor: ConsumerAct
 
     init {
         executor = executorFactory.create("Connection worker")
-        lifecycle = ServiceLifecycle(actionExecutor.getDisplayName())
+        lifecycle = ServiceLifecycle(actionExecutor.displayName)
     }
 
-    override fun getDisplayName(): String {
-        return actionExecutor.getDisplayName()
-    }
+    override val displayName: String?
+        get() = actionExecutor.displayName
 
     override fun stop() {
         CompositeStoppable.stoppable(lifecycle, executor, actionExecutor).stop()
@@ -48,19 +48,20 @@ class DefaultAsyncConsumerActionExecutor(private val actionExecutor: ConsumerAct
         actionExecutor.disconnect()
     }
 
-    override fun <T> run(action: ConsumerAction<out T?>, handler: ResultHandlerVersion1<in T?>) {
+    @Suppress("UNCHECKED_CAST")
+    override fun <T> run(action: ConsumerAction<out T?>?, handler: ResultHandlerVersion1<in T?>?) {
         lifecycle.use(object : Runnable {
             override fun run() {
                 executor.execute(object : Runnable {
                     override fun run() {
                         val result: T?
                         try {
-                            result = actionExecutor.run(action)
+                            result = actionExecutor.run(action!! as ConsumerAction<T?>)
                         } catch (t: Throwable) {
-                            handler.onFailure(t)
+                            handler!!.onFailure(t)
                             return
                         }
-                        handler.onComplete(result)
+                        handler!!.onComplete(result)
                     }
                 })
             }

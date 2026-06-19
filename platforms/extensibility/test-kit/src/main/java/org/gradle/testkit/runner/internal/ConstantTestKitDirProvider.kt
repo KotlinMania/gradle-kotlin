@@ -18,7 +18,6 @@ package org.gradle.testkit.runner.internal
 import java.io.File
 
 internal class ConstantTestKitDirProvider(private val testKitDir: File?) : TestKitDirProvider {
-    override fun getDir(): File? {
-        return testKitDir
-    }
+    override val dir: File?
+        get() = testKitDir
 }

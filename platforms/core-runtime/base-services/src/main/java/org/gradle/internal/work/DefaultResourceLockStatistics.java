@@ -48,16 +48,16 @@ public class DefaultResourceLockStatistics implements ResourceLockStatistics {
 
     @Override
     public void measureLockAcquisition(Iterable<? extends Describable> locks, Runnable runnable) {
-        measure("Blocked on", locks, (Factory<@Nullable Void>) () -> {
+        measure("Blocked on", locks, (Factory<Object>) () -> {
             Timer timer = Time.startTimer();
             runnable.run();
-            totalBlockedTime.addAndGet(timer.elapsedMillis);
-            return null;
+            totalBlockedTime.addAndGet(timer.getElapsedMillis());
+            return true;
         });
     }
 
     @Override
-    public <T extends @Nullable Object> T measure(String operation, Iterable<? extends Describable> locks, Factory<T> factory) {
+    public <T extends @Nullable Object> @Nullable T measure(String operation, Iterable<? extends Describable> locks, Factory<T> factory) {
         return buildOperationRunner.call(new CallableBuildOperation<T>() {
             @Override
             public T call(BuildOperationContext context) {

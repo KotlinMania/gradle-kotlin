@@ -33,40 +33,41 @@ object HttpRedirectVerifierFactory {
      * @param insecureBaseHost Callback when the base host URL is insecure.
      * @param insecureRedirect Callback when the server returns an 30x redirect to an insecure server.
      */
+    @JvmStatic
     fun create(
         baseHost: URI?,
         allowInsecureProtocol: Boolean,
-        insecureBaseHost: Runnable?,
-        insecureRedirect: Consumer<URI?>?
-    ): HttpRedirectVerifier? {
-        Objects.requireNonNull<Runnable?>(insecureBaseHost, "insecureBaseHost must not be null")
-        Objects.requireNonNull<Consumer<URI?>?>(insecureRedirect, "insecureRedirect must not be null")
+        insecureBaseHost: Runnable,
+        insecureRedirect: Consumer<URI>
+    ): HttpRedirectVerifier {
+        Objects.requireNonNull(insecureBaseHost, "insecureBaseHost must not be null")
+        Objects.requireNonNull(insecureRedirect, "insecureRedirect must not be null")
         if (allowInsecureProtocol) {
-            return NoopHttpRedirectVerifier.Companion.instance
+            return NoopHttpRedirectVerifier.instance
         } else {
             // Verify that the base URL is secure now.
             if (baseHost != null && !GUtil.isSecureUrl(baseHost)) {
-                insecureBaseHost!!.run()
+                insecureBaseHost.run()
             }
 
             // Verify that any future redirect locations are secure.
             // Lambda will be called back on for every redirect in the chain.
-            return HttpRedirectVerifier { redirectLocations: MutableCollection<URI?>? ->
-                redirectLocations!!
+            return HttpRedirectVerifier { redirectLocations: MutableCollection<URI> ->
+                redirectLocations
                     .stream()
-                    .filter { url: URI? -> !GUtil.isSecureUrl(url) }
+                    .filter { url: URI -> !GUtil.isSecureUrl(url) }
                     .forEach(insecureRedirect)
             }
         }
     }
 
     private class NoopHttpRedirectVerifier : HttpRedirectVerifier {
-        override fun validateRedirects(redirectLocations: MutableCollection<URI?>?) {
+        override fun validateRedirects(redirectLocations: MutableCollection<URI>) {
             // Noop
         }
 
         companion object {
-            private val instance = NoopHttpRedirectVerifier()
+            val instance = NoopHttpRedirectVerifier()
         }
     }
 }

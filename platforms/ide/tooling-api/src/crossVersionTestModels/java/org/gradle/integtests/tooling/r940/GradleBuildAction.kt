@@ -15,14 +15,25 @@
  */
 package org.gradle.integtests.tooling.r940
 
+import org.gradle.tooling.*
+import org.gradle.tooling.model.*
+import org.gradle.tooling.model.build.*
+import org.gradle.tooling.model.eclipse.*
+import org.gradle.tooling.model.gradle.*
+import org.gradle.tooling.model.idea.*
+import org.gradle.tooling.model.kotlin.dsl.*
+import org.gradle.tooling.internal.adapter.ProtocolToModelAdapter
+import java.io.File
+import org.gradle.integtests.tooling.r48.*
+
 import org.gradle.tooling.BuildAction
 import java.io.Serializable
 
 internal class GradleBuildAction(private val resilient: Boolean) : BuildAction<GradleBuildModel?>, Serializable {
-    public override fun execute(controller: BuildController): GradleBuildModel {
+    public override fun execute(controller: BuildController?): GradleBuildModel {
         if (resilient) {
             val result: FetchModelResult<GradleBuild?> = controller.fetch(GradleBuild::class.java)
-            return GradleBuildModel(result.getModel(), result.getFailures())
+            return GradleBuildModel(result.getModel(), result.getFailures().toMutableList())
         } else {
             val model: GradleBuild? = controller.getModel(GradleBuild::class.java)
             return GradleBuildModel(model, mutableListOf<Failure?>())

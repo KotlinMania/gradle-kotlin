@@ -36,7 +36,7 @@ public class ProfileCoordinator implements RootBuildLifecycleListener {
 
     @Override
     public void beforeComplete(@Nullable Throwable failure) {
-        profile.setBuildFinished(clock.currentTime);
+        profile.setBuildFinished(clock.getCurrentTime());
         generator.buildFinished(profile);
     }
 }

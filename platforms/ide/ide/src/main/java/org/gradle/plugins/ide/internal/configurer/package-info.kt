@@ -15,31 +15,4 @@
  */
 package org.gradle.plugins.ide.internal.configurer
 
-import org.gradle.internal.Cast.uncheckedCast
-import org.gradle.internal.UncheckedException.Companion.throwAsUncheckedException
-import org.gradle.api.JavaVersion.Companion.toVersion
-import org.gradle.internal.deprecation.DeprecationLogger.deprecateTask
-import org.gradle.internal.deprecation.DeprecationMessageBuilder.willBeRemovedInGradle10
-import org.gradle.internal.deprecation.Documentation.AbstractBuilder.withUpgradeGuideSection
-import org.gradle.internal.deprecation.DeprecationMessageBuilder.WithDocumentation.nagUser
-import org.gradle.internal.service.ServiceRegistry.get
-import org.gradle.util.internal.CollectionUtils.partition
-import org.gradle.util.internal.CollectionUtils.intersection
-import org.gradle.util.internal.CollectionUtils.flattenCollections
-import org.gradle.util.internal.CollectionUtils.sort
-import org.gradle.api.JavaVersion.toString
-import org.gradle.api.JavaVersion.majorVersion
-import org.gradle.internal.deprecation.DeprecationLogger.whileDisabled
-import org.gradle.api.JavaVersion.Companion.current
-import org.gradle.launcher.cli.internal.HelpRenderer.render
-import org.gradle.StartParameter.taskNames
-import org.gradle.process.internal.CurrentProcess.jvmOptions
-import org.gradle.process.internal.JvmOptions.allImmutableJvmArgs
-import org.gradle.launcher.cli.internal.VersionInfoRenderer.render
-import org.gradle.api.specs.Spec.isSatisfiedBy
-import org.gradle.api.logging.Logging.getLogger
-import org.gradle.internal.Factory.create
-import org.gradle.internal.service.ServiceRegistration.add
-import org.gradle.internal.deprecation.DeprecationLogger.deprecateBehaviour
-import org.gradle.util.internal.CollectionUtils.collect
 

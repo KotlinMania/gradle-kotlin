@@ -15,6 +15,7 @@
  */
 package org.gradle.tooling.internal.protocol.events
 
+import java.time.Duration
 import org.gradle.tooling.internal.protocol.InternalProtocolInterface
 
 /**

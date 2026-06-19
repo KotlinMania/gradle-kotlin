@@ -15,5 +15,4 @@
  */
 package org.gradle.internal.resolve.resolver
 
-import org.gradle.internal.resolve.result.DefaultBuildableTypedResolveResult.getResult
 

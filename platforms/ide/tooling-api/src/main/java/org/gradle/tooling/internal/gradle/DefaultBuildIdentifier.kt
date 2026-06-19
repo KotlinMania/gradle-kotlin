@@ -15,20 +15,19 @@
  */
 package org.gradle.tooling.internal.gradle
 
-import org.gradle.tooling.model.BuildIdentifier
 import java.io.File
 import java.io.Serializable
+import org.gradle.tooling.model.BuildIdentifier
+import org.gradle.tooling.model.gradle.GradleBuild
 
 class DefaultBuildIdentifier(rootDir: File) : Serializable, GradleBuildIdentity, BuildIdentifier {
-    private val rootDir: File
+    override val rootDir: File
 
     init {
         this.rootDir = rootDir.getAbsoluteFile()
     }
 
-    override fun getRootDir(): File {
-        return rootDir
-    }
+
 
     override fun toString(): String {
         return "build=" + rootDir.getPath()

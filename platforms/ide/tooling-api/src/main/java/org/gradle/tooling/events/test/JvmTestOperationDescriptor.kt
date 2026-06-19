@@ -16,6 +16,7 @@
 package org.gradle.tooling.events.test
 
 import org.gradle.api.Incubating
+import org.gradle.tooling.events.test.source.TestSource
 
 /**
  * Describes a test that runs on the JVM and for which an event has occurred. At least

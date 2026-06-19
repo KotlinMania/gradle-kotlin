@@ -143,16 +143,16 @@ class StreamByteBuffer @JvmOverloads constructor(private var nextChunkSize: Int 
         var wasUnderflow = false
         var nextBuf: ByteBuffer? = null
         var needsFlush = false
-        while (hasRemaining(nextBuf!!) || hasRemaining(buf!!) || prepareRead() != -1) {
-            if (hasRemaining(buf!!)) {
+        while (hasRemaining(nextBuf) || hasRemaining(buf) || prepareRead() != -1) {
+            if (hasRemaining(buf)) {
                 // handle decoding underflow, multi-byte unicode character at buffer chunk boundary
                 check(wasUnderflow) { "Unexpected state. Buffer has remaining bytes without underflow in decoding." }
                 if (!hasRemaining(nextBuf) && prepareRead() != -1) {
                     nextBuf = currentReadChunk!!.readToNioBuffer()
                 }
                 // copy one by one until the underflow has been resolved
-                buf = ByteBuffer.allocate(buf.remaining() + 1).put(buf)
-                buf.put(nextBuf.get())
+                buf = ByteBuffer.allocate(buf!!.remaining() + 1).put(buf)
+                buf.put(nextBuf!!.get())
                 BufferCaster.cast<ByteBuffer>(buf).flip()
             } else {
                 if (hasRemaining(nextBuf)) {
@@ -163,7 +163,7 @@ class StreamByteBuffer @JvmOverloads constructor(private var nextChunkSize: Int 
                 }
                 nextBuf = null
             }
-            val endOfInput = !hasRemaining(nextBuf!!) && prepareRead() == -1
+            val endOfInput = !hasRemaining(nextBuf) && prepareRead() == -1
             val bufRemainingBefore = buf!!.remaining()
             var result = decoder.decode(buf, charbuffer, false)
             if (bufRemainingBefore > buf.remaining()) {
@@ -186,8 +186,8 @@ class StreamByteBuffer @JvmOverloads constructor(private var nextChunkSize: Int 
         }
         clear()
         // push back remaining bytes of multi-byte unicode character
-        while (hasRemaining(buf!!)) {
-            val b = buf.get()
+        while (hasRemaining(buf)) {
+            val b = buf!!.get()
             try {
                 this.outputStream.write(b.toInt())
             } catch (e: IOException) {
@@ -198,7 +198,7 @@ class StreamByteBuffer @JvmOverloads constructor(private var nextChunkSize: Int 
         return charbuffer
     }
 
-    private fun hasRemaining(nextBuf: ByteBuffer): Boolean {
+    private fun hasRemaining(nextBuf: ByteBuffer?): Boolean {
         return nextBuf != null && nextBuf.hasRemaining()
     }
 
@@ -414,7 +414,9 @@ class StreamByteBuffer @JvmOverloads constructor(private var nextChunkSize: Int 
     internal inner class StreamByteBufferInputStream : InputStream() {
         @Throws(IOException::class)
         override fun read(): Int {
-            prepareRead()
+            if (prepareRead() == -1) {
+                return -1
+            }
             return currentReadChunk!!.read()
         }
 
@@ -505,6 +507,7 @@ class StreamByteBuffer @JvmOverloads constructor(private var nextChunkSize: Int 
             return StreamByteBuffer(chunkSizeInDefaultRange(value))
         }
 
+        @JvmStatic
         fun chunkSizeInDefaultRange(value: Int): Int {
             return valueInRange(value, DEFAULT_CHUNK_SIZE, MAX_CHUNK_SIZE)
         }
@@ -513,6 +516,7 @@ class StreamByteBuffer @JvmOverloads constructor(private var nextChunkSize: Int 
             return min(max(value, min), max)
         }
 
+        @JvmStatic
         fun of(listOfByteArrays: MutableList<ByteArray>): StreamByteBuffer {
             val buffer = StreamByteBuffer()
             buffer.addChunks(listOfByteArrays)

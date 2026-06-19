@@ -15,6 +15,7 @@
  */
 package org.gradle.tooling.events.test
 
+import org.gradle.tooling.Failure
 import org.gradle.tooling.events.FinishEvent
 
 /**
@@ -36,5 +37,5 @@ interface TestFinishEvent : TestProgressEvent, FinishEvent {
      *
      * @return the result of the finished test operation
      */
-    override fun getResult(): TestOperationResult?
+    override val result: TestOperationResult?
 }

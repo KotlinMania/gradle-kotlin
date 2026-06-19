@@ -16,6 +16,5 @@
 package org.gradle.platform.base.internal
 
 interface ComponentSpecInternal {
-    @JvmField
     val identifier: ComponentSpecIdentifier?
 }

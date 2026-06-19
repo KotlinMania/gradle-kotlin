@@ -25,7 +25,7 @@ import javax.inject.Inject
 @ServiceScope(Scope.Global::class)
 abstract class CurrentJvmToolchainSpec @Inject constructor(propertyFactory: PropertyFactory, currentJvm: Jvm) : DefaultToolchainSpec(propertyFactory) {
     init {
-        getLanguageVersion().set(of(currentJvm.getJavaVersion()!!.majorVersion))
+        languageVersion.set(of(currentJvm.getJavaVersion()!!.majorVersion))
 
         // disallow changing property values
         finalizeProperties()

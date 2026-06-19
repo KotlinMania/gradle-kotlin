@@ -19,7 +19,7 @@ import org.gradle.internal.service.scopes.Scope
 import org.gradle.internal.service.scopes.ServiceScope
 import org.gradle.jvm.toolchain.internal.InstallationLocation
 
-@ServiceScope([Scope.Global::class, Scope.UserHome::class])
+@ServiceScope(Scope.Global::class, Scope.UserHome::class)
 interface JvmMetadataDetector {
-    fun getMetadata(javaInstallationLocation: InstallationLocation?): JvmInstallationMetadata?
+    fun getMetadata(javaInstallationLocation: InstallationLocation): JvmInstallationMetadata
 }

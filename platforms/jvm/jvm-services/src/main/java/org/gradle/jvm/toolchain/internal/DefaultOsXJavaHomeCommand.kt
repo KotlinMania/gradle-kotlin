@@ -59,7 +59,7 @@ open class DefaultOsXJavaHomeCommand(private val execHandleFactory: ClientExecHa
         val execHandleBuilder = execHandleFactory.newExecHandleBuilder()
         execHandleBuilder!!.setWorkingDir(File(".").getAbsoluteFile())
         execHandleBuilder.commandLine("/usr/libexec/java_home", "-V")
-        execHandleBuilder.environment!!.remove("JAVA_VERSION") //JAVA_VERSION filters the content of java_home's output
+        execHandleBuilder.getEnvironment().remove("JAVA_VERSION") //JAVA_VERSION filters the content of java_home's output
         execHandleBuilder.setErrorOutput(outputStream) // verbose output is written to stderr
         execHandleBuilder.setStandardOutput(ByteArrayOutputStream())
         execHandleBuilder.build()!!.start()!!.waitForFinish()!!.assertNormalExitValue()

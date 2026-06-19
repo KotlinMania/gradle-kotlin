@@ -18,5 +18,5 @@ package org.gradle.internal.remote.internal.hub
 import org.gradle.internal.serialize.Serializer
 
 interface MethodArgsSerializer {
-    fun forTypes(types: Array<Class<*>?>?): Serializer<Array<Any?>?>?
+    fun forTypes(types: Array<Class<*>>): Serializer<Array<Any?>?>
 }

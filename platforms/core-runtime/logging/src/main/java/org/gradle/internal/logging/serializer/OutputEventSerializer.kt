@@ -42,7 +42,7 @@ object OutputEventSerializer {
     fun registerTypes(registry: DefaultSerializerRegistry) {
         val factory = BaseSerializerFactory()
         val logLevelSerializer = factory.getSerializerFor<LogLevel>(LogLevel::class.java)
-        val throwableSerializer = factory.getSerializerFor<Throwable>(Throwable::class.java)
+        val throwableSerializer = BaseSerializerFactory.THROWABLE_SERIALIZER
 
         registry.register<LogEvent>(LogEvent::class.java, LogEventSerializer(logLevelSerializer, throwableSerializer))
         registry.register<UserInputRequestEvent>(UserInputRequestEvent::class.java, UserInputRequestEventSerializer())
@@ -57,7 +57,7 @@ object OutputEventSerializer {
             StyledTextOutputEvent::class.java,
             StyledTextOutputEventSerializer(
                 logLevelSerializer,
-                ListSerializer<StyledTextOutputEvent.Span?>(SpanSerializer(factory.getSerializerFor<StyledTextOutput.Style>(StyledTextOutput.Style::class.java)))
+                ListSerializer<StyledTextOutputEvent.Span>(SpanSerializer(factory.getSerializerFor<StyledTextOutput.Style>(StyledTextOutput.Style::class.java)))
             )
         )
         registry.register<ProgressStartEvent>(ProgressStartEvent::class.java, ProgressStartEventSerializer())

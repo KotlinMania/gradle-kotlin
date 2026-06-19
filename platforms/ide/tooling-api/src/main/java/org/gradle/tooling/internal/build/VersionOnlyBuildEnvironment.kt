@@ -17,7 +17,7 @@ package org.gradle.tooling.internal.build
 
 class VersionOnlyBuildEnvironment(private val gradleVersion: String?) {
     val gradle: VersionOnlyGradleEnvironment
-        get() = VersionOnlyBuildEnvironment.VersionOnlyGradleEnvironment()
+        get() = VersionOnlyGradleEnvironment()
 
     inner class VersionOnlyGradleEnvironment {
         fun getGradleVersion(): String? {

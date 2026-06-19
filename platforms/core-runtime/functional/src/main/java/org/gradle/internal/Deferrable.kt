@@ -88,6 +88,7 @@ interface Deferrable<T> {
         /**
          * An already completed result, can be successful or failed.
          */
+        @JvmStatic
         fun <T> completed(successfulResult: T?): Deferrable<T?> {
             return object : Deferrable<T?> {
                 override val completed: Optional<T?>
@@ -102,6 +103,7 @@ interface Deferrable<T> {
         /**
          * An invocation with no pre-computed result, requiring to do the expensive computation on [.completeAndGet].
          */
+        @JvmStatic
         fun <T> deferred(result: Supplier<T?>): Deferrable<T?> {
             return object : Deferrable<T?> {
                 @Volatile

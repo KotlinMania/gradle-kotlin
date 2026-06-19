@@ -20,9 +20,8 @@ import java.io.Serializable
 
 @UsedByScanPlugin
 interface PlaceholderExceptionSupport : Serializable {
-    val stackTrace: Array<StackTraceElement?>?
+    fun getStackTrace(): Array<out StackTraceElement?>?
 
-    @JvmField
     val exceptionClassName: String?
 
     val message: String?

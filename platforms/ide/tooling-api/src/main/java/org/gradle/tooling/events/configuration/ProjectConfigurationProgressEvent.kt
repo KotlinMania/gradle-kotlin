@@ -28,5 +28,5 @@ interface ProjectConfigurationProgressEvent : ProgressEvent {
      *
      * @return The description of the underlying project configuration operation.
      */
-    override fun getDescriptor(): ProjectConfigurationOperationDescriptor?
+    override val descriptor: ProjectConfigurationOperationDescriptor?
 }

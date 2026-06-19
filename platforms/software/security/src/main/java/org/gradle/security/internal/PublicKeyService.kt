@@ -18,6 +18,6 @@ package org.gradle.security.internal
 import java.io.Closeable
 
 interface PublicKeyService : Closeable {
-    fun findByLongId(keyId: Long, builder: PublicKeyResultBuilder?)
-    fun findByFingerprint(fingerprint: ByteArray?, builder: PublicKeyResultBuilder?)
+    fun findByLongId(keyId: Long, builder: PublicKeyResultBuilder)
+    fun findByFingerprint(fingerprint: ByteArray, builder: PublicKeyResultBuilder)
 }

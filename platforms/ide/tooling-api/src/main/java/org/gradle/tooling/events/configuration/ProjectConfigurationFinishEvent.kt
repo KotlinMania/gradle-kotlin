@@ -23,5 +23,5 @@ import org.gradle.tooling.events.FinishEvent
  * @since 5.1
  */
 interface ProjectConfigurationFinishEvent : ProjectConfigurationProgressEvent, FinishEvent {
-    override fun getResult(): ProjectConfigurationOperationResult?
+    override val result: ProjectConfigurationOperationResult?
 }

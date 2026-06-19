@@ -15,6 +15,8 @@
  */
 package org.gradle.tooling.internal.protocol
 
+import org.gradle.tooling.Failure
+
 /**
  * DO NOT CHANGE THIS INTERFACE. It is part of the cross-version protocol.
  *
@@ -31,7 +33,7 @@ interface InternalTestFailure : InternalFailure {
      *
      * @return The failure message
      */
-    val message: String?
+    override val message: String?
 
     /**
      * The fully-qualified name of the underlying exception type.

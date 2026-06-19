@@ -196,7 +196,7 @@ public class BuildTreeScopeServices implements ServiceRegistrationProvider {
     @Provides
     protected ExceptionAnalyser createExceptionAnalyser(LoggingConfiguration loggingConfiguration, ExceptionCollector exceptionCollector) {
         ExceptionAnalyser exceptionAnalyser = new MultipleBuildFailuresExceptionAnalyser(exceptionCollector);
-        if (loggingConfiguration.showStacktrace != ShowStacktrace.ALWAYS_FULL) {
+        if (loggingConfiguration.getShowStacktrace() != ShowStacktrace.ALWAYS_FULL) {
             exceptionAnalyser = new StackTraceSanitizingExceptionAnalyser(exceptionAnalyser);
         }
         return exceptionAnalyser;

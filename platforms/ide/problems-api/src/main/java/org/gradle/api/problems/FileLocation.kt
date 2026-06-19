@@ -30,6 +30,5 @@ interface FileLocation : ProblemLocation {
      * @return the file path
      * @since 8.13
      */
-    @JvmField
-    val path: String?
+    fun getPath(): String?
 }

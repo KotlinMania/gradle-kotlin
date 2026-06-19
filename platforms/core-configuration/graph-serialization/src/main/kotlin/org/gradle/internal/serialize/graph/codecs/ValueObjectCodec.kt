@@ -31,7 +31,7 @@ object ValueObjectCodec : Codec<ValueObject> {
     }
 
     override suspend fun ReadContext.decode(): ValueObject =
-        decodeBean().uncheckedCast()
+        decodeBean() as ValueObject
 }
 
 

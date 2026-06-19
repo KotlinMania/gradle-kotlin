@@ -19,5 +19,5 @@ interface DispatchFailureHandler<T> {
     /**
      * Called when a message could not be dispatched. This method can throw an exception to abort further dispatching.
      */
-    fun dispatchFailed(message: T?, failure: Throwable?)
+    fun dispatchFailed(message: T, failure: Throwable)
 }

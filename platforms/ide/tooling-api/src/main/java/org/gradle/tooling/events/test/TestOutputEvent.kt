@@ -26,5 +26,5 @@ import org.gradle.tooling.events.ProgressEvent
  * @since 6.0
  */
 interface TestOutputEvent : ProgressEvent {
-    override fun getDescriptor(): TestOutputDescriptor?
+    override val descriptor: TestOutputDescriptor?
 }

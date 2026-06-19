@@ -20,12 +20,8 @@ import org.gradle.tooling.events.SuccessResult
 /**
  * Implementation of the `BuildSuccessResult` interface.
  */
-open class DefaultOperationSuccessResult(private val startTime: Long, private val endTime: Long) : SuccessResult {
-    override fun getStartTime(): Long {
-        return startTime
-    }
+open class DefaultOperationSuccessResult(override val startTime: Long, override val endTime: Long) : SuccessResult {
 
-    override fun getEndTime(): Long {
-        return endTime
-    }
+
+
 }

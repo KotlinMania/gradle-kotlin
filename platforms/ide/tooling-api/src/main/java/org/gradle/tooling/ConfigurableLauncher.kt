@@ -16,7 +16,6 @@
 package org.gradle.tooling
 
 import org.gradle.tooling.events.OperationType
-import org.gradle.tooling.events.ProgressListener
 import java.io.File
 import java.io.InputStream
 import java.io.OutputStream
@@ -56,13 +55,13 @@ interface ConfigurableLauncher<T : ConfigurableLauncher<T?>?> : LongRunningOpera
      * {@inheritDoc}
      * @since 1.0-milestone-3
      */
-    override fun setStandardOutput(outputStream: OutputStream?): T?
+    override fun setStandardOutput(outputStream: OutputStream): T?
 
     /**
      * {@inheritDoc}
      * @since 1.0-milestone-3
      */
-    override fun setStandardError(outputStream: OutputStream?): T?
+    override fun setStandardError(outputStream: OutputStream): T?
 
     /**
      * {@inheritDoc}
@@ -74,13 +73,13 @@ interface ConfigurableLauncher<T : ConfigurableLauncher<T?>?> : LongRunningOpera
      * {@inheritDoc}
      * @since 1.0-milestone-7
      */
-    override fun setStandardInput(inputStream: InputStream?): T?
+    override fun setStandardInput(inputStream: InputStream): T?
 
     /**
      * {@inheritDoc}
      * @since 1.0-milestone-8
      */
-    override fun setJavaHome(javaHome: File?): T?
+    override fun setJavaHome(javaHome: File): T?
 
     /**
      * {@inheritDoc}
@@ -104,7 +103,7 @@ interface ConfigurableLauncher<T : ConfigurableLauncher<T?>?> : LongRunningOpera
      * {@inheritDoc}
      * @since 7.6
      */
-    override fun withSystemProperties(systemProperties: MutableMap<String?, String?>?): T?
+    override fun withSystemProperties(systemProperties: MutableMap<String, String>): T?
 
     /**
      * {@inheritDoc}
@@ -116,37 +115,37 @@ interface ConfigurableLauncher<T : ConfigurableLauncher<T?>?> : LongRunningOpera
      * {@inheritDoc}
      * @since 3.5
      */
-    override fun setEnvironmentVariables(envVariables: MutableMap<String?, String?>?): T?
+    override fun setEnvironmentVariables(envVariables: MutableMap<String, String>): T?
 
     /**
      * {@inheritDoc}
      * @since 1.0-milestone-3
      */
-    override fun addProgressListener(listener: ProgressListener?): T?
+    override fun addProgressListener(listener: ProgressListener): T?
 
     /**
      * {@inheritDoc}
      * @since 2.5
      */
-    override fun addProgressListener(listener: ProgressListener?): T?
+    override fun addProgressListener(listener: org.gradle.tooling.events.ProgressListener): T?
 
     /**
      * {@inheritDoc}
      * @since 2.5
      */
-    override fun addProgressListener(listener: ProgressListener?, eventTypes: MutableSet<OperationType?>?): T?
+    override fun addProgressListener(listener: org.gradle.tooling.events.ProgressListener?, eventTypes: MutableSet<OperationType>): T?
 
     /**
      * {@inheritDoc}
      * @since 2.6
      */
-    override fun addProgressListener(listener: ProgressListener?, vararg operationTypes: OperationType?): T?
+    override fun addProgressListener(listener: org.gradle.tooling.events.ProgressListener?, vararg operationTypes: OperationType): T?
 
     /**
      * {@inheritDoc}
      * @since 2.3
      */
-    override fun withCancellationToken(cancellationToken: CancellationToken?): T?
+    override fun withCancellationToken(cancellationToken: CancellationToken): T?
 
     /**
      * {@inheritDoc}

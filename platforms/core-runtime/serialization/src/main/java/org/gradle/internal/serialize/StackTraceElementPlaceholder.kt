@@ -28,7 +28,7 @@ class StackTraceElementPlaceholder(ste: StackTraceElement) : Serializable {
     private val lineNumber: Int
 
     init {
-        if (JavaVersion.current().isJava9Compatible()) {
+        if (JavaVersion.current().isJava9Compatible) {
             // FUTURE-STDLIB: StackTraceElement.getClassLoaderName/getModuleName/getModuleVersion are JDK 9+; gated above.
             classLoaderName = ste.getClassLoaderName()
             moduleName = ste.getModuleName()
@@ -45,7 +45,7 @@ class StackTraceElementPlaceholder(ste: StackTraceElement) : Serializable {
     }
 
     fun toStackTraceElement(): StackTraceElement {
-        if (JavaVersion.current().isJava9Compatible()) {
+        if (JavaVersion.current().isJava9Compatible) {
             // FUTURE-STDLIB: the 7-arg StackTraceElement constructor is JDK 9+; gated above.
             return StackTraceElement(classLoaderName, moduleName, moduleVersion, declaringClass, methodName, fileName, lineNumber)
         } else {

@@ -47,14 +47,14 @@ class LogEvent @JvmOverloads constructor(
     }
 
     override fun toString(): String {
-        return "[" + getLogLevel() + "] [" + getCategory() + "] " + message
+        return "[" + logLevel + "] [" + category + "] " + message
     }
 
     override fun getLevel(): LogEventLevel {
-        return LogLevelConverter.convert(getLogLevel())
+        return LogLevelConverter.convert(logLevel)
     }
 
     override fun withBuildOperationId(buildOperationId: OperationIdentifier): RenderableOutputEvent {
-        return LogEvent(getTimestamp(), getCategory(), getLogLevel(), message, throwable, buildOperationId)
+        return LogEvent(timestamp, category, logLevel, message, throwable, buildOperationId)
     }
 }

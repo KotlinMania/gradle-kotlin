@@ -53,7 +53,7 @@ interface Actor : Dispatch<MethodInvocation?>, Stoppable, ThreadSafe {
      * @param type the type for the proxy.
      * @return The proxy.
      */
-    fun <T> getProxy(type: Class<T?>?): T?
+    fun <T> getProxy(type: Class<T?>): T?
 
     /**
      * Stops accepting new method calls, and blocks until all method calls have been executed by the target object.

@@ -16,6 +16,7 @@
 package org.gradle.tooling.events.problems
 
 import org.gradle.api.Incubating
+import org.gradle.tooling.Failure
 
 /**
  * Describes a problem event.

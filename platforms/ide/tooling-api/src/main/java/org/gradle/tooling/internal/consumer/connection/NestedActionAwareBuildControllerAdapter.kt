@@ -24,7 +24,7 @@ import org.gradle.tooling.internal.protocol.InternalBuildControllerVersion2
 import java.io.File
 import java.util.function.Supplier
 
-open class NestedActionAwareBuildControllerAdapter(
+internal open class NestedActionAwareBuildControllerAdapter(
     buildController: InternalBuildControllerVersion2,
     adapter: ProtocolToModelAdapter,
     modelMapping: ModelMapping,
@@ -37,15 +37,15 @@ open class NestedActionAwareBuildControllerAdapter(
         this.controller = buildController as InternalActionAwareBuildController
     }
 
-    override fun getCanQueryProjectModelInParallel(modelType: Class<*>): Boolean {
+    override fun getCanQueryProjectModelInParallel(modelType: Class<*>?): Boolean {
         return controller.getCanQueryProjectModelInParallel(modelType)
     }
 
-    override fun <T> run(buildActions: MutableCollection<out BuildAction<out T>>): MutableList<T?> {
-        val wrappers: MutableList<Supplier<T?>> = ArrayList<Supplier<T?>>(buildActions.size)
-        for (action in buildActions) {
-            wrappers.add(Supplier { action.execute(this@NestedActionAwareBuildControllerAdapter) })
+    override fun <T> run(buildActions: MutableCollection<out BuildAction<out T?>?>?): MutableList<T?> {
+        val wrappers: MutableList<Supplier<T?>?> = ArrayList<Supplier<T?>?>(buildActions?.size ?: 0)
+        for (action in buildActions.orEmpty()) {
+            wrappers.add(Supplier { action!!.execute(this@NestedActionAwareBuildControllerAdapter) })
         }
-        return controller.run<T?>(wrappers)
+        return controller.run<T>(wrappers)!!
     }
 }

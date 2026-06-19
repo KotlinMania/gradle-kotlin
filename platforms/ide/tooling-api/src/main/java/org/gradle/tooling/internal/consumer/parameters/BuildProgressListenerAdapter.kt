@@ -16,6 +16,7 @@
 package org.gradle.tooling.internal.consumer.parameters
 
 import com.google.common.collect.ImmutableList
+import java.io.File
 import org.gradle.internal.Cast.uncheckedNonnullCast
 import org.gradle.internal.event.ListenerBroadcast
 import org.gradle.tooling.Failure
@@ -266,18 +267,18 @@ import org.gradle.tooling.internal.protocol.test.source.InternalTestSource
  * This adapts tooling provider internal types into the public types on the consumer.
  */
 class BuildProgressListenerAdapter(listeners: MutableMap<OperationType, MutableList<ProgressListener>>) : InternalBuildProgressListener {
-    private val testProgressListeners = ListenerBroadcast<ProgressListener?>(ProgressListener::class.java)
-    private val taskProgressListeners = ListenerBroadcast<ProgressListener?>(ProgressListener::class.java)
-    private val buildOperationProgressListeners = ListenerBroadcast<ProgressListener?>(ProgressListener::class.java)
-    private val workItemProgressListeners = ListenerBroadcast<ProgressListener?>(ProgressListener::class.java)
-    private val projectConfigurationProgressListeners = ListenerBroadcast<ProgressListener?>(ProgressListener::class.java)
-    private val transformProgressListeners = ListenerBroadcast<ProgressListener?>(ProgressListener::class.java)
-    private val testOutputProgressListeners = ListenerBroadcast<ProgressListener?>(ProgressListener::class.java)
-    private val testMetadataProgressListeners = ListenerBroadcast<ProgressListener?>(ProgressListener::class.java)
-    private val fileDownloadListeners = ListenerBroadcast<ProgressListener?>(ProgressListener::class.java)
-    private val buildPhaseListeners = ListenerBroadcast<ProgressListener?>(ProgressListener::class.java)
-    private val problemListeners = ListenerBroadcast<ProgressListener?>(ProgressListener::class.java)
-    private val rootBuildListeners = ListenerBroadcast<ProgressListener?>(ProgressListener::class.java)
+    private val testProgressListeners = ListenerBroadcast<ProgressListener?>(ProgressListener::class.java as Class<ProgressListener?>)
+    private val taskProgressListeners = ListenerBroadcast<ProgressListener?>(ProgressListener::class.java as Class<ProgressListener?>)
+    private val buildOperationProgressListeners = ListenerBroadcast<ProgressListener?>(ProgressListener::class.java as Class<ProgressListener?>)
+    private val workItemProgressListeners = ListenerBroadcast<ProgressListener?>(ProgressListener::class.java as Class<ProgressListener?>)
+    private val projectConfigurationProgressListeners = ListenerBroadcast<ProgressListener?>(ProgressListener::class.java as Class<ProgressListener?>)
+    private val transformProgressListeners = ListenerBroadcast<ProgressListener?>(ProgressListener::class.java as Class<ProgressListener?>)
+    private val testOutputProgressListeners = ListenerBroadcast<ProgressListener?>(ProgressListener::class.java as Class<ProgressListener?>)
+    private val testMetadataProgressListeners = ListenerBroadcast<ProgressListener?>(ProgressListener::class.java as Class<ProgressListener?>)
+    private val fileDownloadListeners = ListenerBroadcast<ProgressListener?>(ProgressListener::class.java as Class<ProgressListener?>)
+    private val buildPhaseListeners = ListenerBroadcast<ProgressListener?>(ProgressListener::class.java as Class<ProgressListener?>)
+    private val problemListeners = ListenerBroadcast<ProgressListener?>(ProgressListener::class.java as Class<ProgressListener?>)
+    private val rootBuildListeners = ListenerBroadcast<ProgressListener?>(ProgressListener::class.java as Class<ProgressListener?>)
 
     private val descriptorCache: MutableMap<Any, OperationDescriptor> = HashMap<Any, OperationDescriptor>()
 
@@ -296,8 +297,9 @@ class BuildProgressListenerAdapter(listeners: MutableMap<OperationType, MutableL
         rootBuildListeners.addAll(getOrDefault(listeners, OperationType.ROOT))
     }
 
-    override fun getSubscribedOperations(): MutableList<String> {
-        val operations: MutableList<String> = ArrayList<String>()
+    override val subscribedOperations: MutableList<String?>?
+        get() {
+        val operations: MutableList<String?> = ArrayList<String?>()
 
         if (!testProgressListeners.isEmpty) {
             operations.add(InternalBuildProgressListener.TEST_EXECUTION)
@@ -338,7 +340,7 @@ class BuildProgressListenerAdapter(listeners: MutableMap<OperationType, MutableL
         return operations
     }
 
-    override fun onEvent(event: Any) {
+    override fun onEvent(event: Any?) {
         if (event is ProgressEvent) {
             broadcastProgressEvent(event)
         } else if (event is InternalTestProgressEvent) {
@@ -420,8 +422,9 @@ class BuildProgressListenerAdapter(listeners: MutableMap<OperationType, MutableL
      * This represents a file download update event
      */
     private fun broadcastStatusEvent(progressEvent: InternalStatusEvent) {
-        val descriptor: OperationDescriptor = descriptorCache.get(progressEvent.descriptor.id)!!
-        checkNotNull(descriptor) { String.format("No operation with id %s in progress.", progressEvent.descriptor.id) }
+        val internalDescriptor = progressEvent.descriptor!!
+        val descriptor: OperationDescriptor = descriptorCache.get(internalDescriptor.id)!!
+        checkNotNull(descriptor) { String.format("No operation with id %s in progress.", internalDescriptor.id) }
         fileDownloadListeners.getSource()!!.statusChanged(
             DefaultStatusEvent(
                 progressEvent.eventTime,
@@ -530,9 +533,9 @@ class BuildProgressListenerAdapter(listeners: MutableMap<OperationType, MutableL
         val result: OperationResult?
         if (event.result is InternalFailureResult) {
             val internalResult = event.result as InternalFailureResult
-            result = DefaultOperationFailureResult(internalResult.startTime, internalResult.endTime, toFailures(internalResult.failures))
+            result = DefaultOperationFailureResult(internalResult.startTime, internalResult.endTime, toFailures(internalResult.failures ?: mutableListOf()))
         } else {
-            result = DefaultOperationSuccessResult(event.result.startTime, event.result.endTime)
+            result = DefaultOperationSuccessResult(event.result!!.startTime, event.result!!.endTime)
         }
         return DefaultBuildPhaseFinishEvent(event.eventTime, event.displayName, descriptor, result)
     }
@@ -619,13 +622,13 @@ class BuildProgressListenerAdapter(listeners: MutableMap<OperationType, MutableL
 
     private fun toTestMetadataEvent(event: InternalProgressEvent, descriptor: InternalTestMetadataDescriptor): TestMetadataEvent? {
         if (event is InternalTestMetadataEventVersion2) {
-            val clientDescriptor = addDescriptor<OperationDescriptor>(event.getDescriptor(), toDescriptor(descriptor))!!
-            return DefaultTestFileAttachmentMetadataEvent(event.eventTime, clientDescriptor, event.file, event.mediaType)
+            val clientDescriptor = addDescriptor<OperationDescriptor>(event.descriptor, toDescriptor(descriptor))!!
+            return DefaultTestFileAttachmentMetadataEvent(event.eventTime, clientDescriptor, event.file!!, event.mediaType)
         } else if (event is InternalTestMetadataEvent) {
-            val clientDescriptor = addDescriptor<OperationDescriptor>(event.getDescriptor(), toDescriptor(descriptor))!!
+            val clientDescriptor = addDescriptor<OperationDescriptor>(event.descriptor, toDescriptor(descriptor))!!
             val values = event.values
             val keyValues: MutableMap<String, String> = LinkedHashMap<String, String>()
-            values.forEach { (key: String?, value: Any?) -> keyValues.put(key!!, value.toString()) }
+            values!!.forEach { (key: String?, value: Any?) -> keyValues.put(key!!, value.toString()) }
             return DefaultTestKeyValueMetadataEvent(event.eventTime, clientDescriptor, keyValues)
         } else {
             return null
@@ -661,12 +664,12 @@ class BuildProgressListenerAdapter(listeners: MutableMap<OperationType, MutableL
                 parentDescriptor,
                 DefaultProblemAggregation(
                     toProblemDefinition(
-                        problemAggregationDetails.label,
-                        problemAggregationDetails.category,
-                        problemAggregationDetails.severity,
+                        problemAggregationDetails.label!!,
+                        problemAggregationDetails.category!!,
+                        problemAggregationDetails.severity!!,
                         problemAggregationDetails.documentationLink
                     ),
-                    toProblemContextDetails(problemAggregationDetails.problems)
+                    toProblemContextDetails(problemAggregationDetails.problems ?: mutableListOf())
                 )
             )
         }
@@ -690,15 +693,15 @@ class BuildProgressListenerAdapter(listeners: MutableMap<OperationType, MutableL
                 problemEvent.eventTime,
                 parentDescriptor,
                 DefaultProblemAggregation(
-                    toProblemDefinition(problemAggregationDetails.definition),
-                    toProblemContextDetails(problemAggregationDetails.problems)
+                    toProblemDefinition(problemAggregationDetails.definition!!),
+                    toProblemContextDetails(problemAggregationDetails.problems ?: mutableListOf())
                 )
             )
         } else if (details is InternalProblemSummariesDetails) {
             val problemSummariesDetails = details
             return DefaultProblemSummariesEvent(
                 problemEvent.eventTime, parentDescriptor!!,
-                toProblemIdSummaries(problemSummariesDetails.problemIdCounts)
+                toProblemIdSummaries(problemSummariesDetails.problemIdCounts ?: mutableListOf())
             )
         }
         return null
@@ -715,7 +718,7 @@ class BuildProgressListenerAdapter(listeners: MutableMap<OperationType, MutableL
     }
 
     private fun testStartedEvent(event: InternalTestStartedProgressEvent): TestStartEvent {
-        val clientDescriptor = addDescriptor<TestOperationDescriptor>(event.getDescriptor(), toTestDescriptor(event.getDescriptor()))!!
+        val clientDescriptor = addDescriptor<TestOperationDescriptor>(event.descriptor, toTestDescriptor(event.descriptor!!))!!
         return DefaultTestStartEvent(event.eventTime, event.displayName, clientDescriptor)
     }
 
@@ -745,20 +748,20 @@ class BuildProgressListenerAdapter(listeners: MutableMap<OperationType, MutableL
     }
 
     private fun genericStartedEvent(event: InternalOperationStartedProgressEvent): StartEvent {
-        val clientDescriptor = addDescriptor<OperationDescriptor>(event.descriptor, toDescriptor(event.descriptor))!!
+        val clientDescriptor = addDescriptor<OperationDescriptor>(event.descriptor, toDescriptor(event.descriptor!!))!!
         return DefaultStartEvent(event.eventTime, event.displayName, clientDescriptor)
     }
 
     private fun testFinishedEvent(event: InternalTestFinishedProgressEvent): TestFinishEvent {
-        val clientDescriptor = removeDescriptor<TestOperationDescriptor>(TestOperationDescriptor::class.java, event.getDescriptor())!!
-        return DefaultTestFinishEvent(event.eventTime, event.displayName, clientDescriptor, toTestResult(event.getResult()))
+        val clientDescriptor = removeDescriptor<TestOperationDescriptor>(TestOperationDescriptor::class.java, event.descriptor)!!
+        return DefaultTestFinishEvent(event.eventTime, event.displayName, clientDescriptor, toTestResult(event.result!!))
     }
 
     private fun taskFinishedEvent(event: InternalOperationFinishedProgressEvent): TaskFinishEvent {
         // do not remove task descriptors because they might be needed to describe subsequent tasks' dependencies
         val descriptor: TaskOperationDescriptor = Companion.assertDescriptorType<TaskOperationDescriptor>(
             org.gradle.tooling.events.task.TaskOperationDescriptor::class.java,
-            getParentDescriptor(event.descriptor.id)
+            getParentDescriptor(event.descriptor!!.id)
         )!!
         return DefaultTaskFinishEvent(
             event.eventTime,
@@ -770,7 +773,7 @@ class BuildProgressListenerAdapter(listeners: MutableMap<OperationType, MutableL
 
     private fun workItemFinishedEvent(event: InternalOperationFinishedProgressEvent): WorkItemFinishEvent {
         val descriptor = removeDescriptor<WorkItemOperationDescriptor>(WorkItemOperationDescriptor::class.java, event.descriptor)!!
-        return DefaultWorkItemFinishEvent(event.eventTime, event.displayName, descriptor, toWorkItemResult(event.result))
+        return DefaultWorkItemFinishEvent(event.eventTime, event.displayName, descriptor, toWorkItemResult(event.result!!))
     }
 
     private fun projectConfigurationFinishedEvent(event: InternalOperationFinishedProgressEvent): ProjectConfigurationFinishEvent {
@@ -790,32 +793,35 @@ class BuildProgressListenerAdapter(listeners: MutableMap<OperationType, MutableL
         // do not remove task descriptors because they might be needed to describe subsequent tasks' dependencies
         val descriptor: TransformOperationDescriptor = Companion.assertDescriptorType<TransformOperationDescriptor>(
             org.gradle.tooling.events.transform.TransformOperationDescriptor::class.java,
-            getParentDescriptor(event.descriptor.id)
+            getParentDescriptor(event.descriptor!!.id)
         )!!
-        return DefaultTransformFinishEvent(event.eventTime, event.displayName, descriptor, toTransformResult(event.result))
+        return DefaultTransformFinishEvent(event.eventTime, event.displayName, descriptor, toTransformResult(event.result!!))
     }
 
     private fun fileDownloadFinishedEvent(event: InternalOperationFinishedProgressEvent): FileDownloadFinishEvent {
         val descriptor = removeDescriptor<FileDownloadOperationDescriptor>(FileDownloadOperationDescriptor::class.java, event.descriptor)!!
-        return DefaultFileDownloadFinishEvent(event.eventTime, event.displayName, descriptor, toFileDownloadResult(event.result))
+        return DefaultFileDownloadFinishEvent(event.eventTime, event.displayName, descriptor, toFileDownloadResult(event.result!!))
     }
 
     private fun genericFinishedEvent(event: InternalOperationFinishedProgressEvent): FinishEvent {
         val descriptor: OperationDescriptor? = removeDescriptor<OperationDescriptor>(OperationDescriptor::class.java, event.descriptor)
-        return DefaultFinishEvent<OperationDescriptor?, OperationResult?>(event.eventTime, event.displayName, descriptor, toResult(event.result))
+        return DefaultFinishEvent<OperationDescriptor?, OperationResult?>(event.eventTime, event.displayName, descriptor, toResult(event.result!!))
     }
 
     @Synchronized
-    private fun <T : OperationDescriptor?> addDescriptor(descriptor: InternalOperationDescriptor, clientDescriptor: T?): T? {
-        check(!this.descriptorCache.containsKey(descriptor.id)) { String.format("Operation %s already available.", descriptor) }
-        descriptorCache.put(descriptor.id, clientDescriptor!!)
+    private fun <T : OperationDescriptor?> addDescriptor(descriptor: InternalOperationDescriptor?, clientDescriptor: T?): T? {
+        val operationDescriptor = descriptor!!
+        val id = operationDescriptor.id!!
+        check(!this.descriptorCache.containsKey(id)) { String.format("Operation %s already available.", operationDescriptor) }
+        descriptorCache.put(id, clientDescriptor!!)
         return clientDescriptor
     }
 
     @Synchronized
-    private fun <T : OperationDescriptor?> removeDescriptor(type: Class<T?>, descriptor: InternalOperationDescriptor): T? {
-        val cachedTestDescriptor: OperationDescriptor = this.descriptorCache.remove(descriptor.id)!!
-        checkNotNull(cachedTestDescriptor) { String.format("Operation %s is not available.", descriptor) }
+    private fun <T : OperationDescriptor?> removeDescriptor(type: Class<out OperationDescriptor>, descriptor: InternalOperationDescriptor?): T? {
+        val operationDescriptor = descriptor!!
+        val cachedTestDescriptor: OperationDescriptor = this.descriptorCache.remove(operationDescriptor.id!!)!!
+        checkNotNull(cachedTestDescriptor) { String.format("Operation %s is not available.", operationDescriptor) }
         return assertDescriptorType<T?>(type, cachedTestDescriptor)
     }
 
@@ -883,15 +889,16 @@ class BuildProgressListenerAdapter(listeners: MutableMap<OperationType, MutableL
 
     private fun toTestOutputDescriptor(event: InternalTestOutputEvent, descriptor: InternalTestOutputDescriptor): TestOutputDescriptor {
         val parent = getParentDescriptor(descriptor.parentId)
-        val destination = fromCode(event.getResult().getDestination())
-        val message = event.getResult().getMessage()
+        val outputResult = event.result!!
+        val destination = fromCode(outputResult.destination)
+        val message = outputResult.message
         return DefaultTestOutputOperationDescriptor(descriptor, parent, destination, message)
     }
 
-    private fun collectDescriptors(dependencies: MutableSet<out InternalOperationDescriptor>): MutableSet<OperationDescriptor> {
-        val result: MutableSet<OperationDescriptor> = LinkedHashSet<OperationDescriptor>()
-        for (dependency in dependencies) {
-            val dependencyDescriptor = descriptorCache.get(dependency.id)
+    private fun collectDescriptors(dependencies: MutableSet<out InternalOperationDescriptor?>?): MutableSet<OperationDescriptor?> {
+        val result: MutableSet<OperationDescriptor?> = LinkedHashSet<OperationDescriptor?>()
+        for (dependency in dependencies.orEmpty()) {
+            val dependencyDescriptor = descriptorCache.get(dependency!!.id!!)
             if (dependencyDescriptor != null) {
                 result.add(dependencyDescriptor)
             }
@@ -899,9 +906,10 @@ class BuildProgressListenerAdapter(listeners: MutableMap<OperationType, MutableL
         return result
     }
 
-    private fun toDescriptor(descriptor: InternalOperationDescriptor): OperationDescriptor {
-        val parent = getParentDescriptor(descriptor.parentId)
-        return DefaultOperationDescriptor(descriptor, parent)
+    private fun toDescriptor(descriptor: InternalOperationDescriptor?): OperationDescriptor {
+        val internalDescriptor = descriptor!!
+        val parent = getParentDescriptor(internalDescriptor.parentId)
+        return DefaultOperationDescriptor(internalDescriptor, parent)
     }
 
     @Synchronized
@@ -924,10 +932,10 @@ class BuildProgressListenerAdapter(listeners: MutableMap<OperationType, MutableL
             return progressListeners
         }
 
-        fun toProblemIdSummaries(problemIdCounts: MutableList<InternalProblemSummary>): MutableList<ProblemSummary> {
+        fun toProblemIdSummaries(problemIdCounts: MutableList<InternalProblemSummary>): MutableList<ProblemSummary?> {
             val groupedSummaries: MutableMap<ProblemId, MutableList<InternalProblemSummary>> = getGroupedMap(problemIdCounts)
 
-            val problemSummaries: MutableList<ProblemSummary> = ArrayList<ProblemSummary>()
+            val problemSummaries: MutableList<ProblemSummary?> = ArrayList<ProblemSummary?>()
             for (groupEntry in groupedSummaries.entries) {
                 problemSummaries.add(DefaultProblemSummary(groupEntry.key, getCount(groupEntry)))
             }
@@ -955,7 +963,7 @@ class BuildProgressListenerAdapter(listeners: MutableMap<OperationType, MutableL
         fun getCount(groupEntry: MutableMap.MutableEntry<ProblemId, MutableList<InternalProblemSummary>>): Int {
             var count = 0
             for (internalProblemSummary in groupEntry.value) {
-                count += internalProblemSummary.count
+                count += internalProblemSummary.count ?: 0
             }
             return count
         }
@@ -983,7 +991,10 @@ class BuildProgressListenerAdapter(listeners: MutableMap<OperationType, MutableL
             }
         }
 
-        private fun toProblemContextDetails(problems: MutableList<InternalProblemContextDetails>): MutableList<ProblemContext> {
+        private fun toProblemContextDetails(problems: MutableList<InternalProblemContextDetails>?): MutableList<ProblemContext> {
+            if (problems == null) {
+                return mutableListOf()
+            }
             val result = ImmutableList.builderWithExpectedSize<ProblemContext>(problems.size)
             for (problem in problems) {
                 result.add(toSingleProblemContextDetail(problem))
@@ -992,10 +1003,12 @@ class BuildProgressListenerAdapter(listeners: MutableMap<OperationType, MutableL
         }
 
 
-        private fun <T : OperationDescriptor?> assertDescriptorType(type: Class<T?>, descriptor: OperationDescriptor): T? {
-            val descriptorClass: Class<out OperationDescriptor> = descriptor.javaClass
+        @Suppress("UNCHECKED_CAST")
+        private fun <T : OperationDescriptor?> assertDescriptorType(type: Class<out OperationDescriptor>, descriptor: OperationDescriptor?): T? {
+            val operationDescriptor = descriptor!!
+            val descriptorClass: Class<out OperationDescriptor> = operationDescriptor.javaClass
             check(type.isAssignableFrom(descriptorClass)) { String.format("Unexpected operation type. Required %s but found %s", type.getName(), descriptorClass.getName()) }
-            return uncheckedNonnullCast<T?>(descriptor)
+            return operationDescriptor as T?
         }
 
         private fun inferLegacyTestSource(descriptor: InternalJvmTestDescriptor): TestSource {
@@ -1004,7 +1017,7 @@ class BuildProgressListenerAdapter(listeners: MutableMap<OperationType, MutableL
             } else if (descriptor.className != null && descriptor.methodName == null) {
                 return DefaultClassSource(descriptor.className!!)
             } else {
-                return DefaultNoSource.instance
+                return DefaultNoSource
             }
         }
 
@@ -1013,25 +1026,28 @@ class BuildProgressListenerAdapter(listeners: MutableMap<OperationType, MutableL
             return toTestSource(testSource)
         }
 
-        private fun toTestSource(testSource: InternalTestSource): TestSource {
+        private fun toTestSource(testSource: InternalTestSource?): TestSource {
+            if (testSource == null) {
+                return DefaultOtherSource
+            }
             if (testSource is InternalFileSource) {
                 val fileSource = testSource
-                return DefaultFileSource(fileSource.getFile(), toFilePosition(testSource.getPosition()))
+                return DefaultFileSource(fileSource.getFile()!!, toFilePosition(testSource.getPosition()))
             } else if (testSource is InternalDirectorySource) {
-                return DefaultDirectorySource(testSource.getFile())
+                return DefaultDirectorySource(testSource.getFile()!!)
             } else if (testSource is InternalClassSource) {
                 val classSource = testSource
-                return DefaultClassSource(classSource.getClassName())
+                return DefaultClassSource(classSource.getClassName()!!)
             } else if (testSource is InternalMethodSource) {
                 val methodSource = testSource
-                return DefaultMethodSource(methodSource.getClassName(), methodSource.getMethodName())
+                return DefaultMethodSource(methodSource.getClassName()!!, methodSource.getMethodName()!!)
             } else if (testSource is InternalClasspathResourceSource) {
                 val classpathResourceSource = testSource
-                return DefaultClasspathResourceSource(classpathResourceSource.getClasspathResourceName(), toFilePosition(classpathResourceSource.getPosition()))
+                return DefaultClasspathResourceSource(classpathResourceSource.getClasspathResourceName()!!, toFilePosition(classpathResourceSource.getPosition()))
             } else if (testSource is InternalMissingSource) {
-                return DefaultNoSource.instance
+                return DefaultNoSource
             } else {
-                return DefaultOtherSource.instance
+                return DefaultOtherSource
             }
         }
 
@@ -1042,7 +1058,7 @@ class BuildProgressListenerAdapter(listeners: MutableMap<OperationType, MutableL
             return DefaultFilePosition(position.line, position.column)
         }
 
-        private fun toJvmTestKind(testKind: String): JvmTestKind {
+        private fun toJvmTestKind(testKind: String?): JvmTestKind {
             if (InternalJvmTestDescriptor.KIND_SUITE == testKind) {
                 return JvmTestKind.SUITE
             } else if (InternalJvmTestDescriptor.KIND_ATOMIC == testKind) {
@@ -1054,13 +1070,13 @@ class BuildProgressListenerAdapter(listeners: MutableMap<OperationType, MutableL
 
         private fun toProblem(basicProblemDetails: InternalBasicProblemDetails): Problem {
             return DefaultProblem(
-                toProblemDefinition(basicProblemDetails.getLabel(), basicProblemDetails.getCategory(), basicProblemDetails.getSeverity(), basicProblemDetails.getDocumentationLink()),
-                toContextualLabel(basicProblemDetails.getLabel().getLabel()),
-                toProblemDetails(basicProblemDetails.getDetails()),
-                toLocations(basicProblemDetails.getLocations()),
+                toProblemDefinition(basicProblemDetails.label, basicProblemDetails.category, basicProblemDetails.severity, basicProblemDetails.documentationLink),
+                toContextualLabel(basicProblemDetails.label!!.label),
+                toProblemDetails(basicProblemDetails.details) ?: DefaultDetails(""),
+                toLocations(basicProblemDetails.locations),
                 mutableListOf<Location>(),
-                toSolutions(basicProblemDetails.getSolutions()),
-                toAdditionalData(basicProblemDetails.getAdditionalData()),
+                toSolutions(basicProblemDetails.solutions),
+                toAdditionalData(basicProblemDetails.additionalData),
                 toFailure(basicProblemDetails)
             )
         }
@@ -1078,7 +1094,7 @@ class BuildProgressListenerAdapter(listeners: MutableMap<OperationType, MutableL
             return DefaultProblem(
                 toProblemDefinition(basicProblemDetails.definition),
                 toContextualLabel(basicProblemDetails.contextualLabel)!!,
-                toProblemDetails(basicProblemDetails.details),
+                toProblemDetails(basicProblemDetails.details) ?: DefaultDetails(""),
                 toLocations(originLocations),
                 toLocations(contextualLocations),
                 toSolutions(basicProblemDetails.solutions),
@@ -1087,32 +1103,34 @@ class BuildProgressListenerAdapter(listeners: MutableMap<OperationType, MutableL
             )
         }
 
-        private fun toProblemDefinition(problemDefinition: InternalProblemDefinition): ProblemDefinition {
+        private fun toProblemDefinition(problemDefinition: InternalProblemDefinition?): ProblemDefinition {
+            val definition = problemDefinition!!
             return DefaultProblemDefinition(
-                toProblemId(problemDefinition.id),
-                toProblemSeverity(problemDefinition.severity),
-                toDocumentationLink(problemDefinition.documentationLink)
+                toProblemId(definition.id),
+                toProblemSeverity(definition.severity),
+                toDocumentationLink(definition.documentationLink)
             )
         }
 
-        private fun toProblemDefinition(label: InternalLabel, category: InternalProblemCategory, severity: InternalSeverity, documentationLink: InternalDocumentationLink?): ProblemDefinition {
+        private fun toProblemDefinition(label: InternalLabel?, category: InternalProblemCategory?, severity: InternalSeverity?, documentationLink: InternalDocumentationLink?): ProblemDefinition {
             return DefaultProblemDefinition(
-                toProblemId(label, category),
+                toProblemId(label!!, category!!),
                 toProblemSeverity(severity),
                 toDocumentationLink(documentationLink)
             )
         }
 
-        private fun toProblemId(problemId: InternalProblemId): ProblemId {
-            return DefaultProblemId(problemId.name, problemId.displayName, toProblemGroup(problemId.group))
+        private fun toProblemId(problemId: InternalProblemId?): ProblemId {
+            val id = problemId!!
+            return DefaultProblemId(id.name!!, id.displayName!!, toProblemGroup(id.group)!!)
         }
 
         private fun toProblemId(label: InternalLabel, category: InternalProblemCategory): ProblemId {
             val categories: MutableList<String> = ArrayList<String>()
-            categories.add(category.getCategory())
-            categories.addAll(category.getSubcategories())
+            categories.add(category.category!!)
+            categories.addAll(category.subcategories.orEmpty())
 
-            return DefaultProblemId(categories.removeAt(categories.size - 1), label.getLabel(), toProblemGroup(categories)!!)
+            return DefaultProblemId(categories.removeAt(categories.size - 1), label.label!!, toProblemGroup(categories)!!)
         }
 
         private fun toProblemGroup(groupNames: MutableList<String>): ProblemGroup? {
@@ -1124,71 +1142,75 @@ class BuildProgressListenerAdapter(listeners: MutableMap<OperationType, MutableL
             }
         }
 
-        private fun toProblemGroup(problemGroup: InternalProblemGroup): ProblemGroup {
-            return DefaultProblemGroup(problemGroup.name, problemGroup.displayName, if (problemGroup.parent == null) null else Companion.toProblemGroup(problemGroup.parent!!))
+        private fun toProblemGroup(problemGroup: InternalProblemGroup?): ProblemGroup? {
+            if (problemGroup == null) {
+                return null
+            }
+            return DefaultProblemGroup(problemGroup.name!!, problemGroup.displayName!!, if (problemGroup.parent == null) null else Companion.toProblemGroup(problemGroup.parent!!))
         }
 
-        private fun toAdditionalData(additionalData: InternalAdditionalData): AdditionalData {
+        private fun toAdditionalData(additionalData: InternalAdditionalData?): AdditionalData {
             if (additionalData is InternalProxiedAdditionalData) {
-                val proxy = additionalData.getProxy()
-                return DefaultCustomAdditionalData(additionalData.getAsMap(), proxy)
+                val proxy = additionalData.proxy
+                return DefaultCustomAdditionalData(additionalData.asMap ?: mutableMapOf(), proxy!!)
             }
             if (additionalData == null) {
                 return DefaultAdditionalData(mutableMapOf<String, Any>())
             }
-            return DefaultAdditionalData(additionalData.getAsMap())
+            return DefaultAdditionalData(additionalData.asMap ?: mutableMapOf())
         }
 
         private fun toContextualLabel(contextualLabel: InternalContextualLabel?): ContextualLabel? {
-            return if (contextualLabel == null) null else DefaultContextualLabel(contextualLabel.getContextualLabel())
+            return if (contextualLabel == null) null else DefaultContextualLabel(contextualLabel.contextualLabel)
         }
 
         private fun toContextualLabel(contextualLabel: String?): ContextualLabel {
             return (if (contextualLabel == null) null else org.gradle.tooling.events.problems.internal.DefaultContextualLabel(contextualLabel))!!
         }
 
-        private fun toProblemSeverity(severity: InternalSeverity): Severity {
-            return from(if (severity != null) severity.getSeverity() else Severity.WARNING.severity)
+        private fun toProblemSeverity(severity: InternalSeverity?): Severity {
+            return from(if (severity != null) severity.severity else Severity.WARNING.severity)
         }
 
-        private fun toLocations(locations: MutableList<InternalLocation>): MutableList<Location> {
-            val result: MutableList<Location> = ArrayList<Location>(locations.size)
-            for (location in locations) {
+        private fun toLocations(locations: MutableList<InternalLocation>?): MutableList<Location> {
+            val result: MutableList<Location> = ArrayList<Location>(locations?.size ?: 0)
+            for (location in locations.orEmpty()) {
                 if (location is InternalLineInFileLocation) {
                     val l = location
-                    result.add(DefaultLineInFileLocation(l.getPath(), l.getLine(), l.getColumn(), l.getLength()))
+                    result.add(DefaultLineInFileLocation(l.path!!, l.line, l.column, l.length))
                 } else if (location is InternalOffsetInFileLocation) {
                     val l = location
-                    result.add(DefaultOffsetInFileLocation(l.getPath(), l.getOffset(), l.getLength()))
+                    result.add(DefaultOffsetInFileLocation(l.path!!, l.offset, l.length))
                 } else if (location is InternalFileLocation) {
                     val l = location
-                    result.add(DefaultFileLocation(l.getPath()))
+                    result.add(DefaultFileLocation(l.path!!))
                 } else if (location is InternalPluginIdLocation) {
                     val pluginLocation = location
-                    result.add(DefaultPluginIdLocation(pluginLocation.getPluginId()))
+                    result.add(DefaultPluginIdLocation(pluginLocation.pluginId!!))
                 } else if (location is InternalTaskPathLocation) {
                     val taskLocation = location
-                    result.add(DefaultTaskPathLocation(taskLocation.getBuildTreePath()))
+                    result.add(DefaultTaskPathLocation(taskLocation.buildTreePath!!))
                 }
             }
             return result
         }
 
         private fun toDocumentationLink(link: InternalDocumentationLink?): DocumentationLink {
-            return (if (link == null || link.getUrl() == null) null else org.gradle.tooling.events.problems.internal.DefaultDocumentationLink(link.getUrl()))!!
+            val url = link?.url
+            return (if (url == null) null else org.gradle.tooling.events.problems.internal.DefaultDocumentationLink(url))!!
         }
 
-        private fun toSolutions(solutions: MutableList<InternalSolution>): MutableList<Solution> {
-            val result: MutableList<Solution> = ArrayList<Solution>(solutions.size)
-            for (solution in solutions) {
-                result.add(DefaultSolution(solution.getSolution()))
+        private fun toSolutions(solutions: MutableList<InternalSolution>?): MutableList<Solution> {
+            val result: MutableList<Solution> = ArrayList<Solution>(solutions?.size ?: 0)
+            for (solution in solutions.orEmpty()) {
+                result.add(DefaultSolution(solution.solution!!))
             }
             return result
         }
 
-        private fun toProblemDetails(details: InternalDetails?): Details {
+        private fun toProblemDetails(details: InternalDetails?): Details? {
             if (details != null) {
-                return DefaultDetails(details.getDetails())
+                return DefaultDetails(details.details!!)
             }
             return null
         }
@@ -1224,7 +1246,7 @@ class BuildProgressListenerAdapter(listeners: MutableMap<OperationType, MutableL
             if (result is InternalTaskSuccessResult) {
                 val successResult = result
                 if (result is InternalJavaCompileTaskOperationResult) {
-                    val annotationProcessorResults: MutableList<JavaCompileTaskOperationResult.AnnotationProcessorResult>? =
+                    val annotationProcessorResults: MutableList<JavaCompileTaskOperationResult.AnnotationProcessorResult?>? =
                         toAnnotationProcessorResults((result as InternalJavaCompileTaskOperationResult).annotationProcessorResults)
                     return DefaultJavaCompileTaskSuccessResult(
                         result.startTime,
@@ -1255,7 +1277,7 @@ class BuildProgressListenerAdapter(listeners: MutableMap<OperationType, MutableL
         private fun toTaskExecutionDetails(result: InternalTaskResult): TaskExecutionDetails {
             if (result is InternalIncrementalTaskResult) {
                 val taskResult = result
-                return TaskExecutionDetails.of(taskResult.isIncremental, taskResult.executionReasons)
+                return TaskExecutionDetails.of(taskResult.isIncremental, taskResult.executionReasons ?: mutableListOf())
             }
             return unsupported()
         }
@@ -1285,10 +1307,10 @@ class BuildProgressListenerAdapter(listeners: MutableMap<OperationType, MutableL
             }
         }
 
-        private fun toPluginApplicationResults(pluginApplicationResults: MutableList<out InternalProjectConfigurationResult.InternalPluginApplicationResult>): MutableList<out ProjectConfigurationOperationResult.PluginApplicationResult> {
+        private fun toPluginApplicationResults(pluginApplicationResults: MutableList<out InternalProjectConfigurationResult.InternalPluginApplicationResult?>?): MutableList<out ProjectConfigurationOperationResult.PluginApplicationResult> {
             val results: MutableList<ProjectConfigurationOperationResult.PluginApplicationResult> = ArrayList<ProjectConfigurationOperationResult.PluginApplicationResult>()
-            for (result in pluginApplicationResults) {
-                val plugin: PluginIdentifier? = toPluginIdentifier(result.plugin)
+            for (result in pluginApplicationResults.orEmpty()) {
+                val plugin: PluginIdentifier? = toPluginIdentifier(result!!.plugin)
                 if (plugin != null) {
                     results.add(DefaultPluginApplicationResult(plugin, result.totalConfigurationTime))
                 }
@@ -1296,13 +1318,16 @@ class BuildProgressListenerAdapter(listeners: MutableMap<OperationType, MutableL
             return results
         }
 
-        private fun toPluginIdentifier(pluginIdentifier: InternalPluginIdentifier): PluginIdentifier? {
+        private fun toPluginIdentifier(pluginIdentifier: InternalPluginIdentifier?): PluginIdentifier? {
+            if (pluginIdentifier == null) {
+                return null
+            }
             if (pluginIdentifier is InternalBinaryPluginIdentifier) {
                 val binaryPlugin = pluginIdentifier
-                return DefaultBinaryPluginIdentifier(binaryPlugin.displayName, binaryPlugin.className, binaryPlugin.pluginId)
+                return DefaultBinaryPluginIdentifier(binaryPlugin.displayName!!, binaryPlugin.className!!, binaryPlugin.pluginId!!)
             } else if (pluginIdentifier is InternalScriptPluginIdentifier) {
                 val scriptPlugin = pluginIdentifier
-                return DefaultScriptPluginIdentifier(scriptPlugin.displayName, scriptPlugin.uri)
+                return DefaultScriptPluginIdentifier(scriptPlugin.displayName!!, scriptPlugin.uri!!)
             } else {
                 return null
             }
@@ -1328,9 +1353,9 @@ class BuildProgressListenerAdapter(listeners: MutableMap<OperationType, MutableL
             }
         }
 
-        fun toFailures(causes: MutableCollection<out InternalFailure>?): MutableList<Failure> {
+        fun toFailures(causes: MutableCollection<out InternalFailure?>?): MutableList<Failure> {
             if (causes == null) {
-                return null
+                return mutableListOf()
             }
             val failures: MutableList<Failure> = ArrayList<Failure>(causes.size)
             for (cause in causes) {
@@ -1349,17 +1374,17 @@ class BuildProgressListenerAdapter(listeners: MutableMap<OperationType, MutableL
             return Companion.toFailure(problemDetails.getFailure()!!)
         }
 
-        private fun toFailure(origFailure: InternalFailure): Failure? {
+        private fun toFailure(origFailure: InternalFailure?): Failure? {
             if (origFailure == null) {
                 return null
             }
-            val problemDetails: MutableList<InternalBasicProblemDetailsVersion3> = ArrayList<InternalBasicProblemDetailsVersion3>()
+            val problemDetails: MutableList<InternalBasicProblemDetailsVersion3?> = ArrayList<InternalBasicProblemDetailsVersion3?>()
             try {
-                problemDetails.addAll(origFailure.problems)
+                problemDetails.addAll(origFailure.problems.orEmpty())
             } catch (ignore: AbstractMethodError) {
                 // Older Gradle versions don't have this method
             }
-            val clientProblems: MutableList<Problem> = ArrayList<Problem>(problemDetails.size)
+            val clientProblems: MutableList<Problem?> = ArrayList<Problem?>(problemDetails.size)
             for (problemDetail in problemDetails) {
                 if (problemDetail == null) { // Should not happen, but with some older snapshot versions we see this.
                     continue
@@ -1370,23 +1395,23 @@ class BuildProgressListenerAdapter(listeners: MutableMap<OperationType, MutableL
                 if (origFailure is InternalFileComparisonTestAssertionFailure) {
                     val assertionFailure = origFailure as InternalTestAssertionFailure
                     return DefaultFileComparisonTestAssertionFailure(
-                        assertionFailure.getMessage()!!,
-                        assertionFailure.description,
+                        assertionFailure.message!!,
+                        assertionFailure.description!!,
                         assertionFailure.expected!!,
                         assertionFailure.actual!!,
                         toFailures(origFailure.causes),
-                        (origFailure as InternalTestAssertionFailure).className,
-                        (origFailure as InternalTestAssertionFailure).stacktrace,
+                        (origFailure as InternalTestAssertionFailure).className!!,
+                        (origFailure as InternalTestAssertionFailure).stacktrace!!,
                         origFailure.expectedContent!!,
                         origFailure.actualContent!!
                     )
                 }
                 val assertionFailure = origFailure
                 return DefaultTestAssertionFailure(
-                    assertionFailure.getMessage(),
+                    assertionFailure.message!!,
                     assertionFailure.description,
-                    assertionFailure.expected,
-                    assertionFailure.actual,
+                    assertionFailure.expected!!,
+                    assertionFailure.actual!!,
                     toFailures(origFailure.causes),
                     origFailure.className,
                     origFailure.stacktrace
@@ -1394,7 +1419,7 @@ class BuildProgressListenerAdapter(listeners: MutableMap<OperationType, MutableL
             } else if (origFailure is InternalTestFrameworkFailure) {
                 val frameworkFailure = origFailure
                 return DefaultTestFrameworkFailure(
-                    frameworkFailure.getMessage(),
+                    frameworkFailure.message!!,
                     frameworkFailure.description,
                     toFailures(origFailure.causes),
                     origFailure.className,
@@ -1402,26 +1427,28 @@ class BuildProgressListenerAdapter(listeners: MutableMap<OperationType, MutableL
                 )
             }
             return DefaultFailure(
-                origFailure.message,
+                origFailure.message!!,
                 origFailure.description,
                 toFailures(origFailure.causes),
                 clientProblems
             )
         }
 
-        private fun toAnnotationProcessorResults(protocolResults: MutableList<InternalJavaCompileTaskOperationResult.InternalAnnotationProcessorResult>?): MutableList<JavaCompileTaskOperationResult.AnnotationProcessorResult>? {
+        private fun toAnnotationProcessorResults(protocolResults: MutableList<InternalJavaCompileTaskOperationResult.InternalAnnotationProcessorResult?>?): MutableList<JavaCompileTaskOperationResult.AnnotationProcessorResult?>? {
             if (protocolResults == null) {
                 return null
             }
-            val results: MutableList<JavaCompileTaskOperationResult.AnnotationProcessorResult> = ArrayList<JavaCompileTaskOperationResult.AnnotationProcessorResult>()
+            val results: MutableList<JavaCompileTaskOperationResult.AnnotationProcessorResult?> = ArrayList<JavaCompileTaskOperationResult.AnnotationProcessorResult?>()
             for (result in protocolResults) {
-                results.add(toAnnotationProcessorResult(result))
+                if (result != null) {
+                    results.add(toAnnotationProcessorResult(result))
+                }
             }
             return results
         }
 
         private fun toAnnotationProcessorResult(result: InternalJavaCompileTaskOperationResult.InternalAnnotationProcessorResult): JavaCompileTaskOperationResult.AnnotationProcessorResult {
-            return DefaultAnnotationProcessorResult(result.className, toAnnotationProcessorResultType(result.type), result.duration)
+            return DefaultAnnotationProcessorResult(result.className!!, toAnnotationProcessorResultType(result.type!!), result.duration)
         }
 
         private fun toAnnotationProcessorResultType(type: String): JavaCompileTaskOperationResult.AnnotationProcessorResult.Type {

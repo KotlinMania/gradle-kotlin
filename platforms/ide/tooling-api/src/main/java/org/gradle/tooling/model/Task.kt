@@ -51,7 +51,7 @@ interface Task : Launchable {
      * @return The description of this task, or `null` if it has no description.
      * @since 1.0-milestone-3
      */
-    override fun getDescription(): String?
+    override val description: String?
 
     /**
      * Returns the group a task belongs to.

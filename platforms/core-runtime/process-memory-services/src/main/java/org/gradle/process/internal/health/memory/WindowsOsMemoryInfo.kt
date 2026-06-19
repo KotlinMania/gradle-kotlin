@@ -28,7 +28,8 @@ import org.jspecify.annotations.NullMarked
 class WindowsOsMemoryInfo : OsMemoryInfo {
     override fun getOsSnapshot(): OsMemoryStatus {
         try {
-            val memory = getInstance().get<Memory>(Memory::class.java)
+            @Suppress("UNCHECKED_CAST")
+            val memory = getInstance().get<Memory>(Memory::class.java as Class<Memory?>)!!
             return snapshotFromMemoryInfo(memory.getMemoryInfo())
         } catch (ex: NativeException) {
             throw UnsupportedOperationException("Unable to get system memory", ex)

@@ -30,11 +30,12 @@ class DefaultProgressLoggerFactory(private val progressListener: ProgressListene
     private val current = ThreadLocal<ProgressLoggerImpl>()
     private val currentBuildOperationRef = CurrentBuildOperationRef.instance()
 
-    override fun newOperation(loggerCategory: Class<*>): ProgressLogger {
-        return newOperation(loggerCategory.getName())
+    override fun newOperation(loggerCategory: Class<*>?): ProgressLogger {
+        return newOperation(loggerCategory!!.getName())
     }
 
-    override fun newOperation(loggerCategory: Class<*>, buildOperationDescriptor: BuildOperationDescriptor): ProgressLogger {
+    override fun newOperation(loggerCategory: Class<*>?, buildOperationDescriptor: BuildOperationDescriptor?): ProgressLogger {
+        val buildOperationDescriptor = buildOperationDescriptor!!
         var category = ProgressStartEvent.BUILD_OP_CATEGORY
         val metadata = buildOperationDescriptor.getMetadata()
         val buildOperationCategory = BuildOperationCategory.toCategory(metadata)
@@ -45,7 +46,7 @@ class DefaultProgressLoggerFactory(private val progressListener: ProgressListene
             category = ProgressStartEvent.TASK_CATEGORY
         }
 
-        val logger: ProgressLoggerImpl = DefaultProgressLoggerFactory.ProgressLoggerImpl(
+        val logger = ProgressLoggerImpl(
             null,
             buildOperationDescriptor.getId(),
             category,
@@ -66,11 +67,11 @@ class DefaultProgressLoggerFactory(private val progressListener: ProgressListene
         return logger
     }
 
-    override fun newOperation(loggerCategory: String): ProgressLogger {
-        return init(loggerCategory, null)
+    override fun newOperation(loggerCategory: String?): ProgressLogger {
+        return init(loggerCategory!!, null)
     }
 
-    override fun newOperation(loggerClass: Class<*>, parent: ProgressLogger): ProgressLogger {
+    override fun newOperation(loggerClass: Class<*>?, parent: ProgressLogger?): ProgressLogger {
         return init(loggerClass.toString(), parent)
     }
 
@@ -80,7 +81,7 @@ class DefaultProgressLoggerFactory(private val progressListener: ProgressListene
     ): ProgressLogger {
         require(!(parentOperation != null && parentOperation !is ProgressLoggerImpl)) { "Unexpected parent logger." }
         val currentBuildOperation = currentBuildOperationRef.get()
-        return DefaultProgressLoggerFactory.ProgressLoggerImpl(
+        return ProgressLoggerImpl(
             parentOperation,
             OperationIdentifier(buildOperationIdFactory.nextId()),
             loggerCategory,
@@ -109,26 +110,24 @@ class DefaultProgressLoggerFactory(private val progressListener: ProgressListene
         private val buildOperationCategory: BuildOperationCategory?
     ) : ProgressLogger {
         private var previous: ProgressLoggerImpl? = null
-        private var description: String? = null
-        private var loggingHeader: String? = null
+        private var descriptionValue: String? = null
+        var loggingHeader: String? = null
         private var state = State.idle
-        private var totalProgress = 0
+        var totalProgress = 0
+        override val description: String?
+            get() = descriptionValue
 
         override fun toString(): String {
-            return category + " - " + description
+            return category + " - " + descriptionValue
         }
 
-        override fun getDescription(): String {
-            return description!!
-        }
-
-        override fun setDescription(description: String): ProgressLogger {
+        override fun setDescription(description: String?): ProgressLogger {
             assertCanConfigure()
-            this.description = description
+            this.descriptionValue = description
             return this
         }
 
-        override fun start(description: String, status: String): ProgressLogger {
+        override fun start(description: String?, status: String?): ProgressLogger {
             setDescription(description)
             started(status)
             return this
@@ -143,7 +142,7 @@ class DefaultProgressLoggerFactory(private val progressListener: ProgressListene
         }
 
         fun started(status: String?, totalProgress: Int) {
-            check(GUtil.isTrue(description)) { "A description must be specified before this operation is started." }
+            check(GUtil.isTrue(descriptionValue)) { "A description must be specified before this operation is started." }
             assertNotStarted()
             state = State.started
             previous = current.get()
@@ -168,7 +167,7 @@ class DefaultProgressLoggerFactory(private val progressListener: ProgressListene
                     parentProgressId,
                     clock.currentTime,
                     category,
-                    description!!,
+                    descriptionValue!!,
                     loggingHeader,
                     ensureNotNull(status),
                     totalProgress,
@@ -192,7 +191,7 @@ class DefaultProgressLoggerFactory(private val progressListener: ProgressListene
             completed(null, false)
         }
 
-        override fun completed(status: String, failed: Boolean) {
+        override fun completed(status: String?, failed: Boolean) {
             assertRunning()
             state = State.completed
             current.set(previous)

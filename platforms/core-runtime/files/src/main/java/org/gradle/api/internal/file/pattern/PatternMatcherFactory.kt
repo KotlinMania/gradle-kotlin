@@ -24,6 +24,7 @@ object PatternMatcherFactory {
     private val END_OF_PATH_MATCHER = EndOfPathMatcher()
     private val PATH_SPLITTER = Splitter.on(CharMatcher.anyOf("\\/")).omitEmptyStrings()
 
+    @JvmStatic
     fun getPatternsMatcher(partialMatchDirs: Boolean, caseSensitive: Boolean, patterns: Iterable<String>): PatternMatcher {
         var matcher: PatternMatcher = PatternMatcher.Companion.MATCH_ALL
         for (pattern in patterns) {

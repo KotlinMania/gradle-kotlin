@@ -71,7 +71,7 @@ public interface ProjectLeaseRegistry extends BlockingNotifier {
      * If no locks were held at the time the method was called, then no attempt will be made to reacquire a lock on completion.
      * While blocking to reacquire the project lock, all worker leases held by the thread will be released and reacquired once the project lock is obtained.
      */
-    <T extends @Nullable Object> T runAsIsolatedTask(Factory<T> action);
+    <T extends @Nullable Object> @Nullable T runAsIsolatedTask(Factory<T> action);
 
     /**
      * Releases any project state locks or task execution locks currently held by the current thread and executes the {@link Factory}.
@@ -104,7 +104,7 @@ public interface ProjectLeaseRegistry extends BlockingNotifier {
      * action and reacquired at the end.
      */
     @Override
-    <T extends @Nullable Object> T blocking(Factory<T> action);
+    <T extends @Nullable Object> @Nullable T blocking(Factory<T> action);
 
     /**
      * Runs the given action and disallows the current thread from attempting to acquire or release any project locks.

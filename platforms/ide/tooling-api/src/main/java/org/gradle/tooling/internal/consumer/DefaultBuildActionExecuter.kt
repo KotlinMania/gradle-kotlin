@@ -15,9 +15,16 @@
  */
 package org.gradle.tooling.internal.consumer
 
+import kotlin.Any
+import kotlin.IllegalArgumentException
+import kotlin.IllegalStateException
+import kotlin.Throwable
+import kotlin.Throws
+import kotlin.text.format
 import org.gradle.internal.Cast.uncheckedNonnullCast
 import org.gradle.tooling.BuildAction
 import org.gradle.tooling.BuildActionExecuter
+import org.gradle.tooling.Failure
 import org.gradle.tooling.GradleConnectionException
 import org.gradle.tooling.IntermediateResultHandler
 import org.gradle.tooling.ResultHandler
@@ -26,16 +33,9 @@ import org.gradle.tooling.internal.consumer.async.AsyncConsumerActionExecutor
 import org.gradle.tooling.internal.consumer.connection.ConsumerAction
 import org.gradle.tooling.internal.consumer.connection.ConsumerConnection
 import org.gradle.util.internal.CollectionUtils.toList
-import java.lang.String
-import kotlin.Any
-import kotlin.IllegalArgumentException
-import kotlin.IllegalStateException
-import kotlin.Throwable
-import kotlin.Throws
-import kotlin.text.format
 
-internal class DefaultBuildActionExecuter<T>(buildAction: BuildAction<T?>, connection: AsyncConsumerActionExecutor, parameters: ConnectionParameters?) :
-    AbstractLongRunningOperation<DefaultBuildActionExecuter<T?>?>(parameters), BuildActionExecuter<T?> {
+internal class DefaultBuildActionExecuter<T>(buildAction: BuildAction<T?>, connection: AsyncConsumerActionExecutor, parameters: ConnectionParameters) :
+    AbstractLongRunningOperation<DefaultBuildActionExecuter<T>>(parameters), BuildActionExecuter<T?> {
     private val buildAction: BuildAction<T?>
     private val connection: AsyncConsumerActionExecutor
 
@@ -45,37 +45,38 @@ internal class DefaultBuildActionExecuter<T>(buildAction: BuildAction<T?>, conne
         this.connection = connection
     }
 
-    override fun getThis(): DefaultBuildActionExecuter<T?> {
-        return this
-    }
+    override val `this`: DefaultBuildActionExecuter<T>
+        get() = this
 
-    override fun setStreamedValueListener(listener: StreamedValueListener) {
-        operationParamsBuilder.setStreamedValueListener(listener)
+    override fun setStreamedValueListener(listener: StreamedValueListener?) {
+        operationParamsBuilder.setStreamedValueListener(listener!!)
     }
 
     override fun forTasks(vararg tasks: String?): BuildActionExecuter<T?> {
-        operationParamsBuilder.setTasks((if (tasks != null) java.util.Arrays.asList<kotlin.String>(*tasks) else null)!!)
-        return getThis()
+        operationParamsBuilder.setTasks((if (tasks != null) tasks.filterNotNull().toMutableList() else null)!!)
+        return this
     }
 
     override fun forTasks(tasks: Iterable<String?>?): BuildActionExecuter<T?> {
-        operationParamsBuilder.setTasks(if (tasks != null) toList<String>(tasks) else null)
-        return getThis()
+        operationParamsBuilder.setTasks(if (tasks != null) tasks.filterNotNull().toMutableList() else null)
+        return this
     }
 
     @Throws(GradleConnectionException::class)
     override fun run(): T? {
-        val handler = BlockingResultHandler<Any?>(Any::class.java)
+        val handler = BlockingResultHandler<Any>(Any::class.java as Class<Any?>)
         run(handler)
-        return uncheckedNonnullCast<T?>(handler.getResult())
+        return handler.result as T?
     }
 
     @Throws(IllegalStateException::class)
     override fun run(handler: ResultHandler<in T?>?) {
-        val parameters = getConsumerOperationParameters()
+        val operationParameters = consumerOperationParameters
         connection.run<T?>(object : ConsumerAction<T?> {
+            override val parameters = operationParameters
+
             override fun run(connection: ConsumerConnection): T? {
-                val result = connection.run<T?>(buildAction, this.parameters)
+                val result = connection.run<T?>(buildAction, parameters)
                 return result
             }
         }, ResultHandlerAdapter<T?>(handler, createExceptionTransformer(object : ConnectionExceptionTransformer.ConnectionFailureMessageProvider {
@@ -85,7 +86,7 @@ internal class DefaultBuildActionExecuter<T>(buildAction: BuildAction<T?>, conne
         })))
     }
 
-    internal class Builder(private val connection: AsyncConsumerActionExecutor?, private val parameters: ConnectionParameters?) : BuildActionExecuter.Builder {
+    internal class Builder(private val connection: AsyncConsumerActionExecutor, private val parameters: ConnectionParameters) : BuildActionExecuter.Builder {
         private var projectsLoadedAction: PhasedBuildAction.BuildActionWrapper<*>? = null
         private var buildFinishedAction: PhasedBuildAction.BuildActionWrapper<*>? = null
 

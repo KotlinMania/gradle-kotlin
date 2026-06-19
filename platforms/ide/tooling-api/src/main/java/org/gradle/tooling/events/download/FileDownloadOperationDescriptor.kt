@@ -15,6 +15,8 @@
  */
 package org.gradle.tooling.events.download
 
+import java.io.File
+import java.net.URI
 import org.gradle.tooling.events.OperationDescriptor
 
 /**

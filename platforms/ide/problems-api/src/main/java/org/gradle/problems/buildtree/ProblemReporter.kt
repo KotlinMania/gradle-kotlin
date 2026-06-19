@@ -23,7 +23,7 @@ import java.io.File
  * A service that collects problems of some type during the execution of Gradle for a build tree and reports them to the user
  * in some form.
  */
-@ServiceScope([Scope.Global::class, Scope.BuildTree::class])
+@ServiceScope(Scope.Global::class, Scope.BuildTree::class)
 interface ProblemReporter {
     interface ProblemConsumer {
         fun accept(throwable: Throwable)
@@ -34,8 +34,7 @@ interface ProblemReporter {
      * that the output is generated in a stable order rather than in an order based on the order that implementations
      * are discovered.
      */
-    @JvmField
-    val id: String?
+    fun getId(): String?
 
     /**
      * Notifies the build user of whatever problems have been collected. May report problems to the console, or generate a report

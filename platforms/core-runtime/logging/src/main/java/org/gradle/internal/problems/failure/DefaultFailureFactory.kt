@@ -21,7 +21,6 @@ import org.gradle.api.JavaVersion
 import org.gradle.api.problems.internal.ProblemInternal
 import org.gradle.api.problems.internal.ProblemLocator
 import org.gradle.internal.exceptions.MultiCauseException
-import org.gradle.util.internal.CollectionUtils
 import java.lang.reflect.InvocationTargetException
 import java.util.Collections
 import java.util.IdentityHashMap
@@ -71,20 +70,18 @@ class DefaultFailureFactory(private val stackTraceClassifier: StackTraceClassifi
             val suppressedAndCauses: SuppressedAndCauses = getSuppressedAndCauses(failure)
             val suppressed = convertSuppressed(suppressedAndCauses)
             val causes = convertCauses(suppressedAndCauses)
-            val problems: MutableList<ProblemInternal> = ImmutableList.copyOf<ProblemInternal>(problemLocator.findAll(failure))
+            val problems: MutableList<ProblemInternal> = ImmutableList.copyOf<ProblemInternal>(problemLocator.findAll(failure) ?: mutableListOf())
             return DefaultFailure(failure, stackTrace, relevances, suppressed, causes, problems)
         }
 
         fun convertSuppressed(suppressedAndCauses: SuppressedAndCauses): MutableList<Failure> {
-            val suppressed: Array<Throwable?> = suppressedAndCauses.suppressed
+            val suppressed: Array<Throwable>? = suppressedAndCauses.suppressed
             if (suppressed == null) {
                 return mutableListOf<Failure>()
             }
 
-            return CollectionUtils.collect<Failure, Throwable>(
-                suppressed,
-                determineRecursiveConverter(suppressedAndCauses.childCount())
-            )
+            val converter = determineRecursiveConverter(suppressedAndCauses.childCount())
+            return suppressed.mapTo(mutableListOf()) { converter.apply(it) }
         }
 
         fun convertCauses(suppressedAndCauses: SuppressedAndCauses): MutableList<Failure> {
@@ -92,10 +89,8 @@ class DefaultFailureFactory(private val stackTraceClassifier: StackTraceClassifi
             if (causes.isEmpty()) {
                 return mutableListOf<Failure>()
             }
-            return CollectionUtils.collect<Failure, Throwable>(
-                causes,
-                determineRecursiveConverter(suppressedAndCauses.childCount())
-            )
+            val converter = determineRecursiveConverter(suppressedAndCauses.childCount())
+            return causes.mapTo(mutableListOf()) { converter.apply(it) }
         }
 
         fun determineRecursiveConverter(size: Int): Function<Throwable, Failure> {
@@ -112,11 +107,11 @@ class DefaultFailureFactory(private val stackTraceClassifier: StackTraceClassifi
         }
 
         private class SuppressedAndCauses(
-            private val suppressed: Array<Throwable?>,
-            private val causes: MutableList<Throwable>
+            val suppressed: Array<Throwable>?,
+            val causes: MutableList<Throwable>
         ) {
             fun childCount(): Int {
-                return causes.size + (if (suppressed != null) suppressed.size else 0)
+                return causes.size + (suppressed?.size ?: 0)
             }
         }
 
@@ -135,14 +130,14 @@ class DefaultFailureFactory(private val stackTraceClassifier: StackTraceClassifi
             }
 
             private fun getSuppressedAndCauses(failure: Throwable): SuppressedAndCauses {
-                val suppressed: Array<Throwable?> = getSuppressed(failure)
+                val suppressed: Array<Throwable>? = getSuppressed(failure)
                 val causes: MutableList<Throwable> = getCauses(failure)
                 return SuppressedAndCauses(suppressed, causes)
             }
 
-            private fun getSuppressed(parent: Throwable): Array<Throwable?> {
+            private fun getSuppressed(parent: Throwable): Array<Throwable>? {
                 // Short-circuit if suppressed exceptions are not supported by the current JVM
-                if (!JavaVersion.current().isJava7Compatible()) {
+                if (!JavaVersion.current().isJava7Compatible) {
                     return null
                 }
 
@@ -152,7 +147,11 @@ class DefaultFailureFactory(private val stackTraceClassifier: StackTraceClassifi
             private fun getCauses(parent: Throwable): MutableList<Throwable> {
                 val causes = ImmutableList.Builder<Throwable>()
                 if (parent is MultiCauseException) {
-                    causes.addAll((parent as MultiCauseException).causes)
+                    for (cause in parent.getCauses()) {
+                        if (cause != null) {
+                            causes.add(cause)
+                        }
+                    }
                 } else if (parent.cause != null) {
                     causes.add(parent.cause!!)
                 }

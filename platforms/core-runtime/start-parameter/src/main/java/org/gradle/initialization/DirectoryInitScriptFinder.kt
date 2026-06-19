@@ -34,7 +34,7 @@ abstract class DirectoryInitScriptFinder : InitScriptFinder {
     }
 
     private fun initScriptsIn(initScriptsDir: File): MutableList<File?> {
-        return resolver().findScriptsIn(initScriptsDir)
+        return resolver().findScriptsIn(initScriptsDir).toMutableList()
     }
 
     private fun resolver(): DefaultScriptFileResolver {

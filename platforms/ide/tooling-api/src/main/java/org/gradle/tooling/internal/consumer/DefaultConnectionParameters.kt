@@ -20,9 +20,9 @@ import java.io.File
 import java.util.concurrent.TimeUnit
 
 class DefaultConnectionParameters private constructor(
-    private val projectDir: File?, private val gradleUserHomeDir: File?, private val embedded: Boolean?,
-    private val daemonMaxIdleTimeValue: Int?, private val daemonMaxIdleTimeUnits: TimeUnit?, private val daemonBaseDir: File?,
-    private val verboseLogging: Boolean, private val searchUpwards: Boolean?, private val distributionBaseDir: File?
+    override val projectDir: File?, override val gradleUserHomeDir: File?, private val embedded: Boolean?,
+    override val daemonMaxIdleTimeValue: Int?, override val daemonMaxIdleTimeUnits: TimeUnit?, override val daemonBaseDir: File?,
+    override val verboseLogging: Boolean, private val searchUpwards: Boolean?, override val distributionBaseDir: File?
 ) : ConnectionParameters {
     class Builder {
         private var projectDir: File? = null
@@ -94,45 +94,28 @@ class DefaultConnectionParameters private constructor(
         }
     }
 
-    override fun getProjectDir(): File? {
-        return projectDir
-    }
 
-    override fun getDaemonBaseDir(): File? {
-        return daemonBaseDir
-    }
 
-    override fun getGradleUserHomeDir(): File? {
-        return gradleUserHomeDir
-    }
 
-    override fun isEmbedded(): Boolean? {
-        return embedded
-    }
 
-    override fun getDaemonMaxIdleTimeValue(): Int? {
-        return daemonMaxIdleTimeValue
-    }
 
-    override fun getDaemonMaxIdleTimeUnits(): TimeUnit? {
-        return daemonMaxIdleTimeUnits
-    }
 
-    override fun getConsumerVersion(): String? {
-        return GradleVersion.current().getVersion()
-    }
+    override val isEmbedded: Boolean?
+        get() = embedded
 
-    override fun getVerboseLogging(): Boolean {
-        return verboseLogging
-    }
 
-    override fun isSearchUpwards(): Boolean? {
-        return searchUpwards
-    }
 
-    override fun getDistributionBaseDir(): File? {
-        return distributionBaseDir
-    }
+
+
+    override val consumerVersion: String?
+        get() = GradleVersion.current().getVersion()
+
+
+
+    override val isSearchUpwards: Boolean?
+        get() = searchUpwards
+
+
 
     companion object {
         fun builder(): Builder {

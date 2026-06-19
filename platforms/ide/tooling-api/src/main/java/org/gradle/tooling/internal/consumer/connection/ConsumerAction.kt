@@ -15,6 +15,8 @@
  */
 package org.gradle.tooling.internal.consumer.connection
 
+import org.gradle.tooling.internal.consumer.parameters.ConsumerOperationParameters
+
 interface ConsumerAction<T> {
     val parameters: ConsumerOperationParameters?
 

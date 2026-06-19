@@ -44,7 +44,7 @@ class DefaultAvailableOsMemoryStatusAspect(name: String, total: Long, free: Long
         return free
     }
 
-    override fun equals(o: Any): Boolean {
+    override fun equals(o: Any?): Boolean {
         if (this === o) {
             return true
         }

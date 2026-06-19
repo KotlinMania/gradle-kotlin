@@ -15,6 +15,8 @@
  */
 package org.gradle.tooling.events
 
+import java.net.URI
+
 /**
  * Identifies a Gradle script plugin.
  *

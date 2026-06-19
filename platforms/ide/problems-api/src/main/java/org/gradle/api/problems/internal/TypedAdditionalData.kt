@@ -26,14 +26,12 @@ interface TypedAdditionalData : AdditionalData {
      *
      * @return the data
      */
-    @JvmField
-    val bytesForIsolatedObject: ByteArray?
+    fun getBytesForIsolatedObject(): ByteArray?
 
     /**
      * the serialized type/class of the object
      *
      * @return the data
      */
-    @JvmField
-    val serializedType: Any?
+    fun getSerializedType(): Any?
 }

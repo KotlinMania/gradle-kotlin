@@ -25,7 +25,7 @@ import java.util.concurrent.Executor
 /**
  * Forwards the contents of an [InputStream] to the process' stdin
  */
-class ForwardStdinStreamsHandler(private val input: InputStream?) : StreamsHandler {
+class ForwardStdinStreamsHandler(private val input: InputStream) : StreamsHandler {
     private val completed = CountDownLatch(1)
     private var executor: Executor? = null
     private var standardInputWriter: ExecOutputHandleRunner? = null

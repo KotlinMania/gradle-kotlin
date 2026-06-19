@@ -47,22 +47,21 @@ open class DefaultListenerManager private constructor(private val scope: Class<o
 
     constructor(scope: Class<out Scope>) : this(scope, null)
 
-    override fun getAnnotations(): MutableList<Class<out Annotation>> {
-        return ANNOTATIONS
-    }
+    override val annotations: MutableList<Class<out Annotation?>?>?
+        get() = Cast.uncheckedCast(ANNOTATIONS)
 
-    override fun getImplicitAnnotation(): Class<out Annotation>? {
-        return null
-    }
+    override val implicitAnnotation: Class<out Annotation?>?
+        get() = null
 
-    override fun whenRegistered(annotation: Class<out Annotation>, registration: AnnotatedServiceLifecycleHandler.Registration) {
+    override fun whenRegistered(annotation: Class<out Annotation?>?, registration: AnnotatedServiceLifecycleHandler.Registration?) {
+        val serviceRegistration = registration!!
         synchronized(lock) {
             if (annotation == ListenerService::class.java) {
-                pendingServices.add(registration)
+                pendingServices.add(serviceRegistration)
             } else {
-                pendingRegistrations.add(registration)
+                pendingRegistrations.add(serviceRegistration)
                 for (broadcast in broadcasters.values) {
-                    if (registrationProvides(broadcast.type, registration)) {
+                    if (registrationProvides(broadcast.type, serviceRegistration)) {
                         broadcast.assertMutable("add listener")
                     }
                 }
@@ -73,7 +72,7 @@ open class DefaultListenerManager private constructor(private val scope: Class<o
     private fun maybeAddPendingRegistrations(type: Class<*>) {
         synchronized(lock) {
             for (registration in pendingServices) {
-                addListener(registration.instance)
+                addListener(registration.instance!!)
             }
             pendingServices.clear()
 
@@ -81,7 +80,7 @@ open class DefaultListenerManager private constructor(private val scope: Class<o
             while (i < pendingRegistrations.size) {
                 val registration = pendingRegistrations.get(i)
                 if (registrationProvides(type, registration)) {
-                    addListener(registration.instance)
+                    addListener(registration.instance!!)
                     pendingRegistrations.removeAt(i)
                 } else {
                     i++
@@ -94,7 +93,7 @@ open class DefaultListenerManager private constructor(private val scope: Class<o
         var details: ListenerDetails? = null
         synchronized(lock) {
             if (!allListeners.containsKey(listener)) {
-                details = DefaultListenerManager.ListenerDetails(listener)
+                details = ListenerDetails(listener)
                 allListeners.put(listener, details!!)
             }
         }
@@ -120,7 +119,7 @@ open class DefaultListenerManager private constructor(private val scope: Class<o
         var details: ListenerDetails? = null
         synchronized(lock) {
             if (!allLoggers.containsKey(logger)) {
-                details = DefaultListenerManager.ListenerDetails(logger)
+                details = ListenerDetails(logger)
                 allLoggers.put(logger, details!!)
             }
         }
@@ -154,9 +153,9 @@ open class DefaultListenerManager private constructor(private val scope: Class<o
             broadcaster = Cast.uncheckedCast<EventBroadcast<T?>>(broadcasters.get(listenerClass))
             if (broadcaster == null) {
                 if (listenerClass.getAnnotation<StatefulListener>(StatefulListener::class.java) != null) {
-                    broadcaster = DefaultListenerManager.ParallelEventBroadcast<T?>(listenerClass)
+                    broadcaster = ParallelEventBroadcast<T?>(listenerClass)
                 } else {
-                    broadcaster = DefaultListenerManager.ExclusiveEventBroadcast<T?>(listenerClass)
+                    broadcaster = ExclusiveEventBroadcast<T?>(listenerClass)
                 }
 
                 for (listener in allListeners.values) {
@@ -175,11 +174,12 @@ open class DefaultListenerManager private constructor(private val scope: Class<o
     private fun <T> assertCanBroadcast(listenerClass: Class<T?>) {
         val scope = listenerClass.getAnnotation<EventScope>(EventScope::class.java)
         requireNotNull(scope) { String.format("Listener type %s is not annotated with @EventScope.", listenerClass.getName()) }
-        require(ArrayUtils.contains<Class<out Scope>>(scope.value, this.scope)) {
+        val scopeTypes: Array<Class<out Scope>> = scope.value.map { it.java }.toTypedArray()
+        require(scopeTypes.contains(this.scope)) {
             String.format(
                 "Listener type %s with %s cannot be used to generate events in scope '%s'.",
                 listenerClass.getName(),
-                Companion.displayScopes(scope.value),
+                Companion.displayScopes(scopeTypes),
                 this.scope.getSimpleName()
             )
         }
@@ -197,7 +197,7 @@ open class DefaultListenerManager private constructor(private val scope: Class<o
         private val dispatch: ListenerDispatch
         private val dispatchNoLogger: ListenerDispatch
 
-        private val listeners: MutableSet<ListenerDetails> = LinkedHashSet<ListenerDetails>()
+        val listeners: MutableSet<ListenerDetails> = LinkedHashSet<ListenerDetails>()
 
         @Volatile
         private var source: ProxyDispatchAdapter<T?>? = null
@@ -206,16 +206,16 @@ open class DefaultListenerManager private constructor(private val scope: Class<o
 
         private var parentDispatch: Dispatch<MethodInvocation?>? = null
 
-        private var allWithLogger: ImmutableList<Dispatch<MethodInvocation>> = ImmutableList.of<Dispatch<MethodInvocation?>>()
-        private var allWithNoLogger: ImmutableList<Dispatch<MethodInvocation>> = ImmutableList.of<Dispatch<MethodInvocation?>>()
+        private var allWithLogger: ImmutableList<Dispatch<MethodInvocation?>> = ImmutableList.of<Dispatch<MethodInvocation?>>()
+        private var allWithNoLogger: ImmutableList<Dispatch<MethodInvocation?>> = ImmutableList.of<Dispatch<MethodInvocation?>>()
 
         @Volatile
         protected var initialized: Boolean = false
         protected val initializationLock: Any = Any()
 
         init {
-            dispatch = EventBroadcast.ListenerDispatch(type, true)
-            dispatchNoLogger = EventBroadcast.ListenerDispatch(type, false)
+            dispatch = ListenerDispatch(type, true)
+            dispatchNoLogger = ListenerDispatch(type, false)
             if (parent != null) {
                 parentDispatch = parent.getBroadcasterInternal<T?>(type).getDispatch(true)
                 initLoggers()
@@ -238,7 +238,7 @@ open class DefaultListenerManager private constructor(private val scope: Class<o
                 return source!!.source
             }
 
-        protected fun getListeners(withLogger: Boolean): MutableList<Dispatch<MethodInvocation>> {
+        protected fun getListeners(withLogger: Boolean): MutableList<Dispatch<MethodInvocation?>> {
             return if (withLogger) allWithLogger else allWithNoLogger
         }
 
@@ -304,30 +304,30 @@ open class DefaultListenerManager private constructor(private val scope: Class<o
             logger = candidate
         }
 
-        fun initAllWithNoLogger(): ImmutableList<Dispatch<MethodInvocation>> {
+        fun initAllWithNoLogger(): ImmutableList<Dispatch<MethodInvocation?>> {
             if (parentDispatch == null && listeners.isEmpty()) {
                 return ImmutableList.of<Dispatch<MethodInvocation?>>()
             }
 
-            val dispatchers: ImmutableList.Builder<Dispatch<MethodInvocation>> = ImmutableList.builder<Dispatch<MethodInvocation?>>()
+            val dispatchers: ImmutableList.Builder<Dispatch<MethodInvocation?>> = ImmutableList.builder<Dispatch<MethodInvocation?>>()
             if (parentDispatch != null) {
-                dispatchers.add(parentDispatch)
+                dispatchers.add(parentDispatch!!)
             }
             dispatchers.addAll(listeners)
             return dispatchers.build()
         }
 
-        fun initAllWithLogger(): ImmutableList<Dispatch<MethodInvocation>> {
+        fun initAllWithLogger(): ImmutableList<Dispatch<MethodInvocation?>> {
             if (logger == null && parentDispatch == null && listeners.isEmpty()) {
                 return ImmutableList.of<Dispatch<MethodInvocation?>>()
             }
 
-            val result: ImmutableList.Builder<Dispatch<MethodInvocation>> = ImmutableList.builder<Dispatch<MethodInvocation?>>()
+            val result: ImmutableList.Builder<Dispatch<MethodInvocation?>> = ImmutableList.builder<Dispatch<MethodInvocation?>>()
             if (logger != null) {
-                result.add(logger)
+                result.add(logger!!)
             }
             if (parentDispatch != null) {
-                result.add(parentDispatch)
+                result.add(parentDispatch!!)
             }
             result.addAll(listeners)
             return result.build()
@@ -345,19 +345,19 @@ open class DefaultListenerManager private constructor(private val scope: Class<o
             }
         }
 
-        protected abstract fun startDispatch(includeLogger: Boolean): MutableList<Dispatch<MethodInvocation>>
+        protected abstract fun startDispatch(includeLogger: Boolean): MutableList<Dispatch<MethodInvocation?>>
 
         protected abstract fun endDispatch()
 
         abstract fun assertMutable(operation: String)
 
         private inner class ListenerDispatch(type: Class<T?>, private val includeLogger: Boolean) : AbstractBroadcastDispatch<T?>(type) {
-            override fun dispatch(invocation: MethodInvocation) {
+            override fun dispatch(invocation: MethodInvocation?) {
                 maybeInitialize()
 
                 val dispatchers = startDispatch(includeLogger)
                 try {
-                    dispatch(invocation, dispatchers)
+                    dispatch(invocation!!, dispatchers)
                 } finally {
                     endDispatch()
                 }
@@ -400,7 +400,7 @@ open class DefaultListenerManager private constructor(private val scope: Class<o
             }
         }
 
-        override fun startDispatch(includeLogger: Boolean): MutableList<Dispatch<MethodInvocation>> {
+        override fun startDispatch(includeLogger: Boolean): MutableList<Dispatch<MethodInvocation?>> {
             check(!broadcasterLock.isHeldByCurrentThread()) {
                 String.format(
                     "Cannot notify listeners of type %s as these listeners are already being notified.",
@@ -429,7 +429,7 @@ open class DefaultListenerManager private constructor(private val scope: Class<o
             }
         }
 
-        protected override fun assertMutable(operation: String) {
+        override fun assertMutable(operation: String) {
             // Since we perform locking when operating on listeners,
             // the exclusive broadcaster is always mutable.
         }
@@ -441,13 +441,13 @@ open class DefaultListenerManager private constructor(private val scope: Class<o
      * after an event has been broadcast.
      */
     private inner class ParallelEventBroadcast<T>(type: Class<T?>) : EventBroadcast<T?>(type) {
-        override fun startDispatch(includeLogger: Boolean): MutableList<Dispatch<MethodInvocation>> {
+        override fun startDispatch(includeLogger: Boolean): MutableList<Dispatch<MethodInvocation?>> {
             return getListeners(includeLogger)
         }
 
         override fun endDispatch() {}
 
-        protected override fun assertMutable(operation: String) {
+        override fun assertMutable(operation: String) {
             synchronized(initializationLock) {
                 check(!initialized) {
                     String.format(
@@ -480,7 +480,7 @@ open class DefaultListenerManager private constructor(private val scope: Class<o
             removed.set(true)
         }
 
-        override fun dispatch(message: MethodInvocation) {
+        override fun dispatch(message: MethodInvocation?) {
             if (removed.get()) {
                 return
             }
@@ -526,8 +526,8 @@ open class DefaultListenerManager private constructor(private val scope: Class<o
     companion object {
         private val ANNOTATIONS: MutableList<Class<out Annotation>> = ImmutableList.of<Class<out Annotation>>(StatefulListener::class.java, ListenerService::class.java)
         private fun registrationProvides(type: Class<*>, registration: AnnotatedServiceLifecycleHandler.Registration): Boolean {
-            for (declaredType in registration.declaredTypes) {
-                if (type.isAssignableFrom(declaredType)) {
+            for (declaredType in registration.declaredTypes!!) {
+                if (type.isAssignableFrom(declaredType!!)) {
                     return true
                 }
             }
@@ -539,7 +539,7 @@ open class DefaultListenerManager private constructor(private val scope: Class<o
                 return "service scope '" + scopes[0].getSimpleName() + "'"
             }
 
-            return "service scopes " + CollectionUtils.join<String, Class<out Scope>>(", ", scopes, Function { aClass: Class<out Scope> -> "'" + aClass.getSimpleName() + "'" })
+            return "service scopes " + scopes.joinToString(", ") { aClass: Class<out Scope> -> "'" + aClass.getSimpleName() + "'" }
         }
     }
 }

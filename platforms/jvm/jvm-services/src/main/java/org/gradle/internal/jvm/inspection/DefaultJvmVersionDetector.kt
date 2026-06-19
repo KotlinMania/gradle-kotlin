@@ -38,15 +38,15 @@ class DefaultJvmVersionDetector(private val detector: JvmMetadataDetector) : Jvm
         return getVersionFromJavaHome(parentFolder.getParentFile())
     }
 
-    private fun getVersionFromJavaHome(javaHome: File?): Int {
+    private fun getVersionFromJavaHome(javaHome: File): Int {
         val metadata = validate(detector.getMetadata(InstallationLocation.Companion.autoDetected(javaHome, "specific path")))
-        return parseMajorVersion(metadata.getJavaVersion())
+        return parseMajorVersion(metadata.javaVersion)
     }
 
     private fun validate(metadata: JvmInstallationMetadata): JvmInstallationMetadata {
-        if (metadata.isValidInstallation()) {
+        if (metadata.isValidInstallation) {
             return metadata
         }
-        throw GradleException("Unable to determine version for JDK located at " + metadata.getJavaHome() + ". Reason: " + metadata.getErrorMessage(), metadata.getErrorCause())
+        throw GradleException("Unable to determine version for JDK located at " + metadata.javaHome + ". Reason: " + metadata.errorMessage, metadata.errorCause)
     }
 }

@@ -24,10 +24,9 @@ interface HtmlPageBuilder<T> {
      *
      * @return A relative URL that refers to the resource's output location.
      */
-    fun requireResource(resource: URL?): String?
+    fun requireResource(resource: URL): String
 
-    fun formatDate(date: Date?): String?
+    fun formatDate(date: Date): String
 
-    @JvmField
-    val output: T?
+    val output: T
 }

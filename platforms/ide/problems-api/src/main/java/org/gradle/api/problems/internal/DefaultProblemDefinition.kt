@@ -42,7 +42,7 @@ class DefaultProblemDefinition @VisibleForTesting internal constructor(
         return documentationLink
     }
 
-    override fun equals(o: Any): Boolean {
+    override fun equals(o: Any?): Boolean {
         if (this === o) {
             return true
         }

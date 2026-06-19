@@ -15,20 +15,4 @@
  */
 package org.gradle.tooling.internal.consumer.connection
 
-import org.gradle.internal.UncheckedException.Companion.throwAsUncheckedException
-import org.gradle.tooling.internal.adapter.ViewBuilder.mixInTo
-import org.gradle.tooling.internal.adapter.ProtocolToModelAdapter.newGraph
-import org.gradle.tooling.internal.adapter.ObjectGraphAdapter.builder
-import org.gradle.tooling.internal.adapter.ViewBuilder.build
-import org.gradle.tooling.internal.adapter.ProtocolToModelAdapter.unpack
-import org.gradle.internal.Cast.uncheckedNonnullCast
-import org.gradle.tooling.internal.adapter.ProtocolToModelAdapter.adapt
-import org.gradle.internal.event.ListenerManager.addListener
-import org.gradle.internal.logging.progress.ProgressLoggerFactory.newOperation
-import org.gradle.internal.logging.progress.ProgressLogger.setDescription
-import org.gradle.internal.logging.progress.ProgressLogger.started
-import org.gradle.internal.logging.progress.ProgressLogger.completed
-import org.gradle.internal.event.ListenerManager.removeListener
-import org.gradle.internal.logging.events.ProgressStartEvent.getDescription
-import org.gradle.tooling.internal.adapter.ProtocolToModelAdapter.builder
 

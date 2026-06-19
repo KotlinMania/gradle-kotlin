@@ -21,66 +21,66 @@ import java.io.EOFException
 import java.io.IOException
 import java.io.InputStream
 
-class InputStreamBackedDecoder(private val inputStream: DataInputStream) : AbstractDecoder(), Decoder, Closeable {
+class InputStreamBackedDecoder(private val dataInputStream: DataInputStream) : AbstractDecoder(), Decoder, Closeable {
     constructor(inputStream: InputStream) : this(DataInputStream(inputStream))
 
     @Throws(IOException::class)
-    override fun maybeReadBytes(buffer: ByteArray?, offset: Int, count: Int): Int {
-        return inputStream.read(buffer, offset, count)
+    override fun maybeReadBytes(buffer: ByteArray, offset: Int, count: Int): Int {
+        return dataInputStream.read(buffer, offset, count)
     }
 
     @Throws(IOException::class)
     override fun maybeSkip(count: Long): Long {
-        return inputStream.skip(count)
+        return dataInputStream.skip(count)
     }
 
     @Throws(IOException::class)
     override fun readLong(): Long {
-        return inputStream.readLong()
+        return dataInputStream.readLong()
     }
 
     @Throws(EOFException::class, IOException::class)
     override fun readInt(): Int {
-        return inputStream.readInt()
+        return dataInputStream.readInt()
     }
 
     @Throws(EOFException::class, IOException::class)
     override fun readShort(): Short {
-        return inputStream.readShort()
+        return dataInputStream.readShort()
     }
 
     @Throws(EOFException::class, IOException::class)
     override fun readFloat(): Float {
-        return inputStream.readFloat()
+        return dataInputStream.readFloat()
     }
 
     @Throws(EOFException::class, IOException::class)
     override fun readDouble(): Double {
-        return inputStream.readDouble()
+        return dataInputStream.readDouble()
     }
 
     @Throws(EOFException::class, IOException::class)
     override fun readBoolean(): Boolean {
-        return inputStream.readBoolean()
+        return dataInputStream.readBoolean()
     }
 
     @Throws(EOFException::class, IOException::class)
-    override fun readString(): String? {
-        return inputStream.readUTF()
+    override fun readString(): String {
+        return dataInputStream.readUTF()
     }
 
     @Throws(IOException::class)
     override fun readByte(): Byte {
-        return (inputStream.readByte().toInt() and 0xff).toByte()
+        return (dataInputStream.readByte().toInt() and 0xff).toByte()
     }
 
     @Throws(IOException::class)
-    override fun readBytes(buffer: ByteArray?, offset: Int, count: Int) {
-        inputStream.readFully(buffer, offset, count)
+    override fun readBytes(buffer: ByteArray, offset: Int, count: Int) {
+        dataInputStream.readFully(buffer, offset, count)
     }
 
     @Throws(IOException::class)
     override fun close() {
-        inputStream.close()
+        dataInputStream.close()
     }
 }

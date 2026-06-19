@@ -102,7 +102,7 @@ public abstract class GradleBuild extends ConventionTask {
     @Input
     @ToBeReplacedByLazyProperty
     public List<String> getTasks() {
-        return getStartParameter().getTaskNames();
+        return com.google.common.collect.ImmutableList.copyOf(getStartParameter().getTaskNames());
     }
 
     /**

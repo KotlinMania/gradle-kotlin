@@ -18,5 +18,4 @@
  */
 package org.gradle.tooling.events.lifecycle
 
-import org.gradle.tooling.events.internal.BaseProgressEvent.getDescriptor
 

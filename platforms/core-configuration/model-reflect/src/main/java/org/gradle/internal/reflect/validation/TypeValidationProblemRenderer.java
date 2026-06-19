@@ -39,18 +39,18 @@ public class TypeValidationProblemRenderer {
 
     public static String renderMinimalInformationAbout(ProblemInternal problem, boolean renderDocLink, boolean renderSolutions) {
         TreeFormatter formatter = new TreeFormatter();
-        formatter.node(endLineWithDot(Optional.ofNullable(problem.contextualLabel).orElseGet(() -> problem.definition.getId().getDisplayName())));
-        ofNullable(problem.details).ifPresent(reason -> {
+        formatter.node(endLineWithDot(Optional.ofNullable(problem.getContextualLabel()).orElseGet(() -> problem.getDefinition().getId().getDisplayName())));
+        ofNullable(problem.getDetails()).ifPresent(reason -> {
             formatter.blankLine();
-            formatter.node("Reason: " + capitalize(endLineWithDot(problem.details)));
+            formatter.node("Reason: " + capitalize(endLineWithDot(problem.getDetails())));
         });
         if (renderSolutions) {
-            List<String> allSolutions = new ArrayList<>(problem.solutions.size() + problem.solutions.size());
-            allSolutions.addAll(problem.solutions);
+            List<String> allSolutions = new ArrayList<>(problem.getSolutions().size() + problem.getSolutions().size());
+            allSolutions.addAll(problem.getSolutions());
             renderSolutions(formatter, allSolutions);
         }
         if (renderDocLink) {
-            ofNullable(problem.definition.getDocumentationLink()).ifPresent(docLink -> {
+            ofNullable(problem.getDefinition().getDocumentationLink()).ifPresent(docLink -> {
                 formatter.blankLine();
                 formatter.node(new DocumentationRegistry().getDocumentationRecommendationFor("information", docLink));
             });

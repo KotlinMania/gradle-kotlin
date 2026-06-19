@@ -18,7 +18,4 @@
  */
 package org.gradle.api.internal.artifacts.ivyservice.resolveengine.excludes.specs
 
-import org.gradle.internal.Factory.create
-import org.gradle.internal.UncheckedException.Companion.throwAsUncheckedException
-import org.gradle.internal.Cast.uncheckedCast
 

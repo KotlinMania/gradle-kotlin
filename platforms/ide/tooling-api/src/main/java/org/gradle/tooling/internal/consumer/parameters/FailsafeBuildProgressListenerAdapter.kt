@@ -16,12 +16,13 @@
 package org.gradle.tooling.internal.consumer.parameters
 
 import org.gradle.internal.event.ListenerNotificationException
+import org.gradle.tooling.Failure
 import org.gradle.tooling.internal.protocol.InternalBuildProgressListener
 
 class FailsafeBuildProgressListenerAdapter(private val delegate: InternalBuildProgressListener) : InternalBuildProgressListener {
     private var listenerFailure: Throwable? = null
 
-    override fun onEvent(event: Any) {
+    override fun onEvent(event: Any?) {
         if (listenerFailure != null) {
             // Discard event
             return
@@ -33,13 +34,12 @@ class FailsafeBuildProgressListenerAdapter(private val delegate: InternalBuildPr
         }
     }
 
-    override fun getSubscribedOperations(): MutableList<String> {
-        return delegate.subscribedOperations
-    }
+    override val subscribedOperations: MutableList<String?>?
+        get() = delegate.subscribedOperations
 
     fun rethrowErrors() {
         if (listenerFailure != null) {
-            throw ListenerNotificationException(null, "One or more progress listeners failed with an exception.", mutableListOf<Throwable>(listenerFailure))
+            throw ListenerNotificationException(null, "One or more progress listeners failed with an exception.", mutableListOf(listenerFailure!!))
         }
     }
 }

@@ -58,6 +58,7 @@ class UncheckedException : RuntimeException {
             }
         }
 
+        @JvmStatic
         fun <T> unchecked(callable: Callable<T?>): T? {
             try {
                 return callable.call()
@@ -75,7 +76,7 @@ class UncheckedException : RuntimeException {
          * @return an instance of RuntimeException based on the target exception of the parameter.
          */
         @JvmStatic
-        fun unwrapAndRethrow(e: InvocationTargetException): Nothing {
+        fun unwrapAndRethrow(e: InvocationTargetException): RuntimeException {
             throw throwAsUncheckedException(e.targetException)
         }
 
@@ -86,6 +87,7 @@ class UncheckedException : RuntimeException {
          * @param <T> Callable's return type
          * @return The value returned by [Callable.call]
         </T> */
+        @JvmStatic
         fun <T> uncheckedCall(callable: Callable<T?>): T? {
             try {
                 return callable.call()

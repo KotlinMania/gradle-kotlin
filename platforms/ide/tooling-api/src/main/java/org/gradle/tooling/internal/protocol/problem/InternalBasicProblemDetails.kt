@@ -15,6 +15,7 @@
  */
 package org.gradle.tooling.internal.protocol.problem
 
+import org.gradle.tooling.events.problems.Problem
 import org.gradle.tooling.internal.protocol.InternalProblemDetails
 
 /**

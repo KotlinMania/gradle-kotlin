@@ -30,7 +30,7 @@ open class HttpResourceAccessor(private val client: HttpClient) : AbstractExtern
     public override fun openResource(location: ExternalResourceName, revalidate: Boolean): HttpResponseResource? {
         LOGGER.debug("Constructing external resource: {}", location)
 
-        val uri = location.getUri()
+        val uri = location.uri
         val response = client.performGet(uri, getHeaders(revalidate))
         return wrapResponse(uri, response)
     }
@@ -38,10 +38,10 @@ open class HttpResourceAccessor(private val client: HttpClient) : AbstractExtern
     override fun getMetaData(location: ExternalResourceName, revalidate: Boolean): ExternalResourceMetaData? {
         LOGGER.debug("Constructing external resource metadata: {}", location)
 
-        val uri = location.getUri()
+        val uri = location.uri
         val response = client.performHead(uri, getHeaders(revalidate))
 
-        if (response.isMissing()) {
+        if (response.isMissing) {
             return null
         }
 
@@ -53,16 +53,16 @@ open class HttpResourceAccessor(private val client: HttpClient) : AbstractExtern
         }
     }
 
-    private fun wrapResponse(uri: URI?, response: HttpClient.Response?): HttpResponseResource {
+    private fun wrapResponse(uri: URI, response: HttpClient.Response): HttpResponseResource {
         return HttpResponseResource("GET", uri, response)
     }
 
     companion object {
         private val LOGGER: Logger = LoggerFactory.getLogger(HttpResourceAccessor::class.java)
-        private val REVALIDATE_HEADERS = ImmutableMap.of<String?, String?>(HttpHeaders.CACHE_CONTROL, "max-age=0")
+        private val REVALIDATE_HEADERS = ImmutableMap.of<String, String>(HttpHeaders.CACHE_CONTROL, "max-age=0")
 
-        private fun getHeaders(revalidate: Boolean): ImmutableMap<String?, String?> {
-            return if (revalidate) REVALIDATE_HEADERS else ImmutableMap.of<String?, String?>()
+        private fun getHeaders(revalidate: Boolean): ImmutableMap<String, String> {
+            return if (revalidate) REVALIDATE_HEADERS else ImmutableMap.of<String, String>()
         }
     }
 }

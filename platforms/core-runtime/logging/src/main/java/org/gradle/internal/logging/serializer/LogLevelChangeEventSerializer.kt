@@ -21,7 +21,7 @@ import org.gradle.internal.serialize.Decoder
 import org.gradle.internal.serialize.Encoder
 import org.gradle.internal.serialize.Serializer
 
-class LogLevelChangeEventSerializer(private val logLevelSerializer: Serializer<LogLevel>) : Serializer<LogLevelChangeEvent?> {
+class LogLevelChangeEventSerializer(private val logLevelSerializer: Serializer<LogLevel>) : Serializer<LogLevelChangeEvent> {
     @Throws(Exception::class)
     override fun write(encoder: Encoder, value: LogLevelChangeEvent) {
         logLevelSerializer.write(encoder, value.newLogLevel)

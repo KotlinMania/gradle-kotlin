@@ -16,7 +16,6 @@
 package org.gradle.internal.logging.console
 
 import com.google.common.base.Function
-import com.google.common.collect.Iterables
 import com.google.common.collect.Sets
 import org.gradle.internal.logging.events.EndOutputEvent
 import org.gradle.internal.logging.events.OutputEvent
@@ -36,20 +35,20 @@ class WorkInProgressRenderer(
     consoleLayoutCalculator: ConsoleLayoutCalculator
 ) : OutputEventListener {
     private val operations = ProgressOperations()
-    private val progressArea: BuildProgressArea?
+    private val progressArea: BuildProgressArea
     private val labelFormatter: DefaultWorkInProgressFormatter
     private val consoleLayoutCalculator: ConsoleLayoutCalculator
 
-    private val queue: MutableList<OutputEvent?> = ArrayList<OutputEvent?>()
+    private val queue: MutableList<OutputEvent> = ArrayList<OutputEvent>()
 
     // Track all unused labels to display future progress operation
     private val unusedProgressLabels: Deque<StyledLabel>
 
     // Track currently associated label with its progress operation
-    private val operationIdToAssignedLabels: MutableMap<OperationIdentifier?, AssociationLabel> = HashMap<OperationIdentifier?, AssociationLabel>()
+    private val operationIdToAssignedLabels: MutableMap<OperationIdentifier, AssociationLabel> = HashMap<OperationIdentifier, AssociationLabel>()
 
     // Track any progress operation that either can't be display due to label shortage or child progress operation is already been displayed
-    private val unassignedProgressOperations: Deque<ProgressOperation?> = ArrayDeque<ProgressOperation?>()
+    private val unassignedProgressOperations: Deque<ProgressOperation> = ArrayDeque<ProgressOperation>()
 
     init {
         this.progressArea = progressArea
@@ -64,24 +63,22 @@ class WorkInProgressRenderer(
         if (event is UpdateNowEvent) {
             renderNow()
         } else if (event is EndOutputEvent) {
-            progressArea!!.setVisible(false)
+            progressArea.setVisible(false)
         }
 
         listener.onOutput(event)
     }
 
     // Transform ProgressCompleteEvent into their corresponding progress OperationIdentifier.
-    private fun toOperationIdSet(events: Iterable<ProgressCompleteEvent?>): MutableSet<OperationIdentifier?> {
-        return Sets.newHashSet<OperationIdentifier?>(
-            Iterables.transform<ProgressCompleteEvent?, OperationIdentifier?>(
-                events,
-                Function { obj: ProgressCompleteEvent? -> obj!!.progressOperationId })
+    private fun toOperationIdSet(events: Iterable<ProgressCompleteEvent>): MutableSet<OperationIdentifier> {
+        return Sets.newHashSet<OperationIdentifier>(
+            events.map { it.progressOperationId }
         )
     }
 
     private fun resizeTo(newBuildProgressLabelCount: Int) {
         var newBuildProgressLabelCount = newBuildProgressLabelCount
-        val previousBuildProgressLabelCount: Int = progressArea!!.buildProgressLabels.size()
+        val previousBuildProgressLabelCount: Int = progressArea.buildProgressLabels.size
         newBuildProgressLabelCount = consoleLayoutCalculator.calculateNumWorkersForConsoleDisplay(newBuildProgressLabelCount)
         if (previousBuildProgressLabelCount >= newBuildProgressLabelCount) {
             // We don't support shrinking at the moment
@@ -92,7 +89,7 @@ class WorkInProgressRenderer(
 
         // Add new labels to the unused queue
         for (i in newBuildProgressLabelCount - 1 downTo previousBuildProgressLabelCount) {
-            unusedProgressLabels.push(progressArea.buildProgressLabels!!.get(i))
+            unusedProgressLabels.push(progressArea.buildProgressLabels[i])
         }
     }
 
@@ -124,7 +121,7 @@ class WorkInProgressRenderer(
     }
 
     private fun attach(operation: ProgressOperation, label: StyledLabel) {
-        val association: AssociationLabel = WorkInProgressRenderer.AssociationLabel(operation, label)
+        val association = AssociationLabel(operation, label)
         operationIdToAssignedLabels.put(operation.operationId, association)
     }
 
@@ -139,7 +136,7 @@ class WorkInProgressRenderer(
         if (operation.parent != null && isRenderable(operation.parent)) {
             attach(operation.parent)
         } else if (!unassignedProgressOperations.isEmpty()) {
-            attach(unassignedProgressOperations.pop()!!)
+            attach(unassignedProgressOperations.pop())
             reportLinesNotShown()
         }
     }
@@ -169,7 +166,7 @@ class WorkInProgressRenderer(
             text = "  (" + linesNotShown + " lines not showing)"
         }
 
-        progressArea!!.cursorParkLine!!.setText(text)
+        progressArea.cursorParkLine.setText(text)
     }
 
     // Any ProgressOperation in the parent chain has a message, the operation is considered renderable.
@@ -191,12 +188,12 @@ class WorkInProgressRenderer(
         }
 
         // Skip processing of any operations that both start and complete in the queue
-        val completeEventOperationIds = toOperationIdSet(Iterables.filter<ProgressCompleteEvent?>(queue, ProgressCompleteEvent::class.java))
-        val operationIdsToSkip: MutableSet<OperationIdentifier?> = HashSet<OperationIdentifier?>()
+        val completeEventOperationIds = toOperationIdSet(queue.filterIsInstance<ProgressCompleteEvent>())
+        val operationIdsToSkip: MutableSet<OperationIdentifier> = HashSet<OperationIdentifier>()
 
         for (event in queue) {
             if (event is ProgressStartEvent) {
-                progressArea!!.setVisible(true)
+                progressArea.setVisible(true)
                 val startEvent = event
                 if (completeEventOperationIds.contains(startEvent.getProgressOperationId())) {
                     operationIdsToSkip.add(startEvent.getProgressOperationId())

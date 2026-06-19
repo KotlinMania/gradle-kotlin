@@ -18,7 +18,6 @@ package org.gradle.platform.base.internal
 import org.gradle.internal.logging.text.DiagnosticsVisitor
 
 interface BinaryBuildAbility {
-    @JvmField
     val isBuildable: Boolean
     fun explain(visitor: DiagnosticsVisitor?)
 }

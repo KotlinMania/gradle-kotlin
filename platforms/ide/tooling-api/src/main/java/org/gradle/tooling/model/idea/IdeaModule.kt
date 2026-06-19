@@ -15,6 +15,7 @@
  */
 package org.gradle.tooling.model.idea
 
+import org.gradle.tooling.model.DomainObjectSet
 import org.gradle.tooling.model.GradleProject
 import org.gradle.tooling.model.HasGradleProject
 import org.gradle.tooling.model.HierarchicalElement
@@ -50,7 +51,7 @@ interface IdeaModule : HierarchicalElement, HasGradleProject {
      * @return associated gradle project
      * @since 1.0-milestone-5
      */
-    override fun getGradleProject(): GradleProject?
+    override val gradleProject: GradleProject?
 
     /**
      * Returns the project of this module.
@@ -59,7 +60,7 @@ interface IdeaModule : HierarchicalElement, HasGradleProject {
      * @return idea project
      * @since 1.0-milestone-5
      */
-    override fun getParent(): IdeaProject?
+    override val parent: IdeaProject?
 
     /**
      * Returns the project of this module.

@@ -15,6 +15,8 @@
  */
 package org.gradle.tooling.internal.protocol.problem
 
+import java.io.File
+
 /**
  *
  * DO NOT CHANGE THIS INTERFACE - it is part of the cross-version protocol.

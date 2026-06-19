@@ -19,5 +19,6 @@ package org.gradle.internal.extensions.core
 import org.gradle.internal.event.ListenerManager
 
 
+@Suppress("UNCHECKED_CAST")
 inline fun <reified T : Any> ListenerManager.getBroadcaster(): T =
-    getBroadcaster(T::class.java)
+    getBroadcaster(T::class.java as Class<T?>)!!

@@ -15,6 +15,8 @@
  */
 package org.gradle.tooling.internal.protocol
 
+import org.gradle.tooling.Failure
+
 /**
  * A wrapper thrown when a build action fails with an exception. The failure will be attached as the cause of this exception.
  *

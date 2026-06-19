@@ -149,9 +149,8 @@ class OutputEventListenerBackedLoggerContext(private val clock: Clock) : ILogger
         override fun debug(format: String?, arg1: Any?, arg2: Any?) {
         }
 
-        override fun isLifecycleEnabled(): Boolean {
-            return false
-        }
+        override val isLifecycleEnabled: Boolean
+            get() = false
 
         override fun debug(format: String?, vararg arguments: Any?) {
         }
@@ -203,9 +202,8 @@ class OutputEventListenerBackedLoggerContext(private val clock: Clock) : ILogger
         override fun info(format: String?, vararg arguments: Any?) {
         }
 
-        override fun isQuietEnabled(): Boolean {
-            return false
-        }
+        override val isQuietEnabled: Boolean
+            get() = false
 
         override fun quiet(message: String?) {
         }

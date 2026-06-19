@@ -41,7 +41,7 @@ interface ProblemSpecInternal : ProblemSpec {
     </U> */
     fun <U : AdditionalDataSpec?> additionalDataInternal(specType: Class<out U>, config: Action<in U?>): ProblemSpecInternal?
 
-    override fun <T : AdditionalData?> additionalData(type: Class<T?>, config: Action<in T?>): ProblemSpecInternal?
+    override fun <T : AdditionalData> additionalData(type: Class<T>, config: Action<in T>): ProblemSpecInternal?
 
     /**
      * Declares that this problem was emitted by a task with the given path.

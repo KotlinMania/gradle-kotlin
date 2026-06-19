@@ -15,6 +15,8 @@
  */
 package org.gradle.tooling.model.idea
 
+import java.io.File
+import org.gradle.tooling.model.DomainObjectSet
 import org.gradle.tooling.model.UnsupportedMethodException
 
 /**

@@ -23,10 +23,16 @@ import java.io.InputStream
 import java.io.OutputStream
 import javax.inject.Inject
 
-class DefaultExecSpec @Inject constructor(resolver: PathToFileResolver?) : DefaultProcessForkOptions(resolver), ExecSpec, ProcessArgumentsSpec.HasExecutable {
+class DefaultExecSpec @Inject constructor(resolver: PathToFileResolver) : DefaultProcessForkOptions(resolver), ExecSpec {
     private var ignoreExitValue = false
     private val streamsSpec = ProcessStreamsSpec()
-    private val argumentsSpec = ProcessArgumentsSpec(this)
+    private val argumentsSpec = ProcessArgumentsSpec(object : ProcessArgumentsSpec.HasExecutable {
+        override var executable: String?
+            get() = this@DefaultExecSpec.getExecutable()
+            set(value) {
+                this@DefaultExecSpec.setExecutable(value)
+            }
+    })
 
     fun copyTo(targetSpec: ExecSpec) {
         // Fork options
@@ -35,61 +41,61 @@ class DefaultExecSpec @Inject constructor(resolver: PathToFileResolver?) : Defau
         copyBaseExecSpecTo(this, targetSpec)
         // ExecSpec
         targetSpec.setArgs(getArgs())
-        targetSpec.getArgumentProviders().addAll(getArgumentProviders()!!)
+        targetSpec.getArgumentProviders().addAll(getArgumentProviders())
     }
 
-    override fun getCommandLine(): MutableList<String?>? {
-        return argumentsSpec.getCommandLine()
+    override fun getCommandLine(): MutableList<String> {
+        return argumentsSpec.commandLine
     }
 
-    override fun commandLine(vararg arguments: Any?): ExecSpec {
+    override fun commandLine(vararg arguments: Any): ExecSpec {
         argumentsSpec.commandLine(*arguments)
         return this
     }
 
-    override fun commandLine(args: Iterable<*>?): ExecSpec {
+    override fun commandLine(args: Iterable<*>): ExecSpec {
         argumentsSpec.commandLine(args)
         return this
     }
 
-    override fun setCommandLine(args: MutableList<String?>?) {
+    override fun setCommandLine(args: MutableList<String>) {
         argumentsSpec.commandLine(args)
     }
 
-    override fun setCommandLine(vararg args: Any?) {
+    override fun setCommandLine(vararg args: Any) {
         argumentsSpec.commandLine(*args)
     }
 
-    override fun setCommandLine(args: Iterable<*>?) {
+    override fun setCommandLine(args: Iterable<*>) {
         argumentsSpec.commandLine(args)
     }
 
-    override fun args(vararg args: Any?): ExecSpec {
+    override fun args(vararg args: Any): ExecSpec {
         argumentsSpec.args(*args)
         return this
     }
 
-    override fun args(args: Iterable<*>?): ExecSpec {
+    override fun args(args: Iterable<*>): ExecSpec {
         argumentsSpec.args(args)
         return this
     }
 
-    override fun setArgs(arguments: MutableList<String?>?): ExecSpec {
+    override fun setArgs(arguments: MutableList<String>): ExecSpec {
         argumentsSpec.setArgs(arguments)
         return this
     }
 
-    override fun setArgs(arguments: Iterable<*>?): ExecSpec {
+    override fun setArgs(arguments: Iterable<*>): ExecSpec {
         argumentsSpec.setArgs(arguments)
         return this
     }
 
-    override fun getArgs(): MutableList<String?>? {
-        return argumentsSpec.getArgs()
+    override fun getArgs(): MutableList<String> {
+        return argumentsSpec.args
     }
 
-    override fun getArgumentProviders(): MutableList<CommandLineArgumentProvider?>? {
-        return argumentsSpec.getArgumentProviders()
+    override fun getArgumentProviders(): MutableList<CommandLineArgumentProvider> {
+        return argumentsSpec.argumentProviders
     }
 
     override fun setIgnoreExitValue(ignoreExitValue: Boolean): ExecSpec {
@@ -101,31 +107,31 @@ class DefaultExecSpec @Inject constructor(resolver: PathToFileResolver?) : Defau
         return ignoreExitValue
     }
 
-    override fun setStandardInput(inputStream: InputStream?): BaseExecSpec {
+    override fun setStandardInput(inputStream: InputStream): BaseExecSpec {
         streamsSpec.setStandardInput(inputStream)
         return this
     }
 
-    override fun getStandardInput(): InputStream? {
-        return streamsSpec.getStandardInput()
+    override fun getStandardInput(): InputStream {
+        return streamsSpec.standardInput!!
     }
 
-    override fun setStandardOutput(outputStream: OutputStream?): BaseExecSpec {
+    override fun setStandardOutput(outputStream: OutputStream): BaseExecSpec {
         streamsSpec.setStandardOutput(outputStream)
         return this
     }
 
-    override fun getStandardOutput(): OutputStream? {
-        return streamsSpec.getStandardOutput()
+    override fun getStandardOutput(): OutputStream {
+        return streamsSpec.standardOutput!!
     }
 
-    override fun setErrorOutput(outputStream: OutputStream?): BaseExecSpec {
+    override fun setErrorOutput(outputStream: OutputStream): BaseExecSpec {
         streamsSpec.setErrorOutput(outputStream)
         return this
     }
 
-    override fun getErrorOutput(): OutputStream? {
-        return streamsSpec.getErrorOutput()
+    override fun getErrorOutput(): OutputStream {
+        return streamsSpec.errorOutput!!
     }
 
     companion object {

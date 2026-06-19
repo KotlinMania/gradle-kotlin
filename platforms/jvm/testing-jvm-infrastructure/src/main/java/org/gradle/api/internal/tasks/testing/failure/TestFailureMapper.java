@@ -104,6 +104,6 @@ public abstract class TestFailureMapper {
      */
     @Nullable
     protected static Object invokeMethod(@Nullable Object obj, String methodName) throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
-        return <Object>invokeMethod(obj, methodName, Object.class);
+        return invokeMethod(obj, methodName, Object.class);
     }
 }

@@ -24,20 +24,20 @@ import javax.annotation.CheckReturnValue
 
 abstract class Documentation : DocLinkInternal {
     override fun getConsultDocumentationMessage(): String {
-        return String.format(RECOMMENDATION, "information", url)
+        return String.format(RECOMMENDATION, "information", getUrl())
     }
 
     private abstract class SerializableDocumentation : Documentation()
 
     abstract class AbstractBuilder<T> {
-        abstract fun withDocumentation(documentation: DocLink?): T?
+        abstract fun withDocumentation(documentation: DocLink?): T
 
         /**
          * Allows proceeding without including any documentation reference.
          * Consider using one of the documentation providing methods instead.
          */
         @CheckReturnValue
-        fun undocumented(): T? {
+        fun undocumented(): T {
             return withDocumentation(null)
         }
 
@@ -45,7 +45,7 @@ abstract class Documentation : DocLinkInternal {
          * Output: See USER_MANUAL_URL for more details.
          */
         @CheckReturnValue
-        fun withUserManual(documentationId: String, section: String): T? {
+        fun withUserManual(documentationId: String, section: String): T {
             return withDocumentation(userManual(documentationId, section))
         }
 
@@ -53,7 +53,7 @@ abstract class Documentation : DocLinkInternal {
          * Output: See DSL_REFERENCE_URL for more details.
          */
         @CheckReturnValue
-        fun withDslReference(targetClass: Class<*>, property: String): T? {
+        fun withDslReference(targetClass: Class<*>, property: String): T {
             return withDocumentation(dslReference(targetClass, property))
         }
 
@@ -61,7 +61,7 @@ abstract class Documentation : DocLinkInternal {
          * Output: Consult the upgrading guide for further information: UPGRADE_GUIDE_URL
          */
         @CheckReturnValue
-        fun withUpgradeGuideSection(majorVersion: Int, upgradeGuideSection: String): T? {
+        fun withUpgradeGuideSection(majorVersion: Int, upgradeGuideSection: String): T {
             return withDocumentation(upgradeMinorGuide(majorVersion, upgradeGuideSection))
         }
     }
@@ -69,7 +69,7 @@ abstract class Documentation : DocLinkInternal {
     private open class UserGuide(id: String, private val section: String?) : SerializableDocumentation() {
         private val page: String
 
-        private val topic: String = null
+        private val topic: String? = null
 
         init {
             this.page = Preconditions.checkNotNull<String>(id)
@@ -85,7 +85,7 @@ abstract class Documentation : DocLinkInternal {
             return DOCUMENTATION_REGISTRY.getDocumentationRecommendationFor(topic, page, section)
         }
 
-        override fun equals(o: Any): Boolean {
+        override fun equals(o: Any?): Boolean {
             if (o !is UserGuide) {
                 return false
             }
@@ -127,7 +127,7 @@ abstract class Documentation : DocLinkInternal {
             return DOCUMENTATION_REGISTRY.getDslRefForProperty(targetClass, property)
         }
 
-        override fun equals(o: Any): Boolean {
+        override fun equals(o: Any?): Boolean {
             if (o !is DslReference) {
                 return false
             }
@@ -145,7 +145,7 @@ abstract class Documentation : DocLinkInternal {
             return DOCUMENTATION_REGISTRY.getKotlinDslRefForExtension(extensionName)
         }
 
-        override fun equals(o: Any): Boolean {
+        override fun equals(o: Any?): Boolean {
             if (o !is KotlinDslExtensionReference) {
                 return false
             }
@@ -182,15 +182,15 @@ abstract class Documentation : DocLinkInternal {
             return UpgradeGuide.Companion.forMajorVersion(majorVersion, upgradeGuideSection)
         }
 
+        @JvmStatic
         fun dslReference(targetClass: Class<*>, property: String): Documentation {
             return DslReference(targetClass, property)
         }
 
+        @JvmStatic
         fun kotlinDslExtensionReference(extensionName: String): Documentation {
             return KotlinDslExtensionReference(extensionName)
         }
     }
 }
-
-
 

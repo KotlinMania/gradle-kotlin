@@ -34,12 +34,12 @@ class GcsConnectionProperties private constructor(private val endpoint: URI?, pr
         configureDisableAuthentication(disableAuthentication)
     )
 
-    fun getEndpoint(): Optional<URI?> {
-        return Optional.fromNullable<URI?>(endpoint)
+    fun getEndpoint(): Optional<URI> {
+        return Optional.fromNullable(endpoint)
     }
 
-    fun getServicePath(): Optional<String?> {
-        return Optional.fromNullable<String?>(servicePath)
+    fun getServicePath(): Optional<String> {
+        return Optional.fromNullable(servicePath)
     }
 
     fun requiresAuthentication(): Boolean {
@@ -53,7 +53,7 @@ class GcsConnectionProperties private constructor(private val endpoint: URI?, pr
         // Controls when to disable reading default authentication credentials, should be used in tests only
         const val GCS_DISABLE_AUTH_PROPERTY: String = "org.gradle.gcs.disableAuthentication"
 
-        private val SUPPORTED_SCHEMES: MutableSet<String?> = Sets.newHashSet<String?>("HTTP", "HTTPS")
+        private val SUPPORTED_SCHEMES: MutableSet<String> = Sets.newHashSet("HTTP", "HTTPS")
 
         private fun configureEndpoint(property: String?): URI? {
             var uri: URI? = null

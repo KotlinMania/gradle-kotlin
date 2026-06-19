@@ -16,7 +16,7 @@
 package org.gradle.process.internal.health.memory
 
 class DisabledOsMemoryInfo : OsMemoryInfo {
-    override fun getOsSnapshot(): OsMemoryStatus? {
+    override fun getOsSnapshot(): OsMemoryStatus {
         throw UnsupportedOperationException()
     }
 }

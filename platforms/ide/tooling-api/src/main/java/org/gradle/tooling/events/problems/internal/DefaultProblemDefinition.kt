@@ -16,28 +16,23 @@
 package org.gradle.tooling.events.problems.internal
 
 import org.gradle.tooling.events.problems.DocumentationLink
+import org.gradle.tooling.events.problems.Problem
 import org.gradle.tooling.events.problems.ProblemDefinition
 import org.gradle.tooling.events.problems.ProblemId
 import org.gradle.tooling.events.problems.Severity
 import org.jspecify.annotations.NullMarked
 
 @NullMarked
-class DefaultProblemDefinition(private val id: ProblemId, private val severity: Severity, documentationLink: DocumentationLink) : ProblemDefinition {
-    private val documentationLink: DocumentationLink?
+class DefaultProblemDefinition(override val id: ProblemId, override val severity: Severity, documentationLink: DocumentationLink) : ProblemDefinition {
+    override val documentationLink: DocumentationLink?
 
     init {
         this.documentationLink = documentationLink
     }
 
-    override fun getId(): ProblemId {
-        return id
-    }
 
-    override fun getSeverity(): Severity {
-        return severity
-    }
 
-    override fun getDocumentationLink(): DocumentationLink? {
-        return documentationLink
-    }
+
+
+
 }

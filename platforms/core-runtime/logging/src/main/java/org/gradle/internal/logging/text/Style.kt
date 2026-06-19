@@ -18,7 +18,7 @@ package org.gradle.internal.logging.text
 import com.google.common.base.Objects
 import java.util.EnumSet
 
-class Style(val emphasises: MutableSet<Emphasis?>?, val color: Color?) {
+class Style(val emphasises: MutableSet<Emphasis>, val color: Color) {
     enum class Emphasis {
         BOLD, REVERSE, ITALIC
     }
@@ -51,12 +51,12 @@ class Style(val emphasises: MutableSet<Emphasis?>?, val color: Color?) {
         val NORMAL: Style = of(Color.DEFAULT)
 
         @JvmOverloads
-        fun of(emphasis: Emphasis, color: Color? = Color.DEFAULT): Style {
-            return Style(EnumSet.of<Emphasis?>(emphasis), color)
+        fun of(emphasis: Emphasis, color: Color = Color.DEFAULT): Style {
+            return Style(EnumSet.of(emphasis), color)
         }
 
-        fun of(color: Color?): Style {
-            return Style(mutableSetOf<Emphasis?>(), color)
+        fun of(color: Color): Style {
+            return Style(mutableSetOf(), color)
         }
     }
 }

@@ -15,7 +15,10 @@
  */
 package org.gradle.tooling.internal.consumer.connection
 
+import java.io.File
+import org.gradle.tooling.BuildAction
 import org.gradle.tooling.BuildActionFailureException
+import org.gradle.tooling.Failure
 import org.gradle.tooling.IntermediateResultHandler
 import org.gradle.tooling.internal.adapter.ProtocolToModelAdapter
 import org.gradle.tooling.internal.consumer.DefaultPhasedActionResultListener
@@ -30,7 +33,6 @@ import org.gradle.tooling.internal.protocol.InternalBuildActionVersion2
 import org.gradle.tooling.internal.protocol.InternalPhasedAction
 import org.gradle.tooling.internal.protocol.InternalPhasedActionConnection
 import org.gradle.tooling.internal.protocol.PhasedActionResultListener
-import java.io.File
 
 /**
  * An adapter for [InternalPhasedActionConnection].
@@ -41,12 +43,12 @@ import java.io.File
 open class PhasedActionAwareConsumerConnection(delegate: ConnectionVersion4, modelMapping: ModelMapping, adapter: ProtocolToModelAdapter) :
     ParameterAcceptingConsumerConnection(delegate, modelMapping, adapter) {
     override fun doRun(phasedBuildAction: PhasedBuildAction, operationParameters: ConsumerOperationParameters) {
-        val connection = getDelegate() as InternalPhasedActionConnection
+        val connection = delegate as InternalPhasedActionConnection
         val listener: PhasedActionResultListener = DefaultPhasedActionResultListener(
             Companion.getHandler(phasedBuildAction.projectsLoadedAction),
             Companion.getHandler(phasedBuildAction.buildFinishedAction)
         )
-        val internalPhasedAction: InternalPhasedAction = getPhasedAction(phasedBuildAction, operationParameters.getProjectDir(), getVersionDetails())
+        val internalPhasedAction: InternalPhasedAction = getPhasedAction(phasedBuildAction, operationParameters.projectDir, versionDetails)
         try {
             connection.run(internalPhasedAction, listener, BuildCancellationTokenAdapter(operationParameters.getCancellationToken()), operationParameters)
         } catch (e: InternalBuildActionFailureException) {
@@ -55,7 +57,7 @@ open class PhasedActionAwareConsumerConnection(delegate: ConnectionVersion4, mod
     }
 
     companion object {
-        private fun <T> getHandler(wrapper: PhasedBuildAction.BuildActionWrapper<T?>?): IntermediateResultHandler<in T?>? {
+        private fun getHandler(wrapper: PhasedBuildAction.BuildActionWrapper<*>?): IntermediateResultHandler<*>? {
             return if (wrapper == null) null else wrapper.handler
         }
 
@@ -66,8 +68,9 @@ open class PhasedActionAwareConsumerConnection(delegate: ConnectionVersion4, mod
             )
         }
 
-        private fun <T> getAction(wrapper: PhasedBuildAction.BuildActionWrapper<T?>?, rootDir: File, versionDetails: VersionDetails): InternalBuildActionVersion2<T?>? {
-            return if (wrapper == null) null else InternalBuildActionAdapter<T?>(wrapper.action, rootDir, versionDetails)
+        @Suppress("UNCHECKED_CAST")
+        private fun getAction(wrapper: PhasedBuildAction.BuildActionWrapper<*>?, rootDir: File, versionDetails: VersionDetails): InternalBuildActionVersion2<*>? {
+            return if (wrapper == null) null else InternalBuildActionAdapter<Any?>(wrapper.action as BuildAction<Any?>, rootDir, versionDetails)
         }
     }
 }

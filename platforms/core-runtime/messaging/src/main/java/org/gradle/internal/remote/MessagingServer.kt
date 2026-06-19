@@ -30,5 +30,5 @@ interface MessagingServer {
      * @param action The action to execute when a connection has been established.
      * @return The local address of the endpoint, for the peer to connect to.
      */
-    fun accept(action: Action<ObjectConnection?>?): ConnectionAcceptor?
+    fun accept(action: Action<ObjectConnection>): ConnectionAcceptor
 }

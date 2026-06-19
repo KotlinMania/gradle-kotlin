@@ -18,15 +18,15 @@ package org.gradle.internal.logging.text
 import org.gradle.api.logging.LogLevel
 
 abstract class AbstractStyledTextOutputFactory : StyledTextOutputFactory {
-    override fun create(logCategory: Class<*>): StyledTextOutput? {
-        return create(logCategory.getName())
+    override fun create(logCategory: Class<*>?): StyledTextOutput? {
+        return create(logCategory!!.getName())
     }
 
     override fun create(logCategory: String?): StyledTextOutput? {
         return create(logCategory, null)
     }
 
-    override fun create(logCategory: Class<*>, logLevel: LogLevel?): StyledTextOutput? {
-        return create(logCategory.getName(), logLevel)
+    override fun create(logCategory: Class<*>?, logLevel: LogLevel?): StyledTextOutput? {
+        return create(logCategory!!.getName(), logLevel)
     }
 }

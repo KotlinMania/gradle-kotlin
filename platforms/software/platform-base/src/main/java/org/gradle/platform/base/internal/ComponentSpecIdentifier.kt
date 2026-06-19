@@ -15,6 +15,8 @@
  */
 package org.gradle.platform.base.internal
 
+import org.gradle.util.Path
+
 /**
  * An identifier for a [org.gradle.platform.base.ComponentSpec], which has a name.
  */
@@ -27,7 +29,6 @@ interface ComponentSpecIdentifier {
     /**
      * The base name of this component.
      */
-    @JvmField
     val name: String?
 
     /**
@@ -35,7 +36,6 @@ interface ComponentSpecIdentifier {
      *
      * Implementation should attempt to produce human consumable identifiers.
      */
-    @JvmField
     val path: Path?
 
     /**
@@ -49,12 +49,10 @@ interface ComponentSpecIdentifier {
      *
      * Implementation should attempt to produce a somewhat human consumable name (eg not a uuid).
      */
-    @JvmField
     val projectScopedName: String?
 
     /**
      * The path of the project that contains this component.
      */
-    @JvmField
     val projectPath: String?
 }

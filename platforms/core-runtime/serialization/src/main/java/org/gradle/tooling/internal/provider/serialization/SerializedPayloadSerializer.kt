@@ -20,23 +20,23 @@ import org.gradle.internal.serialize.DefaultSerializer
 import org.gradle.internal.serialize.Encoder
 import org.gradle.internal.serialize.Serializer
 
-class SerializedPayloadSerializer : Serializer<SerializedPayload?> {
+class SerializedPayloadSerializer : Serializer<SerializedPayload> {
     private val javaSerializer: Serializer<Any?> = DefaultSerializer<Any?>()
 
     @Throws(Exception::class)
     override fun write(encoder: Encoder, value: SerializedPayload) {
-        javaSerializer.write(encoder, value.getHeader())
-        encoder.writeSmallInt(value.getSerializedModel().size)
-        for (bytes in value.getSerializedModel()) {
+        javaSerializer.write(encoder, value.header)
+        encoder.writeSmallInt(value.serializedModel.size)
+        for (bytes in value.serializedModel) {
             encoder.writeBinary(bytes)
         }
     }
 
     @Throws(Exception::class)
-    override fun read(decoder: Decoder): SerializedPayload? {
+    override fun read(decoder: Decoder): SerializedPayload {
         val header = javaSerializer.read(decoder)
         val count = decoder.readSmallInt()
-        val chunks: MutableList<ByteArray?> = ArrayList<ByteArray?>(count)
+        val chunks: MutableList<ByteArray> = ArrayList<ByteArray>(count)
         for (i in 0..<count) {
             chunks.add(decoder.readBinary())
         }

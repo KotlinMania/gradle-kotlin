@@ -26,12 +26,7 @@ interface ProblemsInternal : Problems {
      *
      * @return The reporter.
      */
-    @JvmField
-    val internalReporter: ProblemReporterInternal?
-
-    @JvmField
-    val infrastructure: ProblemsInfrastructure?
-
-    @JvmField
-    val problemBuilder: ProblemBuilderInternal?
+    fun getInternalReporter(): ProblemReporterInternal?
+    fun getInfrastructure(): ProblemsInfrastructure?
+    fun getProblemBuilder(): ProblemBuilderInternal?
 }

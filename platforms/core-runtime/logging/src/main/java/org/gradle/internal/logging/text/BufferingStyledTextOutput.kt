@@ -21,14 +21,14 @@ import org.gradle.api.Action
  * A [StyledTextOutput] which buffers the content written to it, for later forwarding to another [StyledTextOutput] instance.
  */
 class BufferingStyledTextOutput : AbstractStyledTextOutput() {
-    private val events: MutableList<Action<StyledTextOutput?>> = ArrayList<Action<StyledTextOutput?>>()
+    private val events: MutableList<Action<StyledTextOutput>> = ArrayList<Action<StyledTextOutput>>()
     var hasContent: Boolean = false
         private set
 
     /**
      * Writes the buffered contents of this output to the given target, and clears the buffer.
      */
-    fun writeTo(output: StyledTextOutput?) {
+    fun writeTo(output: StyledTextOutput) {
         for (event in events) {
             event.execute(output)
         }
@@ -42,19 +42,20 @@ class BufferingStyledTextOutput : AbstractStyledTextOutput() {
         events.add(ChangeStyleAction(style))
     }
 
-    override fun doAppend(text: String) {
-        if (text.length == 0) {
+    override fun doAppend(text: String?) {
+        val text = text ?: "null"
+        if (text.isEmpty()) {
             return
         }
         hasContent = true
-        events.add(object : Action<StyledTextOutput?> {
+        events.add(object : Action<StyledTextOutput> {
             override fun execute(styledTextOutput: StyledTextOutput) {
                 styledTextOutput.text(text)
             }
         })
     }
 
-    private class ChangeStyleAction(private val style: StyledTextOutput.Style?) : Action<StyledTextOutput?> {
+    private class ChangeStyleAction(private val style: StyledTextOutput.Style?) : Action<StyledTextOutput> {
         override fun execute(styledTextOutput: StyledTextOutput) {
             styledTextOutput.style(style)
         }

@@ -15,6 +15,7 @@
  */
 package org.gradle.jvm.toolchain
 
+import org.gradle.api.file.RegularFile
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Nested
 
@@ -27,7 +28,6 @@ interface JavadocTool {
     @get:Nested
     val metadata: JavaInstallationMetadata?
 
-    @JvmField
     @get:Internal
     val executablePath: RegularFile?
 }

@@ -19,12 +19,12 @@ import org.gradle.util.internal.IncubationLogger
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
-class LoggingIncubatingFeatureHandler : FeatureHandler<IncubatingFeatureUsage?> {
+class LoggingIncubatingFeatureHandler : FeatureHandler<IncubatingFeatureUsage> {
     private val features: MutableSet<String> = HashSet<String>()
 
     override fun featureUsed(usage: IncubatingFeatureUsage) {
-        if (features.add(usage.getSummary())) {
-            LOGGER.warn(String.format(IncubationLogger.INCUBATION_MESSAGE, usage.getSummary()))
+        if (features.add(usage.summary)) {
+            LOGGER.warn(String.format(IncubationLogger.INCUBATION_MESSAGE, usage.summary))
         }
     }
 

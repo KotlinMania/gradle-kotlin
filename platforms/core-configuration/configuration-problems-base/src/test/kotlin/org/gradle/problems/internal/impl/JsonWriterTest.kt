@@ -184,6 +184,6 @@ class JsonWriterTest {
         }.toString()
         return JsonSlurper().parseText(
             toString
-        ).uncheckedCast()
+        ).uncheckedCast<Map<String, Any>>()!!
     }
 }

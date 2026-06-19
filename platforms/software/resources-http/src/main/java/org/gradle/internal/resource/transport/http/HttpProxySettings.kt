@@ -21,7 +21,6 @@ import org.jspecify.annotations.NullMarked
 
 
 interface HttpProxySettings {
-    @JvmField
     val proxy: HttpProxy?
 
     class HttpProxy(@JvmField val host: String?, @JvmField val port: Int, username: String?, password: String?) {

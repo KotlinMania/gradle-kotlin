@@ -16,20 +16,20 @@
 
 package org.gradle.internal.serialize.codecs.stdlib
 
-import org.gradle.internal.serialize.BaseSerializerFactory.BIG_DECIMAL_SERIALIZER
-import org.gradle.internal.serialize.BaseSerializerFactory.BIG_INTEGER_SERIALIZER
-import org.gradle.internal.serialize.BaseSerializerFactory.BOOLEAN_SERIALIZER
-import org.gradle.internal.serialize.BaseSerializerFactory.BYTE_ARRAY_SERIALIZER
-import org.gradle.internal.serialize.BaseSerializerFactory.BYTE_SERIALIZER
-import org.gradle.internal.serialize.BaseSerializerFactory.CHAR_SERIALIZER
-import org.gradle.internal.serialize.BaseSerializerFactory.DOUBLE_SERIALIZER
-import org.gradle.internal.serialize.BaseSerializerFactory.FILE_SERIALIZER
-import org.gradle.internal.serialize.BaseSerializerFactory.FLOAT_SERIALIZER
-import org.gradle.internal.serialize.BaseSerializerFactory.INTEGER_SERIALIZER
-import org.gradle.internal.serialize.BaseSerializerFactory.LONG_SERIALIZER
-import org.gradle.internal.serialize.BaseSerializerFactory.PATH_SERIALIZER
-import org.gradle.internal.serialize.BaseSerializerFactory.SHORT_SERIALIZER
-import org.gradle.internal.serialize.BaseSerializerFactory.STRING_SERIALIZER
+import org.gradle.internal.serialize.BaseSerializerFactory.Companion.BIG_DECIMAL_SERIALIZER
+import org.gradle.internal.serialize.BaseSerializerFactory.Companion.BIG_INTEGER_SERIALIZER
+import org.gradle.internal.serialize.BaseSerializerFactory.Companion.BOOLEAN_SERIALIZER
+import org.gradle.internal.serialize.BaseSerializerFactory.Companion.BYTE_ARRAY_SERIALIZER
+import org.gradle.internal.serialize.BaseSerializerFactory.Companion.BYTE_SERIALIZER
+import org.gradle.internal.serialize.BaseSerializerFactory.Companion.CHAR_SERIALIZER
+import org.gradle.internal.serialize.BaseSerializerFactory.Companion.DOUBLE_SERIALIZER
+import org.gradle.internal.serialize.BaseSerializerFactory.Companion.FILE_SERIALIZER
+import org.gradle.internal.serialize.BaseSerializerFactory.Companion.FLOAT_SERIALIZER
+import org.gradle.internal.serialize.BaseSerializerFactory.Companion.INTEGER_SERIALIZER
+import org.gradle.internal.serialize.BaseSerializerFactory.Companion.LONG_SERIALIZER
+import org.gradle.internal.serialize.BaseSerializerFactory.Companion.PATH_SERIALIZER
+import org.gradle.internal.serialize.BaseSerializerFactory.Companion.SHORT_SERIALIZER
+import org.gradle.internal.serialize.BaseSerializerFactory.Companion.STRING_SERIALIZER
 import org.gradle.internal.serialize.graph.codecs.BindingsBuilder
 
 

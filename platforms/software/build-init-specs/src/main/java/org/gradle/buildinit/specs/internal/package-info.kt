@@ -18,7 +18,3 @@
  * by plugins and use them to generate new builds.
  */
 package org.gradle.buildinit.specs.internal
-
-import org.gradle.api.logging.Logging.getLogger
-import org.gradle.api.logging.Logger.info
-

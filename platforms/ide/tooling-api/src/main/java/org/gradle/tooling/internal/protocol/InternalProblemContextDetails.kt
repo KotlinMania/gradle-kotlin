@@ -15,6 +15,13 @@
  */
 package org.gradle.tooling.internal.protocol
 
+import org.gradle.tooling.Failure
+import org.gradle.tooling.events.problems.Problem
+import org.gradle.tooling.internal.protocol.problem.InternalAdditionalData
+import org.gradle.tooling.internal.protocol.problem.InternalContextualLabel
+import org.gradle.tooling.internal.protocol.problem.InternalDetails
+import org.gradle.tooling.internal.protocol.problem.InternalLocation
+import org.gradle.tooling.internal.protocol.problem.InternalSolution
 import org.jspecify.annotations.NullMarked
 
 @NullMarked

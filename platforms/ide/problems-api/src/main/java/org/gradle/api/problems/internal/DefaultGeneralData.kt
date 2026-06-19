@@ -32,10 +32,10 @@ class DefaultGeneralData(map: MutableMap<String, String>) : GeneralData, Seriali
     private class DefaultGeneralDataBuilder : GeneralDataSpec, AdditionalDataBuilder<GeneralData> {
         private val mapBuilder = ImmutableMap.builder<String, String>()
 
-        private constructor()
+        constructor()
 
-        private constructor(from: GeneralData) {
-            mapBuilder.putAll(from.getAsMap())
+        constructor(from: GeneralData) {
+            mapBuilder.putAll(from.getAsMap()!!)
         }
 
         override fun put(key: String, value: String): GeneralDataSpec {

@@ -25,15 +25,15 @@ open class OutputEventListenerBackedLogger(private val name: String, private val
         return name
     }
 
-    override fun isLevelAtMost(levelLimit: LogLevel): Boolean {
-        return levelLimit.compareTo(context.getLevel()) >= 0
+    override fun isLevelAtMost(levelLimit: LogLevel?): Boolean {
+        return levelLimit != null && levelLimit.compareTo(context.getLevel()!!) >= 0
     }
 
-    override fun log(logLevel: LogLevel, throwable: Throwable?, message: String, operationIdentifier: OperationIdentifier?) {
-        val logEvent = LogEvent(clock.currentTime, name, logLevel, message, throwable, operationIdentifier)
+    override fun log(logLevel: LogLevel?, throwable: Throwable?, message: String?, operationIdentifier: OperationIdentifier?) {
+        val logEvent = LogEvent(clock.currentTime, name, logLevel ?: LogLevel.LIFECYCLE, message ?: "", throwable, operationIdentifier)
         val outputEventListener = context.getOutputEventListener()
         try {
-            outputEventListener.onOutput(logEvent)
+            outputEventListener!!.onOutput(logEvent)
         } catch (e: Throwable) {
             // fall back to standard out
             e.printStackTrace(System.out)

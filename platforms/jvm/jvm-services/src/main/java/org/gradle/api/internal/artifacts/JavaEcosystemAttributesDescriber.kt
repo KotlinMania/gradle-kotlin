@@ -40,7 +40,7 @@ import java.util.stream.Collectors
  */
 /* package */
 internal class JavaEcosystemAttributesDescriber : AttributeDescriber {
-    private val describableAttributes = ImmutableSet.of<Attribute<*>?>(
+    private val describableAttributes = ImmutableSet.of<Attribute<*>>(
         Usage.USAGE_ATTRIBUTE,
         Category.CATEGORY_ATTRIBUTE,
         LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE,
@@ -58,22 +58,22 @@ internal class JavaEcosystemAttributesDescriber : AttributeDescriber {
      * @return `true` if the given attribute is describable by this describer; `false` otherwise
      */
     fun isDescribable(attribute: Attribute<*>): Boolean {
-        return describableAttributes.stream().anyMatch { describableAttribute: Attribute<*>? -> Companion.haveSameName(attribute, describableAttribute!!) }
+        return describableAttributes.stream().anyMatch { describableAttribute: Attribute<*> -> Companion.haveSameName(attribute, describableAttribute) }
     }
 
-    override fun getDescribableAttributes(): ImmutableSet<Attribute<*>?> {
+    override fun getDescribableAttributes(): ImmutableSet<Attribute<*>> {
         return describableAttributes
     }
 
-    override fun describeAttributeSet(attributes: MutableMap<Attribute<*>?, *>): String {
-        val category: Any? = Companion.extractAttributeValue<Category?>(attributes, Category.CATEGORY_ATTRIBUTE)
-        val usage: Any? = Companion.extractAttributeValue<Usage?>(attributes, Usage.USAGE_ATTRIBUTE)
-        val le: Any? = Companion.extractAttributeValue<LibraryElements?>(attributes, LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE)
-        val bundling: Any? = Companion.extractAttributeValue<Bundling?>(attributes, Bundling.BUNDLING_ATTRIBUTE)
-        val targetJvmEnvironment: Any? = extractAttributeValue<TargetJvmEnvironment?>(attributes, TargetJvmEnvironment.Companion.TARGET_JVM_ENVIRONMENT_ATTRIBUTE)
-        val targetJvm: Any? = Companion.extractAttributeValue<Int?>(attributes, TargetJvmVersion.TARGET_JVM_VERSION_ATTRIBUTE)
-        val docsType: Any? = Companion.extractAttributeValue<DocsType?>(attributes, DocsType.DOCS_TYPE_ATTRIBUTE)
-        val status: Any? = extractAttributeValue<String?>(attributes, STATUS_ATTRIBUTE)
+    override fun describeAttributeSet(attributes: MutableMap<Attribute<*>, *>): String {
+        val category: Any? = Companion.extractAttributeValue(attributes, Category.CATEGORY_ATTRIBUTE)
+        val usage: Any? = Companion.extractAttributeValue(attributes, Usage.USAGE_ATTRIBUTE)
+        val le: Any? = Companion.extractAttributeValue(attributes, LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE)
+        val bundling: Any? = Companion.extractAttributeValue(attributes, Bundling.BUNDLING_ATTRIBUTE)
+        val targetJvmEnvironment: Any? = extractAttributeValue(attributes, TargetJvmEnvironment.Companion.TARGET_JVM_ENVIRONMENT_ATTRIBUTE)
+        val targetJvm: Any? = Companion.extractAttributeValue(attributes, TargetJvmVersion.TARGET_JVM_VERSION_ATTRIBUTE)
+        val docsType: Any? = Companion.extractAttributeValue(attributes, DocsType.DOCS_TYPE_ATTRIBUTE)
+        val status: Any? = extractAttributeValue(attributes, STATUS_ATTRIBUTE)
 
         val sb = StringBuilder()
 
@@ -118,10 +118,10 @@ internal class JavaEcosystemAttributesDescriber : AttributeDescriber {
         return sb.toString()
     }
 
-    private fun processExtraAttributes(attributes: MutableMap<Attribute<*>?, *>, sb: StringBuilder) {
+    private fun processExtraAttributes(attributes: MutableMap<Attribute<*>, *>, sb: StringBuilder) {
         val describableAttributes: MutableList<Attribute<*>> = attributes.keys.stream()
-            .filter { a: Attribute<*>? -> !isDescribable(a!!) }
-            .sorted(Comparator.comparing<Attribute<*>?, String?>(Function { obj: Attribute<*>? -> obj!!.getName() }))
+            .filter { a: Attribute<*> -> !isDescribable(a) }
+            .sorted(Comparator.comparing<Attribute<*>, String>(Function { obj: Attribute<*> -> obj.getName() }))
             .collect(Collectors.toList())
 
         if (!describableAttributes.isEmpty()) {
@@ -202,17 +202,17 @@ internal class JavaEcosystemAttributesDescriber : AttributeDescriber {
     }
 
     companion object {
-        private val STATUS_ATTRIBUTE = Attribute.of<String?>("org.gradle.status", String::class.java)
+        private val STATUS_ATTRIBUTE = Attribute.of<String>("org.gradle.status", String::class.java)
 
         private fun describeStatus(status: Any?, sb: StringBuilder) {
             sb.append(toName(status)).append(" status")
         }
 
-        private fun <T> extractAttributeValue(attributes: MutableMap<Attribute<*>?, *>, attribute: Attribute<T?>): Any? {
+        private fun extractAttributeValue(attributes: MutableMap<Attribute<*>, *>, attribute: Attribute<*>): Any? {
             return attributes.entries.stream()
-                .filter { e: MutableMap.MutableEntry<Attribute<*>?, Any?>? -> Companion.haveSameName(e!!.key!!, attribute) }
+                .filter { e: MutableMap.MutableEntry<Attribute<*>, *> -> Companion.haveSameName(e.key, attribute) }
                 .findFirst()
-                .map { Map.Entry.value }
+                .map { e: MutableMap.MutableEntry<Attribute<*>, *> -> e.value }
                 .orElse(null)
         }
 

@@ -18,10 +18,4 @@
  */
 package org.gradle.api.artifacts.verification
 
-import org.gradle.internal.deprecation.DeprecationLogger.deprecateProperty
-import org.gradle.internal.deprecation.DeprecationMessageBuilder.withAdvice
-import org.gradle.internal.deprecation.DeprecationMessageBuilder.DeprecateProperty.willBeRemovedInGradle10
-import org.gradle.internal.deprecation.Documentation.AbstractBuilder.withUpgradeGuideSection
-import org.gradle.internal.deprecation.DeprecationMessageBuilder.WithDocumentation.nagUser
-import org.gradle.initialization.StartParameterBuildOptions.IsolatedProjectsDangerouslyIgnoreProblemsOption
 

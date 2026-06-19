@@ -18,8 +18,8 @@ package org.gradle.internal.serialize
 import java.io.OutputStream
 import java.util.function.Function
 
-class TopLevelExceptionPlaceholder(throwable: Throwable, objectOutputStreamCreator: Function<OutputStream?, ExceptionReplacingObjectOutputStream?>) :
-    ExceptionPlaceholder(throwable, objectOutputStreamCreator, HashSet<Throwable?>(10)) {
+class TopLevelExceptionPlaceholder(throwable: Throwable, objectOutputStreamCreator: Function<OutputStream?, ExceptionReplacingObjectOutputStream>) :
+    ExceptionPlaceholder(throwable, objectOutputStreamCreator, HashSet<Throwable>(10)) {
     companion object {
         private const val serialVersionUID = 1L
     }

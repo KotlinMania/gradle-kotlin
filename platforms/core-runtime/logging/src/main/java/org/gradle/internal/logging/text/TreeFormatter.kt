@@ -45,7 +45,7 @@ class TreeFormatter @JvmOverloads constructor(private val alwaysChildrenOnNewlin
                 buffer.append(text)
             }
         }
-        this.current = TreeFormatter.Node()
+        this.current = Node()
     }
 
     override fun toString(): String {
@@ -55,14 +55,15 @@ class TreeFormatter @JvmOverloads constructor(private val alwaysChildrenOnNewlin
     /**
      * Starts a new node with the given text.
      */
-    override fun node(text: String): TreeFormatter {
+    override fun node(text: String?): TreeFormatter {
+        val text = text ?: "null"
         if (current!!.state == State.TraverseChildren) {
             // First child node
-            current = TreeFormatter.Node(current, text)
+            current = Node(current!!, text)
         } else {
             // A sibling node
             current!!.state = State.Done
-            current = TreeFormatter.Node(current!!.parent, text)
+            current = Node(current!!.parent!!, text)
         }
         if (current!!.isTopLevelNode) {
             // A new top level node, implicitly finish the previous node
@@ -328,14 +329,14 @@ class TreeFormatter @JvmOverloads constructor(private val alwaysChildrenOnNewlin
         var state: State?
         var valueWritten: Boolean = false
 
-        private constructor() {
+        constructor() {
             this.parent = null
             this.value = StringBuilder()
             prefix = ""
             state = State.TraverseChildren
         }
 
-        private constructor(parent: Node, value: String) {
+        constructor(parent: Node, value: String) {
             this.parent = parent
             this.value = StringBuilder(value)
             state = State.CollectValue

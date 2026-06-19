@@ -15,25 +15,20 @@
  */
 package org.gradle.tooling.events.problems.internal
 
+import java.util.Objects
+import org.gradle.tooling.events.problems.Problem
 import org.gradle.tooling.events.problems.ProblemGroup
 import org.jspecify.annotations.NullMarked
-import java.util.Objects
 
 @NullMarked
-class DefaultProblemGroup(private val name: String, private val displayName: String, private val parent: ProblemGroup?) : ProblemGroup {
-    override fun getName(): String {
-        return name
-    }
+class DefaultProblemGroup(override val name: String, override val displayName: String, override val parent: ProblemGroup?) : ProblemGroup {
 
-    override fun getDisplayName(): String {
-        return displayName
-    }
 
-    override fun getParent(): ProblemGroup? {
-        return parent
-    }
 
-    override fun equals(o: Any): Boolean {
+
+
+
+    override fun equals(o: Any?): Boolean {
         if (this === o) {
             return true
         }

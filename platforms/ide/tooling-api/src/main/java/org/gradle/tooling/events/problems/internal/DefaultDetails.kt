@@ -19,8 +19,6 @@ import org.gradle.tooling.events.problems.Details
 import org.jspecify.annotations.NullMarked
 
 @NullMarked
-class DefaultDetails(private val details: String) : Details {
-    override fun getDetails(): String {
-        return details
-    }
+class DefaultDetails(override val details: String) : Details {
+
 }

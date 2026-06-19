@@ -31,12 +31,12 @@ interface EclipseProject : HierarchicalEclipseProject {
     /**
      * {@inheritDoc}
      */
-    override fun getParent(): EclipseProject?
+    override val parent: EclipseProject?
 
     /**
      * {@inheritDoc}
      */
-    override fun getChildren(): DomainObjectSet<out EclipseProject?>?
+    override val children: DomainObjectSet<out EclipseProject?>?
 
     @get:Throws(UnsupportedMethodException::class)
     val javaSourceSettings: EclipseJavaSourceSettings?
@@ -51,7 +51,7 @@ interface EclipseProject : HierarchicalEclipseProject {
      * @return associated gradle project
      * @since 1.0-milestone-5
      */
-    override fun getGradleProject(): GradleProject?
+    override val gradleProject: GradleProject?
 
     /**
      * Returns the external dependencies which make up the classpath of this project.

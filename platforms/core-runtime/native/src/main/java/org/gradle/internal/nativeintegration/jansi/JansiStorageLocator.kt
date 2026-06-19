@@ -30,7 +30,7 @@ class JansiStorageLocator {
 
         if (jansiLibrary != null) {
             val jansiDir = makeVersionSpecificDir(storageDir)
-            val targetLibFile = File(jansiDir, jansiLibrary.getPath())
+            val targetLibFile = File(jansiDir, jansiLibrary.path)
             return JansiStorage(jansiLibrary, targetLibFile)
         }
 

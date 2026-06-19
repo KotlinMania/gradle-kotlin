@@ -32,5 +32,5 @@ interface HttpClientFactory {
     /**
      * Create a new HTTP client with the given settings.
      */
-    fun createClient(settings: HttpSettings): HttpClient?
+    fun createClient(settings: HttpSettings): HttpClient
 }

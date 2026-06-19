@@ -28,43 +28,28 @@ import org.jspecify.annotations.NullMarked
 @NullMarked
 class DefaultProblem(
     private val problemDefinition: ProblemDefinition,
-    private val contextualLabel: ContextualLabel,
-    private val details: Details,
-    private val originLocations: MutableList<Location>,
-    private val contextualLocations: MutableList<Location>,
-    private val solutions: MutableList<Solution>,
-    private val additionalData: AdditionalData,
-    private val failure: Failure?
+    override val contextualLabel: ContextualLabel,
+    override val details: Details,
+    override val originLocations: MutableList<Location>,
+    override val contextualLocations: MutableList<Location>,
+    override val solutions: MutableList<Solution>,
+    override val additionalData: AdditionalData,
+    override val failure: Failure?
 ) : Problem {
-    override fun getDefinition(): ProblemDefinition {
-        return problemDefinition
-    }
+    override val definition: ProblemDefinition
+        get() = problemDefinition
 
-    override fun getContextualLabel(): ContextualLabel {
-        return contextualLabel
-    }
 
-    override fun getDetails(): Details {
-        return details
-    }
 
-    override fun getOriginLocations(): MutableList<Location> {
-        return originLocations
-    }
 
-    override fun getContextualLocations(): MutableList<Location> {
-        return contextualLocations
-    }
 
-    override fun getSolutions(): MutableList<Solution> {
-        return solutions
-    }
 
-    override fun getFailure(): Failure? {
-        return failure
-    }
 
-    override fun getAdditionalData(): AdditionalData {
-        return additionalData
-    }
+
+
+
+
+
+
+
 }

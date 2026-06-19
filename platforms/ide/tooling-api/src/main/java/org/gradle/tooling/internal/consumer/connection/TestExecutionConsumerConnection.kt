@@ -31,6 +31,6 @@ open class TestExecutionConsumerConnection(delegate: ConnectionVersion4, modelMa
     ShutdownAwareConsumerConnection(delegate, modelMapping, adapter) {
     public override fun doRunTests(testExecutionRequest: TestExecutionRequest, operationParameters: ConsumerOperationParameters) {
         val cancellationTokenAdapter = BuildCancellationTokenAdapter(operationParameters.getCancellationToken())
-        (getDelegate() as InternalTestExecutionConnection).runTests(testExecutionRequest, cancellationTokenAdapter, operationParameters)
+        (delegate as InternalTestExecutionConnection).runTests(testExecutionRequest, cancellationTokenAdapter, operationParameters)
     }
 }

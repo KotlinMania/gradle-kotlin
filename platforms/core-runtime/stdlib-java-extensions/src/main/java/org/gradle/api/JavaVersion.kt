@@ -329,6 +329,7 @@ enum class JavaVersion {
             return version
         }
 
+        @JvmStatic
         fun resetCurrent() {
             currentJavaVersion = null
         }
@@ -338,6 +339,7 @@ enum class JavaVersion {
             return getVersionForMajor(classVersion - CLASS_MAJOR_VERSION_OFFSET)
         }
 
+        @JvmStatic
         fun forClass(classData: ByteArray): JavaVersion? {
             require(classData.size >= 8) { "Invalid class format. Should contain at least 8 bytes" }
             return forClassVersion(classData[7].toInt() and 0xFF)

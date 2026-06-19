@@ -15,7 +15,6 @@
  */
 package org.gradle.tooling.events.internal
 
-import org.gradle.internal.Cast.uncheckedCast
 import org.gradle.tooling.events.FinishEvent
 import org.gradle.tooling.events.OperationDescriptor
 import org.gradle.tooling.events.OperationResult
@@ -23,13 +22,5 @@ import org.gradle.tooling.events.OperationResult
 /**
  * Base implementation of the `FinishEvent` interface.
  */
-open class DefaultFinishEvent<D : OperationDescriptor?, R : OperationResult?>(eventTime: Long, displayName: String?, descriptor: D?, private val result: R?) :
-    BaseProgressEvent(eventTime, displayName, descriptor), FinishEvent {
-    override fun getDescriptor(): D? {
-        return uncheckedCast<D?>(super.getDescriptor())
-    }
-
-    override fun getResult(): R? {
-        return result
-    }
-}
+open class DefaultFinishEvent<D : OperationDescriptor?, R : OperationResult?>(eventTime: Long, displayName: String?, descriptor: D, override val result: R) :
+    BaseProgressEvent<D>(eventTime, displayName, descriptor), FinishEvent

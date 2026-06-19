@@ -21,14 +21,14 @@ import java.util.stream.Collectors
 import java.util.stream.Stream
 
 object FileBasedInstallationFactory {
-    fun fromDirectory(rootDirectory: File, supplierName: String?, locationFactory: BiFunction<File?, String?, InstallationLocation?>): MutableSet<InstallationLocation?> {
-        val javaCandidates = rootDirectory.listFiles()
+    fun fromDirectory(rootDirectory: File?, supplierName: String, locationFactory: BiFunction<File, String, InstallationLocation>): MutableSet<InstallationLocation> {
+        val javaCandidates = rootDirectory?.listFiles()
         if (javaCandidates == null) {
-            return mutableSetOf<InstallationLocation?>()
+            return mutableSetOf()
         }
-        return Stream.of<File?>(*javaCandidates)
-            .filter { obj: File? -> obj!!.isDirectory() }
-            .map<InstallationLocation?> { d: File? -> locationFactory.apply(d, supplierName) }
+        return Stream.of<File>(*javaCandidates)
+            .filter { obj: File -> obj.isDirectory() }
+            .map<InstallationLocation> { d: File -> locationFactory.apply(d, supplierName) }
             .collect(Collectors.toSet())
     }
 }

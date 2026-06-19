@@ -26,19 +26,16 @@ import java.util.EnumSet
 import java.util.Objects
 
 interface JvmInstallationMetadata {
-    @JvmField
-    val javaHome: Path?
+    val javaHome: Path
 
     /**
      * Parsed equivalent of [.getJavaVersion].
      */
-    @JvmField
-    val languageVersion: JavaVersion?
+    val languageVersion: JavaVersion
 
     /**
      * The major Java version parsed from [.getJavaVersion].
      */
-    @JvmField
     val javaMajorVersion: Int
 
     /**
@@ -46,162 +43,108 @@ interface JvmInstallationMetadata {
      *
      * @see ProbedSystemProperty.JAVA_VENDOR
      */
-    @JvmField
-    val vendor: JvmVendor?
+    val vendor: JvmVendor
 
     /**
      * @see ProbedSystemProperty.JAVA_VERSION
      */
-    @JvmField
-    val javaVersion: String?
+    val javaVersion: String
 
     /**
      * @see ProbedSystemProperty.RUNTIME_NAME
      */
-    @JvmField
     val runtimeName: String?
 
     /**
      * @see ProbedSystemProperty.RUNTIME_VERSION
      */
-    @JvmField
     val runtimeVersion: String?
 
     /**
      * @see ProbedSystemProperty.VM_NAME
      */
-    @JvmField
     val jvmName: String?
 
     /**
      * @see ProbedSystemProperty.VM_VERSION
      */
-    @JvmField
     val jvmVersion: String?
 
     /**
      * @see ProbedSystemProperty.VM_VENDOR
      */
-    @JvmField
     val jvmVendor: String?
 
     /**
      * @see ProbedSystemProperty.OS_ARCH
      */
-    @JvmField
     val architecture: String?
 
-    @JvmField
-    val displayName: String?
+    val displayName: String
 
-    @JvmField
-    val capabilities: MutableSet<JavaInstallationCapability?>?
+    val capabilities: MutableSet<JavaInstallationCapability>
 
-    @JvmField
     val errorMessage: String?
 
-    @JvmField
     val errorCause: Throwable?
 
-    @JvmField
     val isValidInstallation: Boolean
 
-    class DefaultJvmInstallationMetadata private constructor(
+    class DefaultJvmInstallationMetadata(
         javaHome: File,
-        private val javaVersion: String,
+        override val javaVersion: String,
         private val javaVendor: String?,
-        private val runtimeName: String?,
-        private val runtimeVersion: String?,
-        private val jvmName: String?,
-        private val jvmVersion: String?,
-        private val jvmVendor: String?,
-        private val architecture: String?
+        override val runtimeName: String?,
+        override val runtimeVersion: String?,
+        override val jvmName: String?,
+        override val jvmVersion: String?,
+        override val jvmVendor: String?,
+        override val architecture: String?
     ) : JvmInstallationMetadata {
-        private val javaHome: Path
-        private val languageVersion: JavaVersion?
-        private val javaMajorVersion: Int
+        override val javaHome: Path
+        override val languageVersion: JavaVersion
+        override val javaMajorVersion: Int
 
-        private val capabilities = Cached.of({ this.gatherCapabilities() })
+        private val capabilitiesCache = Cached.of({ this.gatherCapabilities() })
 
         init {
             this.javaHome = javaHome.toPath()
-            this.languageVersion = toVersion(javaVersion)
+            this.languageVersion = toVersion(javaVersion)!!
             this.javaMajorVersion = parseMajorVersion(javaVersion)
         }
 
-        override fun getJavaHome(): Path {
-            return javaHome
-        }
+        override val vendor: JvmVendor
+            get() = JvmVendor.Companion.fromString(javaVendor)
 
-        override fun getLanguageVersion(): JavaVersion? {
-            return languageVersion
-        }
-
-        override fun getJavaMajorVersion(): Int {
-            return javaMajorVersion
-        }
-
-        override fun getVendor(): JvmVendor {
-            return JvmVendor.Companion.fromString(javaVendor)
-        }
-
-        override fun getJavaVersion(): String {
-            return javaVersion
-        }
-
-        override fun getRuntimeName(): String? {
-            return runtimeName
-        }
-
-        override fun getRuntimeVersion(): String? {
-            return runtimeVersion
-        }
-
-        override fun getJvmName(): String? {
-            return jvmName
-        }
-
-        override fun getJvmVersion(): String? {
-            return jvmVersion
-        }
-
-        override fun getJvmVendor(): String? {
-            return jvmVendor
-        }
-
-        override fun getArchitecture(): String? {
-            return architecture
-        }
-
-        override fun getDisplayName(): String {
+        override val displayName: String
+            get() {
             val vendor = determineVendorName()
-            return vendor + " " + determineInstallationType() + " " + getJavaMajorVersion() + " (" + getRuntimeVersion() + ")"
-        }
+                return vendor + " " + determineInstallationType() + " " + javaMajorVersion + " (" + runtimeVersion + ")"
+            }
 
         private fun determineVendorName(): String? {
-            val vendor = getVendor().getKnownVendor()
+            val vendor = vendor.knownVendor
             if (vendor == JvmVendor.KnownJvmVendor.ORACLE) {
                 if (jvmName != null && jvmName.contains("OpenJDK")) {
                     return "OpenJDK"
                 }
             }
-            return getVendor().getDisplayName()
+            return this.vendor.displayName
         }
 
         private fun determineInstallationType(): String {
-            if (getCapabilities()!!.containsAll(JavaInstallationCapability.Companion.JDK_CAPABILITIES)) {
+            if (capabilities.containsAll(JavaInstallationCapability.Companion.JDK_CAPABILITIES)) {
                 return "JDK"
             } else {
                 return "JRE"
             }
         }
 
-        override fun getCapabilities(): MutableSet<JavaInstallationCapability?>? {
-            return capabilities.get()
-        }
+        override val capabilities: MutableSet<JavaInstallationCapability>
+            get() = capabilitiesCache.get()!!
 
-        private fun gatherCapabilities(): MutableSet<JavaInstallationCapability?> {
-            val capabilities: MutableSet<JavaInstallationCapability?> = EnumSet.noneOf<JavaInstallationCapability?>(JavaInstallationCapability::class.java)
+        private fun gatherCapabilities(): MutableSet<JavaInstallationCapability> {
+            val capabilities: MutableSet<JavaInstallationCapability> = EnumSet.noneOf(JavaInstallationCapability::class.java)
             if (getToolByExecutable("javac").exists()) {
                 capabilities.add(JavaInstallationCapability.JAVA_COMPILER)
             }
@@ -214,28 +157,24 @@ interface JvmInstallationMetadata {
             if (getToolByExecutable("native-image").exists()) {
                 capabilities.add(JavaInstallationCapability.NATIVE_IMAGE)
             }
-            val isJ9vm = jvmName!!.contains("J9")
+            val isJ9vm = jvmName?.contains("J9") == true
             if (isJ9vm) {
                 capabilities.add(JavaInstallationCapability.J9_VIRTUAL_MACHINE)
             }
             return capabilities
         }
 
-        private fun getToolByExecutable(name: String?): File {
+        private fun getToolByExecutable(name: String): File {
             return File(File(javaHome.toFile(), "bin"), current()!!.getExecutableName(name))
         }
 
-        override fun getErrorMessage(): String? {
-            throw UnsupportedOperationException()
-        }
+        override val errorMessage: String?
+            get() = throw UnsupportedOperationException()
 
-        override fun getErrorCause(): Throwable? {
-            throw UnsupportedOperationException()
-        }
+        override val errorCause: Throwable?
+            get() = throw UnsupportedOperationException()
 
-        override fun isValidInstallation(): Boolean {
-            return true
-        }
+        override val isValidInstallation: Boolean = true
 
         override fun toString(): String {
             return "DefaultJvmInstallationMetadata{" +
@@ -267,74 +206,51 @@ interface JvmInstallationMetadata {
         }
     }
 
-    class FailureInstallationMetadata private constructor(private val javaHome: File, private val errorMessage: String, private val cause: Exception?) : JvmInstallationMetadata {
-        override fun getJavaHome(): Path {
-            return javaHome.toPath()
-        }
+    class FailureInstallationMetadata(private val javaHomeFile: File, override val errorMessage: String, override val errorCause: Throwable?) : JvmInstallationMetadata {
+        override val javaHome: Path
+            get() = javaHomeFile.toPath()
 
-        override fun getLanguageVersion(): JavaVersion? {
-            throw unsupportedOperation()
-        }
+        override val languageVersion: JavaVersion
+            get() = throw unsupportedOperation()
 
-        override fun getJavaMajorVersion(): Int {
-            throw unsupportedOperation()
-        }
+        override val javaMajorVersion: Int
+            get() = throw unsupportedOperation()
 
-        override fun getVendor(): JvmVendor? {
-            throw unsupportedOperation()
-        }
+        override val vendor: JvmVendor
+            get() = throw unsupportedOperation()
 
-        override fun getJavaVersion(): String? {
-            throw unsupportedOperation()
-        }
+        override val javaVersion: String
+            get() = throw unsupportedOperation()
 
-        override fun getRuntimeName(): String? {
-            throw unsupportedOperation()
-        }
+        override val runtimeName: String?
+            get() = throw unsupportedOperation()
 
-        override fun getRuntimeVersion(): String? {
-            throw unsupportedOperation()
-        }
+        override val runtimeVersion: String?
+            get() = throw unsupportedOperation()
 
-        override fun getJvmName(): String? {
-            throw unsupportedOperation()
-        }
+        override val jvmName: String?
+            get() = throw unsupportedOperation()
 
-        override fun getJvmVersion(): String? {
-            throw unsupportedOperation()
-        }
+        override val jvmVersion: String?
+            get() = throw unsupportedOperation()
 
-        override fun getJvmVendor(): String? {
-            throw unsupportedOperation()
-        }
+        override val jvmVendor: String?
+            get() = throw unsupportedOperation()
 
-        override fun getArchitecture(): String? {
-            throw unsupportedOperation()
-        }
+        override val architecture: String?
+            get() = throw unsupportedOperation()
 
-        override fun getDisplayName(): String {
-            return "Invalid installation: " + getErrorMessage()
-        }
+        override val displayName: String
+            get() = "Invalid installation: " + errorMessage
 
-        override fun getCapabilities(): MutableSet<JavaInstallationCapability?> {
-            return mutableSetOf<JavaInstallationCapability?>()
-        }
+        override val capabilities: MutableSet<JavaInstallationCapability>
+            get() = mutableSetOf()
 
         private fun unsupportedOperation(): UnsupportedOperationException {
-            return UnsupportedOperationException("Installation is not valid. Original error message: " + getErrorMessage())
+            return UnsupportedOperationException("Installation is not valid. Original error message: " + errorMessage)
         }
 
-        override fun getErrorMessage(): String {
-            return errorMessage
-        }
-
-        override fun getErrorCause(): Throwable? {
-            return cause
-        }
-
-        override fun isValidInstallation(): Boolean {
-            return false
-        }
+        override val isValidInstallation: Boolean = false
     }
 
     companion object {
@@ -352,12 +268,12 @@ interface JvmInstallationMetadata {
             return JvmInstallationMetadata.DefaultJvmInstallationMetadata(javaHome, javaVersion, javaVendor, runtimeName, runtimeVersion, jvmName, jvmVersion, jvmVendor, architecture)
         }
 
-        fun failure(javaHome: File, errorMessage: String): JvmInstallationMetadata {
-            return JvmInstallationMetadata.FailureInstallationMetadata(javaHome, errorMessage, null)
+        fun failure(javaHome: File, errorMessage: String?): JvmInstallationMetadata {
+            return JvmInstallationMetadata.FailureInstallationMetadata(javaHome, errorMessage ?: "Unknown error", null)
         }
 
         fun failure(javaHome: File, cause: Exception): JvmInstallationMetadata {
-            return JvmInstallationMetadata.FailureInstallationMetadata(javaHome, cause.message, cause)
+            return JvmInstallationMetadata.FailureInstallationMetadata(javaHome, cause.message ?: cause.toString(), cause)
         }
     }
 }

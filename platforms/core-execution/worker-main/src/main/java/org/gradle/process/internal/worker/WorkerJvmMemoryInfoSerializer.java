@@ -44,8 +44,8 @@ public class WorkerJvmMemoryInfoSerializer {
 
         @Override
         public void write(Encoder encoder, JvmMemoryStatus jvmMemoryStatus) throws Exception {
-            encoder.writeLong(jvmMemoryStatus.committedMemory);
-            encoder.writeLong(jvmMemoryStatus.maxMemory);
+            encoder.writeLong(jvmMemoryStatus.getCommittedMemory());
+            encoder.writeLong(jvmMemoryStatus.getMaxMemory());
         }
     }
 }

@@ -29,7 +29,7 @@ class SocketInetAddress(val address: InetAddress, private val port: Int) : InetE
         return getDisplayName()
     }
 
-    override fun equals(o: Any): Boolean {
+    override fun equals(o: Any?): Boolean {
         if (o === this) {
             return true
         }

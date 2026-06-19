@@ -348,6 +348,7 @@ abstract class OperatingSystem internal constructor() {
         }
 
         // for testing current()
+        @JvmStatic
         fun resetCurrent() {
             currentOs = null
         }

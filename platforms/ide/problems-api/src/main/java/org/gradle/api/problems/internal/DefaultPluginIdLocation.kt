@@ -25,7 +25,7 @@ class DefaultPluginIdLocation(private val pluginId: String?) : PluginIdLocation 
         return pluginId!!
     }
 
-    override fun equals(o: Any): Boolean {
+    override fun equals(o: Any?): Boolean {
         if (o !is DefaultPluginIdLocation) {
             return false
         }

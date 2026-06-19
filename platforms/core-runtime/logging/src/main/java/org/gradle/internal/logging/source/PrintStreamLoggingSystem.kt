@@ -34,10 +34,10 @@ import java.util.concurrent.atomic.AtomicReference
  * Generates a [StyledTextOutputEvent] instance when a line of text is written to the `PrintStream`.
  * Generates a [LogLevelChangeEvent] when the log level for this `LoggingSystem` is changed.
  */
-internal abstract class PrintStreamLoggingSystem protected constructor(private val outputEventListener: OutputEventListener, category: String, clock: Clock) : LoggingSourceSystem {
+abstract class PrintStreamLoggingSystem protected constructor(private val outputEventListener: OutputEventListener, category: String, clock: Clock) : LoggingSourceSystem {
     private val destination = AtomicReference<StandardOutputListener?>()
     private val outstr: PrintStream = LinePerThreadBufferingOutputStream(object : TextStream {
-        override fun text(output: String?) {
+        override fun text(output: String) {
             destination.get()!!.onOutput(output)
         }
 
@@ -61,10 +61,10 @@ internal abstract class PrintStreamLoggingSystem protected constructor(private v
     /**
      * Sets the current value of the PrintStream
      */
-    protected abstract fun set(printStream: PrintStream?)
+    protected abstract fun set(printStream: PrintStream)
 
     override fun snapshot(): LoggingSystem.Snapshot? {
-        return PrintStreamLoggingSystem.SnapshotImpl(enabled, logLevel!!)
+        return SnapshotImpl(enabled, logLevel ?: LogLevel.LIFECYCLE)
     }
 
     override fun restore(state: LoggingSystem.Snapshot?) {
@@ -78,13 +78,15 @@ internal abstract class PrintStreamLoggingSystem protected constructor(private v
         }
     }
 
-    override fun setLevel(logLevel: LogLevel): LoggingSystem.Snapshot? {
+    override fun setLevel(logLevel: LogLevel?): LoggingSystem.Snapshot? {
         val snapshot = snapshot()
         if (logLevel != this.logLevel) {
             this.logLevel = logLevel
             if (enabled) {
                 outstr.flush()
-                outputEventListener.onOutput(LogLevelChangeEvent(logLevel))
+                if (logLevel != null) {
+                    outputEventListener.onOutput(LogLevelChangeEvent(logLevel))
+                }
             }
         }
         return snapshot
@@ -99,11 +101,12 @@ internal abstract class PrintStreamLoggingSystem protected constructor(private v
     }
 
     private fun uninstall() {
+        val original = original
         if (original != null) {
             outstr.flush()
             destination.set(original)
             set(original.originalStream)
-            original = null
+            this.original = null
         }
     }
 
@@ -114,25 +117,28 @@ internal abstract class PrintStreamLoggingSystem protected constructor(private v
         }
         enabled = true
         outstr.flush()
-        outputEventListener.onOutput(LogLevelChangeEvent(logLevel!!))
+        val currentLogLevel = logLevel
+        if (currentLogLevel != null) {
+            outputEventListener.onOutput(LogLevelChangeEvent(currentLogLevel))
+        }
         destination.set(listener)
         if (get() !== outstr) {
             set(outstr)
         }
     }
 
-    private class PrintStreamDestination(private val originalStream: PrintStream) : StandardOutputListener {
+    private class PrintStreamDestination(val originalStream: PrintStream) : StandardOutputListener {
         override fun onOutput(output: CharSequence?) {
             originalStream.print(output)
         }
     }
 
-    private class SnapshotImpl(private val enabled: Boolean, private val logLevel: LogLevel) : LoggingSystem.Snapshot
+    private class SnapshotImpl(val enabled: Boolean, val logLevel: LogLevel) : LoggingSystem.Snapshot
 
-    private class OutputEventDestination(private val listener: OutputEventListener, private val category: String, private val clock: Clock) : StandardOutputListener {
-        override fun onOutput(output: CharSequence) {
+    private inner class OutputEventDestination(private val listener: OutputEventListener, private val category: String, private val clock: Clock) : StandardOutputListener {
+        override fun onOutput(output: CharSequence?) {
             val buildOperationId = CurrentBuildOperationRef.instance().getId()
-            val event: StyledTextOutputEvent = StyledTextOutputEvent(clock.currentTime, category, null, buildOperationId, output.toString())
+            val event: StyledTextOutputEvent = StyledTextOutputEvent(clock.currentTime, category, logLevel ?: LogLevel.LIFECYCLE, buildOperationId, output.toString())
             listener.onOutput(event)
         }
     }

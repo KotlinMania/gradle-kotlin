@@ -24,5 +24,5 @@ import java.io.IOException
  */
 interface ExternalResourceUploader {
     @Throws(IOException::class)
-    fun upload(resource: ReadableContent?, destination: ExternalResourceName?)
+    fun upload(resource: ReadableContent, destination: ExternalResourceName)
 }

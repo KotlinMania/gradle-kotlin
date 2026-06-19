@@ -22,7 +22,7 @@ abstract class AbstractExternalResource : ExternalResource {
         return getDisplayName()
     }
 
-    override fun writeTo(destination: File?): ExternalResourceReadResult<Void?> {
+    override fun writeTo(destination: File): ExternalResourceReadResult<Void?> {
         val result = writeToIfPresent(destination)
         if (result == null) {
             throw ResourceExceptions.getMissing(getURI())
@@ -30,7 +30,7 @@ abstract class AbstractExternalResource : ExternalResource {
         return result
     }
 
-    override fun <T> withContent(readAction: ExternalResource.ContentAction<out T?>?): ExternalResourceReadResult<T?> {
+    override fun <T> withContent(readAction: ExternalResource.ContentAction<out T?>): ExternalResourceReadResult<T?> {
         val result = withContentIfPresent<T?>(readAction)
         if (result == null) {
             throw ResourceExceptions.getMissing(getURI())
@@ -38,7 +38,7 @@ abstract class AbstractExternalResource : ExternalResource {
         return result
     }
 
-    override fun <T> withContent(readAction: ExternalResource.ContentAndMetadataAction<out T?>?): ExternalResourceReadResult<T?>? {
+    override fun <T> withContent(readAction: ExternalResource.ContentAndMetadataAction<out T?>): ExternalResourceReadResult<T?> {
         val result = withContentIfPresent<T?>(readAction)
         if (result == null) {
             throw ResourceExceptions.getMissing(getURI())

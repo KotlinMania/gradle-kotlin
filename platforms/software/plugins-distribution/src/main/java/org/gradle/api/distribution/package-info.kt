@@ -18,5 +18,4 @@
  */
 package org.gradle.api.distribution
 
-import org.gradle.internal.deprecation.DeprecationLogger.whileDisabled
 

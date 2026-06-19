@@ -21,5 +21,5 @@ package org.gradle.tooling.internal.protocol.events
  * @since 6.0
  */
 interface InternalTestOutputEvent : InternalOperationFinishedProgressEvent {
-    val result: InternalTestOutputResult?
+    override val result: InternalTestOutputResult?
 }

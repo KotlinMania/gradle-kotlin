@@ -19,15 +19,14 @@ import org.gradle.initialization.BuildCancellationToken
 import org.gradle.tooling.internal.protocol.InternalCancellationToken
 
 class BuildCancellationTokenAdapter(private val cancellationToken: BuildCancellationToken) : InternalCancellationToken {
-    override fun isCancellationRequested(): Boolean {
-        return cancellationToken.isCancellationRequested()
+    override val isCancellationRequested: Boolean
+        get() = cancellationToken.isCancellationRequested
+
+    override fun addCallback(cancellationHandler: Runnable?): Boolean {
+        return cancellationToken.addCallback(cancellationHandler!!)
     }
 
-    override fun addCallback(cancellationHandler: Runnable): Boolean {
-        return cancellationToken.addCallback(cancellationHandler)
-    }
-
-    override fun removeCallback(cancellationHandler: Runnable) {
-        cancellationToken.removeCallback(cancellationHandler)
+    override fun removeCallback(cancellationHandler: Runnable?) {
+        cancellationToken.removeCallback(cancellationHandler!!)
     }
 }

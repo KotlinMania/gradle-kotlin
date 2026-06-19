@@ -15,7 +15,9 @@
  */
 package org.gradle.tooling.internal.protocol
 
+import java.io.File
 import org.gradle.api.Incubating
+import org.gradle.tooling.Failure
 import org.jspecify.annotations.NullMarked
 
 /**

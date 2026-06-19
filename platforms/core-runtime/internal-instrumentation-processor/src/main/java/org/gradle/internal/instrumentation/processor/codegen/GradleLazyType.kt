@@ -19,7 +19,7 @@ import com.squareup.javapoet.ClassName
 import com.squareup.javapoet.ParameterizedTypeName
 import com.squareup.javapoet.TypeName
 
-enum class GradleLazyType(className: ClassName) {
+enum class GradleLazyType(className: ClassName?) {
     CONFIGURABLE_FILE_COLLECTION("org.gradle.api.file.ConfigurableFileCollection"),
     FILE_COLLECTION("org.gradle.api.file.FileCollection"),
     DIRECTORY_PROPERTY("org.gradle.api.file.DirectoryProperty"),
@@ -29,7 +29,7 @@ enum class GradleLazyType(className: ClassName) {
     MAP_PROPERTY("org.gradle.api.provider.MapProperty"),
     PROPERTY("org.gradle.api.provider.Property"),
     PROVIDER("org.gradle.api.provider.Provider"),
-    UNSUPPORTED((null as com.squareup.javapoet.ClassName?)!!) {
+    UNSUPPORTED(null) {
         override fun asClassName(): ClassName? {
             throw UnsupportedOperationException("Unsupported type")
         }

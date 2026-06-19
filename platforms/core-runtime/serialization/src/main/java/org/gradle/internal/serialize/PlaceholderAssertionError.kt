@@ -21,7 +21,7 @@ import org.gradle.internal.UncheckedException
  * A `PlaceholderException` is used when an assertion error cannot be serialized or deserialized.
  */
 class PlaceholderAssertionError(
-    private val exceptionClassName: String?,
+    override val exceptionClassName: String?,
     message: String?,
     private val getMessageException: Throwable?,
     private val toString: String?,
@@ -32,16 +32,13 @@ class PlaceholderAssertionError(
         initCause(cause)
     }
 
-    override fun getExceptionClassName(): String? {
-        return exceptionClassName
-    }
-
-    override fun getMessage(): String? {
-        if (getMessageException != null) {
-            throw UncheckedException.throwAsUncheckedException(getMessageException)
+    override val message: String?
+        get() {
+            if (getMessageException != null) {
+                throw UncheckedException.throwAsUncheckedException(getMessageException)
+            }
+            return super.message
         }
-        return super.message
-    }
 
     override fun toString(): String {
         if (toStringRuntimeEx != null) {

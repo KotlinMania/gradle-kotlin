@@ -40,7 +40,7 @@ interface ExternalResourceAccessor {
      * @throws ResourceException If the resource may exist, but not could be obtained for some reason.
      */
     @Throws(ResourceException::class)
-    fun <T> withContent(location: ExternalResourceName?, revalidate: Boolean, action: ExternalResource.ContentAndMetadataAction<T?>?): T?
+    fun <T> withContent(location: ExternalResourceName, revalidate: Boolean, action: ExternalResource.ContentAndMetadataAction<T?>): T?
 
     /**
      * Reads the resource at the given location.
@@ -57,8 +57,8 @@ interface ExternalResourceAccessor {
      * @throws ResourceException If the resource may exist, but not could be obtained for some reason.
      */
     @Throws(ResourceException::class)
-    fun <T> withContent(location: ExternalResourceName?, revalidate: Boolean, action: ExternalResource.ContentAction<T?>): T? {
-        return withContent<T?>(location, revalidate, ExternalResource.ContentAndMetadataAction { inputStream: InputStream?, metaData: ExternalResourceMetaData? -> action.execute(inputStream) })
+    fun <T> withContent(location: ExternalResourceName, revalidate: Boolean, action: ExternalResource.ContentAction<T?>): T? {
+        return withContent<T?>(location, revalidate, ExternalResource.ContentAndMetadataAction { inputStream: InputStream, _: ExternalResourceMetaData? -> action.execute(inputStream) })
     }
 
     /**
@@ -75,5 +75,5 @@ interface ExternalResourceAccessor {
      * @throws ResourceException If the resource may exist, but not could be obtained for some reason
      */
     @Throws(ResourceException::class)
-    fun getMetaData(location: ExternalResourceName?, revalidate: Boolean): ExternalResourceMetaData?
+    fun getMetaData(location: ExternalResourceName, revalidate: Boolean): ExternalResourceMetaData?
 }

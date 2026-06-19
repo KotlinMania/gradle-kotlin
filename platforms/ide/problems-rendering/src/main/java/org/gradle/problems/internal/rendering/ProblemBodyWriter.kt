@@ -23,10 +23,6 @@ import org.gradle.api.problems.internal.DocLinkInternal
 import org.gradle.api.problems.internal.ProblemInternal
 import org.gradle.util.internal.TextUtil
 import java.io.PrintWriter
-import java.lang.String
-import java.util.stream.Collectors
-import kotlin.Any
-import kotlin.Int
 import kotlin.text.isEmpty
 import kotlin.text.split
 import kotlin.text.toRegex
@@ -45,37 +41,37 @@ internal class ProblemBodyWriter : PartialProblemWriter {
         }
 
         // indent details further if there was a contextual message
-        if (problem.details != null) {
+        val details = problem.getDetails()
+        if (details != null) {
             output.printf("%n")
-            indent(output, problem.details, if (problemSubMessage == null) LEVEL_1_INDENT else LEVEL_2_INDENT)
+            indent(output, details, if (problemSubMessage == null) LEVEL_1_INDENT else LEVEL_2_INDENT)
         }
 
         // link to documentation
-        val documentationLink: DocLink? = problem.definition.getDocumentationLink()
-        if (documentationLink != null && documentationLink.url != null) {
+        val documentationLink: DocLink? = problem.getDefinition()?.getDocumentationLink()
+        val documentationUrl = documentationLink?.getUrl()
+        if (documentationUrl != null) {
             output.printf("%n")
             val message = if (documentationLink is DocLinkInternal)
-                documentationLink.consultDocumentationMessage
+                documentationLink.getConsultDocumentationMessage()
             else
-                String.format("For more information, please refer to %s.", documentationLink.url)
+                kotlin.String.format("For more information, please refer to %s.", documentationUrl)
             indent(output, message, LEVEL_2_INDENT)
         }
 
         // locations
-        val fileLocations = problem.originLocations!!.stream().filter({ obj: Any? -> FileLocation::class.java.isInstance(obj) }).map({ obj: Any? -> FileLocation::class.java.cast(obj) }).collect(
-            Collectors.toList()
-        )
+        val fileLocations = problem.getOriginLocations().orEmpty().filterIsInstance<FileLocation>()
         for (location in fileLocations) {
             output.printf("%n")
-            indent(output, "Location: " + location.path, LEVEL_2_INDENT)
+            indent(output, "Location: " + location.getPath(), LEVEL_2_INDENT)
             if (location is LineInFileLocation) {
                 val lineLocation = location
-                output.printf(" line " + lineLocation.line)
+                output.printf(" line " + lineLocation.getLine())
             }
         }
 
         // solutions
-        val solutions: MutableList<kotlin.String> = problem.solutions!!
+        val solutions: List<kotlin.String> = problem.getSolutions().orEmpty()
         if (!solutions.isEmpty()) {
             output.printf("%n")
             if (solutions.size == 1) {
@@ -110,10 +106,13 @@ internal class ProblemBodyWriter : PartialProblemWriter {
         }
 
         private fun getContextualMessage(problem: ProblemInternal): kotlin.String? {
-            if (problem.contextualLabel != null) {
-                return problem.contextualLabel
-            } else if (problem.exception != null) {
-                return problem.exception!!.getLocalizedMessage()
+            val contextualLabel = problem.getContextualLabel()
+            if (contextualLabel != null) {
+                return contextualLabel
+            }
+            val exception = problem.getException()
+            if (exception != null) {
+                return exception.localizedMessage
             }
             return null
         }

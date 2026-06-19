@@ -18,14 +18,4 @@
  */
 package org.gradle.api.publish.internal.plugins
 
-import org.gradle.internal.service.ServiceRegistry.get
-import org.gradle.internal.logging.text.StyledTextOutput.println
-import org.gradle.util.internal.CollectionUtils.sort
-import org.gradle.internal.service.ServiceRegistration.addProvider
-import org.gradle.internal.logging.text.TreeFormatter.toString
-import org.gradle.reporting.ReportRenderer.render
-import org.gradle.internal.logging.text.StyledTextOutput.withStyle
-import org.gradle.internal.deprecation.DeprecationLogger.whileDisabled
-import org.gradle.internal.logging.text.StyledTextOutputFactory.create
-import org.gradle.internal.logging.text.StyledTextOutput.text
 

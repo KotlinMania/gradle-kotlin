@@ -36,7 +36,7 @@ public final class DefaultTestKeyValueDataMetadataEvent extends AbstractProgress
 
     @Override
     public String getDisplayName() {
-        return getDescriptor().displayName + " containing " + values.size() + " values";
+        return getDescriptor().getDisplayName() + " containing " + values.size() + " values";
     }
 
     @Override

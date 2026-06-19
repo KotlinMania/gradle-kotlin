@@ -29,6 +29,7 @@ interface MethodInterceptionListener {
     )
 
     companion object {
+        @JvmField
         val NO_OP: MethodInterceptionListener =
             object : MethodInterceptionListener {
                 override fun onInterceptedMethodInstruction(

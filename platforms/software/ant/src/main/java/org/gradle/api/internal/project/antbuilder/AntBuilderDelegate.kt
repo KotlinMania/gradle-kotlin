@@ -33,7 +33,7 @@ class AntBuilderDelegate(builder: Any?, private val antlibClassLoader: ClassLoad
     }
 
     fun addFiles(childNodeName: String, params: Iterable<File>) {
-        createNode(childNodeName, mutableMapOf<String?, Any?>(), Runnable? {
+        createNode(childNodeName, mutableMapOf<String?, Any?>(), Runnable {
             for (file in params) {
                 val filename: String = maskFilename(file.getAbsolutePath())
                 createNode("file", Collections.singletonMap<String?, Any?>("file", filename))
@@ -48,7 +48,7 @@ class AntBuilderDelegate(builder: Any?, private val antlibClassLoader: ClassLoad
             }
 
             val directory: String = maskFilename(tree.getDir().getAbsolutePath())
-            createNode(childNodeName, Collections.singletonMap<String?, Any?>("dir", directory), Runnable? {
+            createNode(childNodeName, Collections.singletonMap<String?, Any?>("dir", directory), Runnable {
                 addPatternSet(tree.getPatterns())
             })
         }
@@ -64,7 +64,7 @@ class AntBuilderDelegate(builder: Any?, private val antlibClassLoader: ClassLoad
 
     private fun addPatternToAntBuilder(patterns: PatternSet) {
         if (patterns is IntersectionPatternSet) {
-            createNode("and", mutableMapOf<String?, Any?>(), Runnable? {
+            createNode("and", mutableMapOf<String?, Any?>(), Runnable {
                 addIncludesAndExcludes(patterns)
                 addPatternToAntBuilder(patterns.getOther())
             })
@@ -74,18 +74,18 @@ class AntBuilderDelegate(builder: Any?, private val antlibClassLoader: ClassLoad
     }
 
     private fun addIncludesAndExcludes(patterns: PatternSet) {
-        createNode("and", mutableMapOf<String?, Any?>(), Runnable? {
+        createNode("and", mutableMapOf<String?, Any?>(), Runnable {
             val caseSensitive = patterns.isCaseSensitive()
             val includes = patterns.getIncludesView()
             if (!includes.isEmpty()) {
-                createNode("or", mutableMapOf<String?, Any?>(), Runnable? { addFilenames(includes, caseSensitive) }
+                createNode("or", mutableMapOf<String?, Any?>(), Runnable { addFilenames(includes, caseSensitive) }
                 )
             }
 
             val excludes = patterns.getExcludesView()
             if (!excludes.isEmpty()) {
-                createNode("not", mutableMapOf<String?, Any?>(), Runnable? {
-                    createNode("or", mutableMapOf<String?, Any?>(), Runnable? { addFilenames(excludes, caseSensitive) }
+                createNode("not", mutableMapOf<String?, Any?>(), Runnable {
+                    createNode("or", mutableMapOf<String?, Any?>(), Runnable { addFilenames(excludes, caseSensitive) }
                     )
                 })
             }

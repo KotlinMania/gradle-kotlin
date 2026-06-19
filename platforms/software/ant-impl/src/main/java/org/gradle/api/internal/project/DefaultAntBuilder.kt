@@ -39,7 +39,6 @@ import java.beans.PropertyChangeEvent
 import java.beans.PropertyChangeListener
 import java.io.File
 import java.util.LinkedList
-import java.util.Optional
 
 class DefaultAntBuilder(private val gradleProject: Project, private val loggingAdapter: AntLoggingAdapter) : BasicAntBuilder(), GroovyObject {
     fun propertyMissing(property: String?, newValue: Any?) {
@@ -59,7 +58,8 @@ class DefaultAntBuilder(private val gradleProject: Project, private val loggingA
         throw MissingPropertyException(name, javaClass)
     }
 
-    public override fun getProperties(): MutableMap<String?, Any?> {
+    public override val properties: MutableMap<String, Any?>?
+        get() {
         val map = ObservableMap(getProject().getProperties())
         map.addPropertyChangeListener(object : PropertyChangeListener {
             override fun propertyChange(event: PropertyChangeEvent) {
@@ -67,11 +67,12 @@ class DefaultAntBuilder(private val gradleProject: Project, private val loggingA
             }
         })
 
-        val castMap = map as MutableMap<String?, Any?>
+        val castMap = map as MutableMap<String, Any?>
         return castMap
-    }
+        }
 
-    public override fun getReferences(): MutableMap<String?, Any?> {
+    public override val references: MutableMap<String, Any?>?
+        get() {
         val map = ObservableMap(getProject().getReferences())
         map.addPropertyChangeListener(object : PropertyChangeListener {
             override fun propertyChange(event: PropertyChangeEvent) {
@@ -79,27 +80,30 @@ class DefaultAntBuilder(private val gradleProject: Project, private val loggingA
             }
         })
 
-        val castMap = map as MutableMap<String?, Any?>
+        val castMap = map as MutableMap<String, Any?>
         return castMap
-    }
+        }
 
     public override fun importBuild(antBuildFile: Any) {
-        importBuild(antBuildFile, Transformers.noOpTransformer<String?>())
+        importBuild(antBuildFile, Transformers.noOpTransformer<String>())
     }
 
-    public override fun importBuild(antBuildFile: Any, baseDirectory: String?) {
-        importBuild(antBuildFile, baseDirectory, Transformers.noOpTransformer<String?>())
+    public override fun importBuild(antBuildFile: Any, baseDirectory: String) {
+        importBuild(antBuildFile, baseDirectory, Transformers.noOpTransformer<String>())
     }
 
-    public override fun importBuild(antBuildFile: Any, taskNamer: Transformer<out String?, in String?>) {
-        importBuild(antBuildFile, null, taskNamer)
+    public override fun importBuild(antBuildFile: Any, taskNamer: Transformer<out String, in String>) {
+        doImportBuild(antBuildFile, null, taskNamer)
     }
 
-    public override fun importBuild(antBuildFile: Any, baseDirectory: String?, taskNamer: Transformer<out String?, in String?>) {
+    public override fun importBuild(antBuildFile: Any, baseDirectory: String, taskNamer: Transformer<out String, in String>) {
+        doImportBuild(antBuildFile, baseDirectory, taskNamer)
+    }
+
+    private fun doImportBuild(antBuildFile: Any, baseDirectory: String?, taskNamer: Transformer<out String, in String>) {
         val file = gradleProject.file(antBuildFile)
 
-        val baseDirectoryOptional: Optional<Any?> = Optional.ofNullable<Any?>(baseDirectory)
-        val baseDir = gradleProject.file(baseDirectoryOptional.orElse(file.getParentFile().getAbsolutePath())!!)
+        val baseDir = gradleProject.file(baseDirectory ?: file.getParentFile().getAbsolutePath())
 
         val existingAntTargets: MutableSet<String?> = HashSet<String?>(getAntProject().getTargets().keys)
         val oldBaseDir = getAntProject().getBaseDir()
@@ -127,17 +131,15 @@ class DefaultAntBuilder(private val gradleProject: Project, private val loggingA
         }
     }
 
-    public override fun setLifecycleLogLevel(logLevel: AntMessagePriority?) {
-        loggingAdapter.setLifecycleLogLevel(logLevel)
-    }
-
-    public override fun getLifecycleLogLevel(): AntMessagePriority {
-        return loggingAdapter.lifecycleLogLevel!!
+    public override var lifecycleLogLevel: AntMessagePriority?
+        get() = loggingAdapter.lifecycleLogLevel
+        set(value) {
+            loggingAdapter.setLifecycleLogLevel(value)
     }
 
     private class AntTargetsTaskDependency(private val taskDependencyNames: MutableList<String>) : TaskDependencyInternal {
-        override fun getDependenciesForInternalUse(task: Task?): MutableSet<out Task?> {
-            val tasks: MutableSet<Task?> = Sets.newHashSetWithExpectedSize<Task?>(taskDependencyNames.size)
+        override fun getDependenciesForInternalUse(task: Task?): MutableSet<out Task> {
+            val tasks: MutableSet<Task> = Sets.newHashSetWithExpectedSize<Task>(taskDependencyNames.size)
             for (dependedOnTaskName in taskDependencyNames) {
                 val dependency = task!!.getProject().getTasks().findByName(dependedOnTaskName)
                 if (dependency == null) {
@@ -148,22 +150,22 @@ class DefaultAntBuilder(private val gradleProject: Project, private val loggingA
             return tasks
         }
 
-        override fun getDependencies(task: Task?): MutableSet<out Task?> {
+        override fun getDependencies(task: Task?): MutableSet<out Task> {
             return getDependenciesForInternalUse(task)
         }
     }
 
     companion object {
-        private fun configureTask(target: Target, task: AntTarget, baseDir: File?, taskNamer: Transformer<out String?, in String?>) {
-            task.setTarget(target)
-            task.setBaseDir(baseDir)
+        private fun configureTask(target: Target, task: AntTarget, baseDir: File?, taskNamer: Transformer<out String, in String>) {
+            task.target = target
+            task.baseDir = baseDir
 
             val taskDependencyNames: MutableList<String> = getTaskDependencyNames(target, taskNamer)
             task.dependsOn(AntTargetsTaskDependency(taskDependencyNames))
             addDependencyOrdering(taskDependencyNames, task.getProject().getTasks())
         }
 
-        private fun getTaskDependencyNames(target: Target, taskNamer: Transformer<out String?, in String?>): MutableList<String> {
+        private fun getTaskDependencyNames(target: Target, taskNamer: Transformer<out String, in String>): MutableList<String> {
             val dependencies = target.getDependencies()
             val taskDependencyNames: MutableList<String> = LinkedList<String>()
             while (dependencies.hasMoreElements()) {
@@ -179,7 +181,7 @@ class DefaultAntBuilder(private val gradleProject: Project, private val loggingA
             for (dependency in dependencies) {
                 if (previous != null) {
                     val finalPrevious: String? = previous
-                    tasks.all(object : Action<Task?> {
+                    tasks.all(object : Action<Task> {
                         override fun execute(task: Task) {
                             if (task.getName() == dependency) {
                                 task.shouldRunAfter(finalPrevious!!)

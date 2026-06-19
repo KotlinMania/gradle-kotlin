@@ -39,7 +39,6 @@ import org.gradle.jvm.toolchain.internal.InstallationLocation.Companion.userDefi
 import org.gradle.jvm.toolchain.internal.install.JavaToolchainProvisioningService
 import org.gradle.jvm.toolchain.internal.install.JvmInstallationMetadataMatcher
 import java.io.File
-import java.lang.String
 import java.util.Objects
 import java.util.Optional
 import java.util.concurrent.Callable
@@ -59,13 +58,13 @@ class JavaToolchainQueryService @VisibleForTesting internal constructor(
     fallbackToolchainSpec: JavaToolchainSpec?,
     currentJavaHome: File
 ) {
-    private class ToolchainLookupKey(specKey: JavaToolchainSpecInternal.Key?, requiredCapabilities: MutableSet<JavaInstallationCapability?>) {
+    private class ToolchainLookupKey(specKey: JavaToolchainSpecInternal.Key?, requiredCapabilities: MutableSet<JavaInstallationCapability>) {
         private val specKey: JavaToolchainSpecInternal.Key?
-        private val requiredCapabilities: MutableSet<JavaInstallationCapability?>
+        private val requiredCapabilities: Set<JavaInstallationCapability>
 
         init {
             this.specKey = specKey
-            this.requiredCapabilities = Sets.immutableEnumSet<JavaInstallationCapability?>(requiredCapabilities)
+            this.requiredCapabilities = Sets.immutableEnumSet<JavaInstallationCapability>(requiredCapabilities)
         }
 
         override fun equals(o: Any?): Boolean {
@@ -123,17 +122,17 @@ class JavaToolchainQueryService @VisibleForTesting internal constructor(
     @JvmOverloads
     fun findMatchingToolchain(
         filter: JavaToolchainSpec?,
-        requiredCapabilities: MutableSet<JavaInstallationCapability?> = mutableSetOf<JavaInstallationCapability?>()
-    ): ProviderInternal<JavaToolchain?> {
+        requiredCapabilities: MutableSet<JavaInstallationCapability> = mutableSetOf<JavaInstallationCapability>()
+    ): ProviderInternal<JavaToolchain> {
         val filterInternal = Objects.requireNonNull<JavaToolchainSpec?>(filter) as JavaToolchainSpecInternal
-        return DefaultProvider<JavaToolchain?>(Callable { resolveToolchain(filterInternal, requiredCapabilities) })
+        return DefaultProvider<JavaToolchain>(Callable { resolveToolchain(filterInternal, requiredCapabilities) })
     }
 
     @Throws(Exception::class)
-    private fun resolveToolchain(requestedSpec: JavaToolchainSpecInternal, requiredCapabilities: MutableSet<JavaInstallationCapability?>): JavaToolchain? {
+    private fun resolveToolchain(requestedSpec: JavaToolchainSpecInternal, requiredCapabilities: MutableSet<JavaInstallationCapability>): JavaToolchain {
         requestedSpec.finalizeProperties()
 
-        if (!requestedSpec.isValid()) {
+        if (!requestedSpec.isValid) {
             throw builder()
                 .withSummary("Using toolchain specifications without setting a language version is not supported.")
                 .withAdvice("Consider configuring the language version.")
@@ -141,7 +140,7 @@ class JavaToolchainQueryService @VisibleForTesting internal constructor(
                 .build()
         }
 
-        val useFallback = !requestedSpec.isConfigured()
+        val useFallback = !requestedSpec.isConfigured
         val actualSpec = (if (useFallback) fallbackToolchainSpec else requestedSpec)!!
         // We can't use the key of the fallback toolchain spec, because it is a spec that can match configured requests as well
         val actualSpecKey = if (useFallback) FALLBACK_TOOLCHAIN_KEY else requestedSpec.toKey()
@@ -160,13 +159,13 @@ class JavaToolchainQueryService @VisibleForTesting internal constructor(
         if (resolutionResult is Exception) {
             throw resolutionResult
         } else {
-            return resolutionResult as JavaToolchain?
+            return resolutionResult as JavaToolchain
         }
     }
 
-    private fun transformCapabilities(actualSpec: JavaToolchainSpec, requiredCapabilities: MutableSet<JavaInstallationCapability?>): MutableSet<JavaInstallationCapability?>? {
-        if (actualSpec.getNativeImageCapable().getOrElse(false)) {
-            val capabilityBuilder = ImmutableSet.Builder<JavaInstallationCapability?>()
+    private fun transformCapabilities(actualSpec: JavaToolchainSpec, requiredCapabilities: MutableSet<JavaInstallationCapability>): Set<JavaInstallationCapability> {
+        if (actualSpec.nativeImageCapable.getOrElse(false)) {
+            val capabilityBuilder = ImmutableSet.Builder<JavaInstallationCapability>()
             capabilityBuilder.addAll(requiredCapabilities)
             capabilityBuilder.add(JavaInstallationCapability.NATIVE_IMAGE)
             return capabilityBuilder.build()
@@ -175,39 +174,39 @@ class JavaToolchainQueryService @VisibleForTesting internal constructor(
         }
     }
 
-    private fun query(spec: JavaToolchainSpec, requiredCapabilities: MutableSet<JavaInstallationCapability?>, isFallback: Boolean): JavaToolchain {
+    private fun query(spec: JavaToolchainSpec, requiredCapabilities: Set<JavaInstallationCapability>, isFallback: Boolean): JavaToolchain {
         if (spec is CurrentJvmToolchainSpec) {
             return asToolchainOrThrow(autoDetected(currentJavaHome, "current JVM"), spec, requiredCapabilities, isFallback)
         }
 
         if (spec is SpecificInstallationToolchainSpec) {
-            return asToolchainOrThrow(userDefined(spec.getJavaHome(), "specific installation"), spec, requiredCapabilities, false)
+            return asToolchainOrThrow(userDefined(spec.javaHome!!, "specific installation"), spec, requiredCapabilities, false)
         }
 
         if (spec is SpecificExecutableToolchainSpec) {
-            return asToolchainOrThrow(userDefined(spec.getJavaHome(), "specific executable"), spec, requiredCapabilities, false)
+            return asToolchainOrThrow(userDefined(spec.javaHome!!, "specific executable"), spec, requiredCapabilities, false)
         }
 
         return findInstalledToolchain(spec, requiredCapabilities).orElseGet(Supplier { downloadToolchain(spec, requiredCapabilities) })
     }
 
-    private fun findInstalledToolchain(spec: JavaToolchainSpec, requiredCapabilities: MutableSet<JavaInstallationCapability?>): Optional<JavaToolchain> {
-        val matcher: Predicate<JvmInstallationMetadata?> = JvmInstallationMetadataMatcher(spec, requiredCapabilities)
+    private fun findInstalledToolchain(spec: JavaToolchainSpec, requiredCapabilities: Set<JavaInstallationCapability>): Optional<JavaToolchain> {
+        val matcher = JvmInstallationMetadataMatcher(spec, requiredCapabilities)
 
         return registry.toolchains()!!.stream()
             .filter { result: JvmToolchainMetadata? -> result!!.metadata!!.isValidInstallation }
-            .filter { result: JvmToolchainMetadata? -> matcher.test(result!!.metadata) }
-            .min(Comparator.comparing<JvmToolchainMetadata, JvmInstallationMetadata?>(Function { result: JvmToolchainMetadata -> result.metadata }, JvmInstallationMetadataComparator(currentJavaHome)))
-            .map<JavaToolchain?>(Function { result: JvmToolchainMetadata? ->
+            .filter { result: JvmToolchainMetadata? -> matcher.test(result!!.metadata!!) }
+            .min(Comparator.comparing<JvmToolchainMetadata, JvmInstallationMetadata>(Function { result: JvmToolchainMetadata -> result.metadata!! }, JvmInstallationMetadataComparator(currentJavaHome)))
+            .map<JavaToolchain>(Function { result: JvmToolchainMetadata? ->
                 warnIfAutoProvisionedToolchainUsedWithoutRepositoryDefinitions(result!!)
-                JavaToolchain(result.metadata, fileFactory, JavaToolchainInput(spec), false)
+                JavaToolchain(result.metadata!!, fileFactory, JavaToolchainInput(spec), false)
             })
     }
 
     private fun warnIfAutoProvisionedToolchainUsedWithoutRepositoryDefinitions(candidate: JvmToolchainMetadata) {
         val javaHome = candidate.location
         val autoDetectedToolchain = javaHome!!.isAutoProvisioned
-        if (autoDetectedToolchain && installService.isAutoDownloadEnabled() && !installService.hasConfiguredToolchainRepositories()) {
+        if (autoDetectedToolchain && installService.isAutoDownloadEnabled && !installService.hasConfiguredToolchainRepositories()) {
             org.gradle.internal.deprecation.DeprecationLogger.deprecateBehaviour(
                 java.lang.String.format(
                     "Using toolchain '%s' installed via auto-provisioning without toolchain repositories.",
@@ -222,15 +221,15 @@ class JavaToolchainQueryService @VisibleForTesting internal constructor(
         }
     }
 
-    private fun downloadToolchain(spec: JavaToolchainSpec, requiredCapabilities: MutableSet<JavaInstallationCapability?>?): JavaToolchain {
+    private fun downloadToolchain(spec: JavaToolchainSpec, requiredCapabilities: Set<JavaInstallationCapability>): JavaToolchain {
         val installation = installService.tryInstall(spec)
-        val downloadedInstallation = autoProvisioned(installation, "provisioned toolchain")
+        val downloadedInstallation = autoProvisioned(installation!!, "provisioned toolchain")
         val downloadedToolchain = asToolchainOrThrow(downloadedInstallation, spec, requiredCapabilities, false)
         registry.addInstallation(downloadedInstallation)
         return downloadedToolchain
     }
 
-    private fun asToolchainOrThrow(javaHome: InstallationLocation, spec: JavaToolchainSpec, requiredCapabilities: MutableSet<JavaInstallationCapability?>?, isFallback: Boolean): JavaToolchain {
+    private fun asToolchainOrThrow(javaHome: InstallationLocation, spec: JavaToolchainSpec, requiredCapabilities: Set<JavaInstallationCapability>, isFallback: Boolean): JavaToolchain {
         val metadata = detector.getMetadata(javaHome)
 
         val cannotProbeSpecificExecutable = (spec is SpecificExecutableToolchainSpec) && !metadata!!.isValidInstallation
@@ -238,11 +237,11 @@ class JavaToolchainQueryService @VisibleForTesting internal constructor(
         if (!metadata!!.isValidInstallation && !cannotProbeSpecificExecutable) {
             throw GradleException("Toolchain installation '" + javaHome.location + "' could not be probed: " + metadata.errorMessage, metadata.errorCause)
         }
-        if (!metadata.capabilities!!.containsAll(requiredCapabilities!!)) {
+        if (!metadata.capabilities!!.containsAll(requiredCapabilities)) {
             throw GradleException("Toolchain installation '" + javaHome.location + "' does not provide the required capabilities: " + requiredCapabilities)
         }
         if (cannotProbeSpecificExecutable) {
-            return SpecificExecutableJavaToolchain(metadata, fileFactory, JavaToolchainInput(spec), isFallback, spec.getJavaExecutable())
+            return SpecificExecutableJavaToolchain(metadata, fileFactory, JavaToolchainInput(spec), isFallback, spec.javaExecutable)
         } else {
             return JavaToolchain(metadata, fileFactory, JavaToolchainInput(spec), isFallback)
         }

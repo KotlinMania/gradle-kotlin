@@ -15,13 +15,24 @@
  */
 package org.gradle.integtests.tooling.r940
 
+import org.gradle.tooling.*
+import org.gradle.tooling.model.*
+import org.gradle.tooling.model.build.*
+import org.gradle.tooling.model.eclipse.*
+import org.gradle.tooling.model.gradle.*
+import org.gradle.tooling.model.idea.*
+import org.gradle.tooling.model.kotlin.dsl.*
+import org.gradle.tooling.internal.adapter.ProtocolToModelAdapter
+import java.io.File
+import org.gradle.integtests.tooling.r48.*
+
 import org.gradle.tooling.BuildAction
 
 /**
  * Example build action used in the r940 cross-version tooling API tests.
  */
 class FetchIdeaModel : BuildAction<IdeaProject?> {
-    public override fun execute(controller: BuildController): IdeaProject {
+    public override fun execute(controller: BuildController?): IdeaProject {
         return controller.getModel(IdeaProject::class.java)
     }
 }

@@ -35,7 +35,6 @@ abstract class AntTarget : ConventionTask() {
     /**
      * Sets the Ant target to execute.
      */
-    @JvmField
     @get:ToBeReplacedByLazyProperty
     @get:Internal
     var target: Target? = null
@@ -45,13 +44,12 @@ abstract class AntTarget : ConventionTask() {
     /**
      * Sets the Ant project base directory to use when executing the target.
      */
-    @JvmField
     @get:ToBeReplacedByLazyProperty
     @get:Internal
     var baseDir: File? = null
 
     init {
-        ConfigurationCacheDegradation.requireDegradation<AntTarget?>(this, "Task is not compatible with the Configuration Cache")
+        ConfigurationCacheDegradation.requireDegradation<AntTarget>(this, "Task is not compatible with the Configuration Cache")
     }
 
     @TaskAction

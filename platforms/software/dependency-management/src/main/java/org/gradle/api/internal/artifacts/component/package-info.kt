@@ -18,10 +18,4 @@
  */
 package org.gradle.api.internal.artifacts.component
 
-import org.gradle.internal.serialize.Decoder.readSmallInt
-import org.gradle.internal.serialize.Decoder.readString
-import org.gradle.internal.serialize.Decoder.readNullableString
-import org.gradle.internal.serialize.Encoder.writeSmallInt
-import org.gradle.internal.serialize.Encoder.writeString
-import org.gradle.internal.serialize.Encoder.writeNullableString
 

@@ -28,5 +28,5 @@ interface TaskProgressEvent : ProgressEvent {
      *
      * @return The description of the underlying task operation.
      */
-    override fun getDescriptor(): TaskOperationDescriptor?
+    override val descriptor: TaskOperationDescriptor?
 }

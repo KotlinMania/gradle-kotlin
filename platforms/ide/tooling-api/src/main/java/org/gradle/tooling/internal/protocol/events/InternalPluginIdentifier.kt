@@ -15,6 +15,7 @@
  */
 package org.gradle.tooling.internal.protocol.events
 
+import org.gradle.tooling.events.PluginIdentifier
 import org.gradle.tooling.internal.protocol.InternalProtocolInterface
 
 /**

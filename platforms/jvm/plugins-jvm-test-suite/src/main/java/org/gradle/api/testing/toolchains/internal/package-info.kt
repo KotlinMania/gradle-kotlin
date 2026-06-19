@@ -20,6 +20,4 @@
  */
 package org.gradle.api.testing.toolchains.internal
 
-import org.gradle.internal.Cast.uncheckedCast
-import org.gradle.api.internal.parameters.NoneParameters
 

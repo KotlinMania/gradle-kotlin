@@ -29,15 +29,15 @@ import org.gradle.internal.time.Clock
 class LoggingBackedStyledTextOutput(private val listener: OutputEventListener, private val category: String, private val logLevel: LogLevel, private val clock: Clock) :
     AbstractLineChoppingStyledTextOutput() {
     private val buffer = StringBuilder()
-    private var spans: MutableList<StyledTextOutputEvent.Span?> = ArrayList<StyledTextOutputEvent.Span?>()
-    private var style = StyledTextOutput.Style.Normal
+    private var spans: MutableList<StyledTextOutputEvent.Span> = ArrayList<StyledTextOutputEvent.Span>()
+    private var currentStyle = StyledTextOutput.Style.Normal
 
-    override fun doStyleChange(style: StyledTextOutput.Style) {
+    override fun doStyleChange(style: StyledTextOutput.Style?) {
         if (buffer.length > 0) {
-            spans.add(StyledTextOutputEvent.Span(this.style, buffer.toString()))
+            spans.add(StyledTextOutputEvent.Span(currentStyle, buffer.toString()))
             buffer.setLength(0)
         }
-        this.style = style
+        currentStyle = style ?: StyledTextOutput.Style.Normal
     }
 
     override fun doLineText(text: CharSequence?) {
@@ -46,10 +46,10 @@ class LoggingBackedStyledTextOutput(private val listener: OutputEventListener, p
 
     override fun doEndLine(endOfLine: CharSequence?) {
         buffer.append(endOfLine)
-        spans.add(StyledTextOutputEvent.Span(this.style, buffer.toString()))
+        spans.add(StyledTextOutputEvent.Span(currentStyle, buffer.toString()))
         buffer.setLength(0)
         val buildOperationId = CurrentBuildOperationRef.instance().getId()
         listener.onOutput(StyledTextOutputEvent(clock.currentTime, category, logLevel, buildOperationId, spans))
-        spans = ArrayList<StyledTextOutputEvent.Span?>()
+        spans = ArrayList<StyledTextOutputEvent.Span>()
     }
 }

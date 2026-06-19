@@ -16,9 +16,14 @@
 package org.gradle.internal.logging.events
 
 import org.gradle.api.logging.LogLevel
+import kotlin.jvm.JvmName
 
-open class CategorisedOutputEvent(@JvmField val timestamp: Long, @JvmField val category: String, private val logLevel: LogLevel) : OutputEvent() {
-    override fun getLogLevel(): LogLevel {
-        return logLevel
+open class CategorisedOutputEvent(val timestamp: Long, private val categoryValue: String, override val logLevel: LogLevel) : OutputEvent() {
+    @get:JvmName("category")
+    val category: String
+        get() = categoryValue
+
+    fun getCategory(): String {
+        return categoryValue
     }
 }

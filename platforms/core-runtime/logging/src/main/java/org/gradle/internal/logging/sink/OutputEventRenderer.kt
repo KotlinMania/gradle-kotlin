@@ -66,19 +66,19 @@ import javax.annotation.concurrent.ThreadSafe
 class OutputEventRenderer(private val clock: Clock, private val userInput: GlobalUserInputReceiver, private val temporaryFileProvider: TemporaryFileProvider) : OutputEventListener, LoggingRouter {
     private val lock = Any()
     private val logLevel = AtomicReference<LogLevel?>(LogLevel.LIFECYCLE)
-    private val formatters = ListenerBroadcast<OutputEventListener?>(OutputEventListener::class.java)
-    private val transformer = OutputEventTransformer(formatters.getSource(), lock)
+    private val formatters = ListenerBroadcast<OutputEventListener>(OutputEventListener::class.java as Class<OutputEventListener?>)
+    private val transformer = OutputEventTransformer(formatters.getSource()!!, lock)
 
-    var colourMap: ColorMap? = null
+    private var colourMapValue: ColorMap? = null
+    val colourMap: ColorMap
         get() {
             synchronized(lock) {
-                if (field == null) {
-                    field = DefaultColorMap(isNoColorRequested)
+                if (colourMapValue == null) {
+                    colourMapValue = DefaultColorMap(isNoColorRequested)
                 }
             }
-            return field
+            return colourMapValue!!
         }
-        private set
     var originalStdOut: OutputStream? = null
         private set
     var originalStdErr: OutputStream? = null
@@ -87,8 +87,8 @@ class OutputEventRenderer(private val clock: Clock, private val userInput: Globa
     private var stdErrListener: OutputEventListener? = null
     private var console: OutputEventListener? = null
     private var userListenerChain: OutputEventListener? = null
-    private var userStdoutListeners: ListenerBroadcast<StandardOutputListener?>? = null
-    private var userStderrListeners: ListenerBroadcast<StandardOutputListener?>? = null
+    private var userStdoutListeners: ListenerBroadcast<StandardOutputListener>? = null
+    private var userStderrListeners: ListenerBroadcast<StandardOutputListener>? = null
 
     override fun snapshot(): LoggingSystem.Snapshot? {
         synchronized(lock) {
@@ -130,17 +130,17 @@ class OutputEventRenderer(private val clock: Clock, private val userInput: Globa
         onOutput(FlushOutputEvent())
     }
 
-    override fun attachProcessConsole(consoleOutput: ConsoleOutput?, consoleUnicodeSupport: ConsoleUnicodeSupport?) {
+    override fun attachProcessConsole(consoleOutput: ConsoleOutput, consoleUnicodeSupport: ConsoleUnicodeSupport?) {
         synchronized(lock) {
-            ConsoleConfigureAction.execute(this, consoleOutput, consoleUnicodeSupport)
+            ConsoleConfigureAction.execute(this, consoleOutput, consoleUnicodeSupport ?: ConsoleUnicodeSupport.Auto)
         }
     }
 
-    override fun attachConsole(outputStream: OutputStream?, errorStream: OutputStream?, consoleOutput: ConsoleOutput?) {
+    override fun attachConsole(outputStream: OutputStream, errorStream: OutputStream, consoleOutput: ConsoleOutput?) {
         attachConsole(outputStream, errorStream, consoleOutput, null)
     }
 
-    override fun attachConsole(outputStream: OutputStream?, errorStream: OutputStream?, consoleOutput: ConsoleOutput?, consoleMetadata: ConsoleMetaData?) {
+    override fun attachConsole(outputStream: OutputStream, errorStream: OutputStream, consoleOutput: ConsoleOutput?, consoleMetadata: ConsoleMetaData?) {
         var consoleMetadata = consoleMetadata
         synchronized(lock) {
             if (consoleMetadata == null) {
@@ -163,7 +163,7 @@ class OutputEventRenderer(private val clock: Clock, private val userInput: Globa
             }
             stdOutListener = LazyListener(object : Factory<OutputEventListener?> {
                 override fun create(): OutputEventListener {
-                    return onNonError(StyledTextOutputBackedRenderer(StreamingStyledTextOutput(StreamBackedStandardOutputListener(originalStdOut as Appendable?))))
+                    return onNonError(StyledTextOutputBackedRenderer(StreamingStyledTextOutput(StreamBackedStandardOutputListener(originalStdOut as Appendable))))
                 }
             })
             addChain(stdOutListener!!)
@@ -178,7 +178,7 @@ class OutputEventRenderer(private val clock: Clock, private val userInput: Globa
             }
             stdErrListener = LazyListener(object : Factory<OutputEventListener?> {
                 override fun create(): OutputEventListener {
-                    return onError(StyledTextOutputBackedRenderer(StreamingStyledTextOutput(StreamBackedStandardOutputListener(originalStdErr as Appendable?))))
+                    return onError(StyledTextOutputBackedRenderer(StreamingStyledTextOutput(StreamBackedStandardOutputListener(originalStdErr as Appendable))))
                 }
             })
             addChain(stdErrListener!!)
@@ -233,7 +233,7 @@ class OutputEventRenderer(private val clock: Clock, private val userInput: Globa
         addConsoleChain(consoleChain)
     }
 
-    fun addRichConsole(stdout: Console, stderr: OutputStream?, consoleMetaData: ConsoleMetaData, verbose: Boolean) {
+    fun addRichConsole(stdout: Console, stderr: OutputStream, consoleMetaData: ConsoleMetaData, verbose: Boolean) {
         val stdoutChain: OutputEventListener = StyledTextOutputBackedRenderer(stdout.buildOutputArea!!)
         val stderrChain: OutputEventListener = StyledTextOutputBackedRenderer(StreamingStyledTextOutput(StreamBackedStandardOutputListener(stderr)))
         val consoleListener: OutputEventListener = ErrorOutputDispatchingListener(stderrChain, stdoutChain)
@@ -243,7 +243,7 @@ class OutputEventRenderer(private val clock: Clock, private val userInput: Globa
         addConsoleChain(consoleChain)
     }
 
-    fun addRichConsole(stdout: OutputStream?, stderr: Console, verbose: Boolean) {
+    fun addRichConsole(stdout: OutputStream, stderr: Console, verbose: Boolean) {
         val stdoutChain: OutputEventListener = StyledTextOutputBackedRenderer(StreamingStyledTextOutput(StreamBackedStandardOutputListener(stdout)))
         val stderrChain: OutputEventListener = FlushConsoleListener(stderr, StyledTextOutputBackedRenderer(stderr.buildOutputArea!!))
         val consoleListener: OutputEventListener = ErrorOutputDispatchingListener(stderrChain, stdoutChain)
@@ -253,7 +253,7 @@ class OutputEventRenderer(private val clock: Clock, private val userInput: Globa
         addConsoleChain(consoleChain)
     }
 
-    fun addPlainConsoleWithErrorOutputOnStdout(stdout: OutputStream?) {
+    fun addPlainConsoleWithErrorOutputOnStdout(stdout: OutputStream) {
         val stdoutListener: OutputEventListener = StyledTextOutputBackedRenderer(StreamingStyledTextOutput(StreamBackedStandardOutputListener(stdout)))
         addConsoleChain(
             throttled(
@@ -262,7 +262,7 @@ class OutputEventRenderer(private val clock: Clock, private val userInput: Globa
         )
     }
 
-    fun addPlainConsole(stdout: OutputStream?, stderr: OutputStream?) {
+    fun addPlainConsole(stdout: OutputStream, stderr: OutputStream) {
         val stdoutChain: OutputEventListener = StyledTextOutputBackedRenderer(StreamingStyledTextOutput(StreamBackedStandardOutputListener(stdout)))
         val stderrChain: OutputEventListener = StyledTextOutputBackedRenderer(StreamingStyledTextOutput(StreamBackedStandardOutputListener(stderr)))
         val outputListener: OutputEventListener = ErrorOutputDispatchingListener(stderrChain, stdoutChain)
@@ -298,7 +298,7 @@ class OutputEventRenderer(private val clock: Clock, private val userInput: Globa
         addConsoleChain(consoleChain)
     }
 
-    private fun getUserInputConsoleRenderer(console: Console, consoleMetaData: ConsoleMetaData, verbose: Boolean, consoleListener: OutputEventListener?): UserInputConsoleRenderer {
+    private fun getUserInputConsoleRenderer(console: Console, consoleMetaData: ConsoleMetaData, verbose: Boolean, consoleListener: OutputEventListener): UserInputConsoleRenderer {
         return UserInputConsoleRenderer(
             BuildStatusRenderer(
                 WorkInProgressRenderer(
@@ -317,7 +317,7 @@ class OutputEventRenderer(private val clock: Clock, private val userInput: Globa
         )
     }
 
-    private fun getInputStandardOutputRenderer(outputListener: OutputEventListener?, verbose: Boolean): UserInputStandardOutputRenderer {
+    private fun getInputStandardOutputRenderer(outputListener: OutputEventListener, verbose: Boolean): UserInputStandardOutputRenderer {
         return UserInputStandardOutputRenderer(
             BuildLogLevelFilterRenderer(
                 GroupingProgressLogEventGenerator(
@@ -339,7 +339,7 @@ class OutputEventRenderer(private val clock: Clock, private val userInput: Globa
         return ConsoleFlushRenderer(listener, console)
     }
 
-    private fun addConsoleChain(consoleChain: OutputEventListener?): OutputEventRenderer {
+    private fun addConsoleChain(consoleChain: OutputEventListener): OutputEventRenderer {
         synchronized(lock) {
             this.console = consoleChain
             removeSystemOutAsLoggingDestination()
@@ -349,11 +349,11 @@ class OutputEventRenderer(private val clock: Clock, private val userInput: Globa
         return this
     }
 
-    private fun onError(listener: OutputEventListener?): OutputEventListener {
+    private fun onError(listener: OutputEventListener): OutputEventListener {
         return LogEventDispatcher(null, listener)
     }
 
-    private fun onNonError(listener: OutputEventListener?): OutputEventListener {
+    private fun onNonError(listener: OutputEventListener): OutputEventListener {
         return LogEventDispatcher(listener, null)
     }
 
@@ -363,10 +363,10 @@ class OutputEventRenderer(private val clock: Clock, private val userInput: Globa
         // Then, a pipeline can be added for each listener as required
         synchronized(lock) {
             if (userStdoutListeners == null) {
-                userStdoutListeners = ListenerBroadcast<StandardOutputListener?>(StandardOutputListener::class.java)
-                userStderrListeners = ListenerBroadcast<StandardOutputListener?>(StandardOutputListener::class.java)
-                val stdOutChain: OutputEventListener = StyledTextOutputBackedRenderer(StreamingStyledTextOutput(userStdoutListeners!!.getSource()))
-                val stdErrChain: OutputEventListener = StyledTextOutputBackedRenderer(StreamingStyledTextOutput(userStderrListeners!!.getSource()))
+                userStdoutListeners = ListenerBroadcast<StandardOutputListener>(StandardOutputListener::class.java as Class<StandardOutputListener?>)
+                userStderrListeners = ListenerBroadcast<StandardOutputListener>(StandardOutputListener::class.java as Class<StandardOutputListener?>)
+                val stdOutChain: OutputEventListener = StyledTextOutputBackedRenderer(StreamingStyledTextOutput(userStdoutListeners!!.getSource()!!))
+                val stdErrChain: OutputEventListener = StyledTextOutputBackedRenderer(StreamingStyledTextOutput(userStderrListeners!!.getSource()!!))
                 userListenerChain = BuildLogLevelFilterRenderer(
                     ProgressLogEventGenerator(object : OutputEventListener {
                         override fun onOutput(event: OutputEvent) {
@@ -374,9 +374,9 @@ class OutputEventRenderer(private val clock: Clock, private val userInput: Globa
                             if (event is LogLevelChangeEvent) {
                                 stdOutChain.onOutput(event)
                                 stdErrChain.onOutput(event)
-                            } else if (event.logLevel === LogLevel.ERROR && !userStderrListeners!!.isEmpty() && event is RenderableOutputEvent) {
+                            } else if (event.logLevel === LogLevel.ERROR && !userStderrListeners!!.isEmpty && event is RenderableOutputEvent) {
                                 stdErrChain.onOutput(event)
-                            } else if (event.logLevel !== LogLevel.ERROR && !userStdoutListeners!!.isEmpty() && event is RenderableOutputEvent) {
+                            } else if (event.logLevel !== LogLevel.ERROR && !userStdoutListeners!!.isEmpty && event is RenderableOutputEvent) {
                                 stdOutChain.onOutput(event)
                             }
                         }
@@ -392,48 +392,49 @@ class OutputEventRenderer(private val clock: Clock, private val userInput: Globa
         userListenerChain!!.onOutput(FlushOutputEvent())
     }
 
-    override fun addStandardErrorListener(listener: StandardOutputListener) {
+    override fun addStandardErrorListener(listener: StandardOutputListener?) {
         synchronized(lock) {
             assertUserListenersEnabled()
-            userStderrListeners!!.add(listener)
+            userStderrListeners!!.add(listener!!)
         }
     }
 
-    override fun addStandardOutputListener(listener: StandardOutputListener) {
+    override fun addStandardOutputListener(listener: StandardOutputListener?) {
         synchronized(lock) {
             assertUserListenersEnabled()
-            userStdoutListeners!!.add(listener)
+            userStdoutListeners!!.add(listener!!)
         }
     }
 
-    override fun addStandardOutputListener(outputStream: OutputStream?) {
+    override fun addStandardOutputListener(outputStream: OutputStream) {
         addStandardOutputListener(StreamBackedStandardOutputListener(outputStream))
     }
 
-    override fun addStandardErrorListener(outputStream: OutputStream?) {
+    override fun addStandardErrorListener(outputStream: OutputStream) {
         addStandardErrorListener(StreamBackedStandardOutputListener(outputStream))
     }
 
-    override fun removeStandardOutputListener(listener: StandardOutputListener) {
+    override fun removeStandardOutputListener(listener: StandardOutputListener?) {
         synchronized(lock) {
             assertUserListenersEnabled()
-            userStdoutListeners!!.remove(listener)
+            userStdoutListeners!!.remove(listener!!)
         }
     }
 
-    override fun removeStandardErrorListener(listener: StandardOutputListener) {
+    override fun removeStandardErrorListener(listener: StandardOutputListener?) {
         synchronized(lock) {
             assertUserListenersEnabled()
-            userStderrListeners!!.remove(listener)
+            userStderrListeners!!.remove(listener!!)
         }
     }
 
-    override fun configure(logLevel: LogLevel) {
-        onOutput(LogLevelChangeEvent(logLevel))
+    override fun configure(logLevel: LogLevel?) {
+        onOutput(LogLevelChangeEvent(logLevel ?: LogLevel.LIFECYCLE))
     }
 
     override fun onOutput(event: OutputEvent) {
-        if (event.logLevel != null && event.logLevel.compareTo(logLevel.get()) < 0 && !isProgressEvent(event)) {
+        val eventLogLevel = event.logLevel
+        if (eventLogLevel != null && eventLogLevel.compareTo(logLevel.get()!!) < 0 && !isProgressEvent(event)) {
             return
         }
         if (event is LogLevelChangeEvent) {
@@ -451,7 +452,7 @@ class OutputEventRenderer(private val clock: Clock, private val userInput: Globa
         return event is ProgressStartEvent || event is ProgressEvent || event is ProgressCompleteEvent
     }
 
-    private class SnapshotImpl(private val logLevel: LogLevel, private val console: OutputEventListener?) : LoggingSystem.Snapshot
+    private class SnapshotImpl(val logLevel: LogLevel, val console: OutputEventListener?) : LoggingSystem.Snapshot
 
     private class LazyListener(private var factory: Factory<OutputEventListener?>?) : OutputEventListener {
         private var delegate: OutputEventListener? = null

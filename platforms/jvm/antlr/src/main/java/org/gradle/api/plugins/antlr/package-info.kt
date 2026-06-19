@@ -18,19 +18,4 @@
  */
 package org.gradle.api.plugins.antlr
 
-import org.gradle.internal.UncheckedException.Companion.throwAsUncheckedException
-import org.gradle.internal.os.OperatingSystem.Companion.current
-import org.gradle.internal.os.OperatingSystem.isWindows
-import org.gradle.internal.deprecation.DeprecationLogger.deprecateAction
-import org.gradle.internal.deprecation.DeprecationMessageBuilder.withAdvice
-import org.gradle.internal.deprecation.DeprecationMessageBuilder.willBecomeAnErrorInGradle10
-import org.gradle.internal.deprecation.Documentation.AbstractBuilder.withDslReference
-import org.gradle.internal.deprecation.DeprecationMessageBuilder.WithDocumentation.nagUser
-import org.gradle.internal.file.FilePathUtil.maybeRemoveTrailingSegments
-import org.gradle.internal.file.Deleter.ensureEmptyDirectory
-import org.gradle.process.internal.JavaExecHandleBuilder.maxHeapSize
-import org.gradle.process.internal.JavaExecHandleBuilder.systemProperty
-import org.gradle.process.internal.JavaExecHandleBuilder.redirectErrorStream
-import antlr.collections.impl.IndexedVector
-import antlr.preprocessor.GrammarFile
 

@@ -35,7 +35,7 @@ class DefaultProblemReporter(
         val problemBuilder = createProblemBuilder()
         problemBuilder.id(problemId)
         spec.execute(problemBuilder)
-        report(problemBuilder.build())
+        report(problemBuilder.build()!!)
     }
 
     private fun createProblemBuilder(): DefaultProblemBuilder {
@@ -44,7 +44,7 @@ class DefaultProblemReporter(
 
     override fun reportError(problem: Problem) {
         var problem = problem
-        problem = getBuilder(problem).internalSeverity(Severity.ERROR).build()
+        problem = getBuilder(problem).internalSeverity(Severity.ERROR)!!.build()!!
         report(problem)
     }
 
@@ -54,23 +54,23 @@ class DefaultProblemReporter(
         }
     }
 
-    override fun throwing(exception: Throwable, problemId: ProblemId, spec: Action<in ProblemSpec>): RuntimeException? {
+    override fun throwing(exception: Throwable, problemId: ProblemId, spec: Action<in ProblemSpec>): RuntimeException {
         val problemBuilder = createProblemBuilder()
         problemBuilder.id(problemId)
         spec.execute(problemBuilder)
         problemBuilder.withException(exception)
-        report(addExceptionToProblem(exception, problemBuilder.build()))
+        report(addExceptionToProblem(exception, problemBuilder.build()!!))
         throw runtimeException(exception)
     }
 
-    override fun throwing(exception: Throwable, problem: Problem): RuntimeException? {
+    override fun throwing(exception: Throwable, problem: Problem): RuntimeException {
         var problem = problem
         problem = addExceptionToProblem(exception, problem)
         report(problem)
         throw runtimeException(exception)
     }
 
-    override fun throwing(exception: Throwable, problems: MutableCollection<out Problem>): RuntimeException? {
+    override fun throwing(exception: Throwable, problems: MutableCollection<out Problem>): RuntimeException {
         for (problem in problems) {
             report(addExceptionToProblem(exception, problem))
         }
@@ -78,20 +78,20 @@ class DefaultProblemReporter(
     }
 
     private fun addExceptionToProblem(exception: Throwable, problem: Problem): ProblemInternal {
-        return getBuilder(problem).internalSeverity(Severity.ERROR).withException(transform(exception)).build()
+        return getBuilder(problem).internalSeverity(Severity.ERROR)!!.withException(transform(exception))!!.build()!!
     }
 
     override fun create(problemId: ProblemId, action: Action<in ProblemSpec>): Problem {
         val defaultProblemBuilder = createProblemBuilder()
         defaultProblemBuilder.id(problemId)
         action.execute(defaultProblemBuilder)
-        return defaultProblemBuilder.build()
+        return defaultProblemBuilder.build()!!
     }
 
     override fun internalCreate(action: Action<in ProblemSpecInternal>): ProblemInternal {
         val defaultProblemBuilder = createProblemBuilder()
         action.execute(defaultProblemBuilder)
-        return defaultProblemBuilder.build()
+        return defaultProblemBuilder.build()!!
     }
 
     /**
@@ -136,7 +136,7 @@ class DefaultProblemReporter(
     }
 
     private fun getBuilder(problem: Problem): ProblemBuilderInternal {
-        return (problem as ProblemInternal).toBuilder(infrastructure)
+        return (problem as ProblemInternal).toBuilder(infrastructure)!!
     }
 
     private fun transform(failure: Throwable): Throwable {
@@ -144,7 +144,7 @@ class DefaultProblemReporter(
             return failure
         }
         try {
-            return exceptionAnalyser.transform(failure).cause!!
+            return exceptionAnalyser.transform(failure)!!.cause!!
         } catch (e: Throwable) {
             throw RuntimeException(e)
         }

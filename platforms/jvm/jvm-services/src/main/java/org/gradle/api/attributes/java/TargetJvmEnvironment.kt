@@ -34,11 +34,13 @@ interface TargetJvmEnvironment : Named {
         /**
          * A standard JVM environment (e.g. running on desktop or server machines).
          */
-        const val STANDARD_JVM: String = "standard-jvm"
+        @JvmField
+        val STANDARD_JVM: String = "standard-jvm"
 
         /**
          * An Android environment.
          */
-        const val ANDROID: String = "android"
+        @JvmField
+        val ANDROID: String = "android"
     }
 }

@@ -24,14 +24,12 @@ interface AwsCredentials : Credentials {
     /**
      * Sets the access key to use to authenticate with AWS.
      */
-    @JvmField
     @get:ToBeReplacedByLazyProperty
     var accessKey: String?
 
     /**
      * Sets the secret key to use to authenticate with AWS.
      */
-    @JvmField
     @get:ToBeReplacedByLazyProperty
     var secretKey: String?
 
@@ -40,7 +38,6 @@ interface AwsCredentials : Credentials {
      *
      * @since 3.3
      */
-    @JvmField
     @get:ToBeReplacedByLazyProperty
     var sessionToken: String?
 }

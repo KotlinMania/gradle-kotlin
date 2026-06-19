@@ -41,8 +41,7 @@ interface ProblemDefinition {
      *
      * @since 8.13
      */
-    @JvmField
-    val id: ProblemId?
+    fun getId(): ProblemId?
 
     /**
      * Problem severity.
@@ -53,14 +52,12 @@ interface ProblemDefinition {
      *
      * @since 8.13
      */
-    @JvmField
-    val severity: Severity?
+    fun getSeverity(): Severity?
 
     /**
      * A link to the documentation for this problem.
      *
      * @since 8.13
      */
-    @JvmField
-    val documentationLink: DocLink?
+    fun getDocumentationLink(): DocLink?
 }

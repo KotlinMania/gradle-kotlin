@@ -23,11 +23,11 @@ import java.io.InputStream
 import java.io.OutputStream
 
 class KryoBackedMessageSerializer : MessageSerializer {
-    override fun newDecoder(inputStream: InputStream?): Decoder {
+    override fun newDecoder(inputStream: InputStream): Decoder {
         return KryoBackedDecoder(inputStream)
     }
 
-    override fun newEncoder(outputStream: OutputStream?): FlushableEncoder {
+    override fun newEncoder(outputStream: OutputStream): FlushableEncoder {
         return KryoBackedEncoder(outputStream)
     }
 }

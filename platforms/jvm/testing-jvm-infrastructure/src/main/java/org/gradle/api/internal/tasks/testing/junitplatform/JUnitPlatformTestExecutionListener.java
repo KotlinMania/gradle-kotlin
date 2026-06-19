@@ -329,7 +329,7 @@ public class JUnitPlatformTestExecutionListener implements TestExecutionListener
     }
 
     private TestStartEvent startEvent(@Nullable Object parentId) {
-        return new TestStartEvent(clock.currentTime, parentId);
+        return new TestStartEvent(clock.getCurrentTime(), parentId);
     }
 
     private TestCompleteEvent completeEvent() {
@@ -337,7 +337,7 @@ public class JUnitPlatformTestExecutionListener implements TestExecutionListener
     }
 
     private TestCompleteEvent completeEvent(@Nullable ResultType resultType) {
-        return new TestCompleteEvent(clock.currentTime, resultType);
+        return new TestCompleteEvent(clock.getCurrentTime(), resultType);
     }
 
     private boolean wasStarted(TestIdentifier testIdentifier) {
@@ -486,7 +486,7 @@ public class JUnitPlatformTestExecutionListener implements TestExecutionListener
         // For tests in default method of interface,
         // we might not be able to get the implementation class directly.
         // In this case, we need to retrieve test plan to get the real implementation class.
-        return <TestIdentifier>findInAncestors(
+        return this.<TestIdentifier>findInAncestors(
             testIdentifier,
             identifier -> isTestClassIdentifier(identifier) ? identifier : null
         );
@@ -500,7 +500,7 @@ public class JUnitPlatformTestExecutionListener implements TestExecutionListener
             return descriptorsByUniqueId.get(classIdentifier.getUniqueId());
         }
         // Otherwise just return the first existing ancestor descriptor
-        return <TestDescriptorInternal>findInAncestors(
+        return this.<TestDescriptorInternal>findInAncestors(
             testIdentifier,
             identifier -> descriptorsByUniqueId.get(identifier.getUniqueId())
         );

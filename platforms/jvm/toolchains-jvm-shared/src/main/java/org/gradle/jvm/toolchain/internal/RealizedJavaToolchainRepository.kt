@@ -35,8 +35,8 @@ class RealizedJavaToolchainRepository @Inject constructor(resolverProvider: Prov
     val resolver: JavaToolchainResolver
         get() = resolverProvider.get()
 
-    fun getAuthentications(uri: URI): MutableCollection<Authentication?> {
-        val configuredAuthentication = repository.getConfiguredAuthentication()
+    fun getAuthentications(uri: URI): MutableCollection<Authentication> {
+        val configuredAuthentication = repository.configuredAuthentication
 
         for (authentication in configuredAuthentication) {
             val authenticationInternal = authentication as AuthenticationInternal
@@ -48,5 +48,5 @@ class RealizedJavaToolchainRepository @Inject constructor(resolverProvider: Prov
     }
 
     val repositoryName: String
-        get() = repository.getName()
+        get() = repository.name!!
 }

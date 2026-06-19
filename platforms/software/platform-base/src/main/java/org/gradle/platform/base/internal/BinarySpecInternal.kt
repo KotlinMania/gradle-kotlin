@@ -15,13 +15,14 @@
  */
 package org.gradle.platform.base.internal
 
+import org.gradle.api.artifacts.component.LibraryBinaryIdentifier
 import org.gradle.platform.base.BinarySpec
+import org.gradle.platform.base.ComponentSpec
 
 interface BinarySpecInternal : BinarySpec {
     /**
      * The unique identifier of this binary.
      */
-    @JvmField
     val id: LibraryBinaryIdentifier?
 
     val component: ComponentSpec?
@@ -29,7 +30,6 @@ interface BinarySpecInternal : BinarySpec {
     /**
      * Returns a name for this binary that is unique for all binaries in the current project.
      */
-    @JvmField
     val projectScopedName: String?
 
     val publicType: Class<out BinarySpec?>?
@@ -37,11 +37,7 @@ interface BinarySpecInternal : BinarySpec {
     fun setBuildable(buildable: Boolean)
 
     val buildAbility: BinaryBuildAbility?
-
-    @JvmField
     val isLegacyBinary: Boolean
-
-    @JvmField
     var namingScheme: BinaryNamingScheme?
 
     fun hasCodependentSources(): Boolean

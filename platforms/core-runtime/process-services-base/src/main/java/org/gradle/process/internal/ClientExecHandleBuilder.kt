@@ -16,6 +16,7 @@
 package org.gradle.process.internal
 
 import org.gradle.process.internal.streams.StreamsHandler
+import org.gradle.process.CommandLineArgumentProvider
 import org.jspecify.annotations.NullMarked
 import java.io.File
 import java.io.InputStream
@@ -46,7 +47,9 @@ interface ClientExecHandleBuilder : BaseExecHandleBuilder {
 
     fun setTimeout(timeoutMillis: Int): ClientExecHandleBuilder?
 
-    var environment: MutableMap<String, Any>?
+    fun getEnvironment(): MutableMap<String, Any>
+
+    fun setEnvironment(environmentVariables: MutableMap<String, *>)
 
     fun environment(key: String, value: Any): ClientExecHandleBuilder?
 
@@ -54,33 +57,35 @@ interface ClientExecHandleBuilder : BaseExecHandleBuilder {
 
     fun args(args: Iterable<*>): ClientExecHandleBuilder?
 
-    val args: MutableList<String>?
+    fun getArgs(): MutableList<String>
 
     fun setArgs(args: Iterable<*>): ClientExecHandleBuilder?
 
     fun setExecutable(executable: String): ClientExecHandleBuilder?
 
+    fun setExecutable(executable: Any)
+
     var executable: String?
 
-    val workingDir: File?
+    fun getWorkingDir(): File
 
     fun setWorkingDir(dir: Any?): ClientExecHandleBuilder?
 
     fun setWorkingDir(dir: File?): ClientExecHandleBuilder?
 
-    val errorOutput: OutputStream?
+    fun getErrorOutput(): OutputStream
 
-    val commandLine: MutableList<String>?
+    fun getCommandLine(): MutableList<String>
 
-    val standardOutput: OutputStream?
+    fun getStandardOutput(): OutputStream
 
-    val allArguments: MutableList<String>?
+    fun getAllArguments(): MutableList<String>
 
-    val argumentProviders: MutableList<CommandLineArgumentProvider>?
+    fun getArgumentProviders(): MutableList<CommandLineArgumentProvider>
 
     fun environment(environmentVariables: MutableMap<String, *>)
 
-    val standardInput: InputStream?
+    fun getStandardInput(): InputStream
 
-    fun buildWithEffectiveArguments(effectiveArguments: MutableList<String>): ExecHandle?
+    fun buildWithEffectiveArguments(effectiveArguments: MutableList<String>): ExecHandle
 }

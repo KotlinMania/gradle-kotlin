@@ -20,57 +20,57 @@ import java.io.DataOutputStream
 import java.io.IOException
 import java.io.OutputStream
 
-class OutputStreamBackedEncoder(outputStream: OutputStream?) : AbstractEncoder(), Closeable, FlushableEncoder {
-    private val outputStream: DataOutputStream
+class OutputStreamBackedEncoder(outputStream: OutputStream) : AbstractEncoder(), Closeable, FlushableEncoder {
+    private val dataOutputStream: DataOutputStream
 
     init {
-        this.outputStream = DataOutputStream(outputStream)
+        this.dataOutputStream = DataOutputStream(outputStream)
     }
 
     @Throws(IOException::class)
     override fun writeLong(value: Long) {
-        outputStream.writeLong(value)
+        dataOutputStream.writeLong(value)
     }
 
     @Throws(IOException::class)
     override fun writeInt(value: Int) {
-        outputStream.writeInt(value)
+        dataOutputStream.writeInt(value)
     }
 
     @Throws(IOException::class)
     override fun writeShort(value: Short) {
-        outputStream.writeShort(value.toInt())
+        dataOutputStream.writeShort(value.toInt())
     }
 
     @Throws(IOException::class)
     override fun writeFloat(value: Float) {
-        outputStream.writeFloat(value)
+        dataOutputStream.writeFloat(value)
     }
 
     @Throws(IOException::class)
     override fun writeDouble(value: Double) {
-        outputStream.writeDouble(value)
+        dataOutputStream.writeDouble(value)
     }
 
     @Throws(IOException::class)
     override fun writeBoolean(value: Boolean) {
-        outputStream.writeBoolean(value)
+        dataOutputStream.writeBoolean(value)
     }
 
     @Throws(IOException::class)
-    override fun writeString(value: CharSequence) {
+    override fun writeString(value: CharSequence?) {
         requireNotNull(value) { "Cannot encode a null string." }
-        outputStream.writeUTF(value.toString())
+        dataOutputStream.writeUTF(value.toString())
     }
 
     @Throws(IOException::class)
     override fun writeByte(value: Byte) {
-        outputStream.writeByte(value.toInt())
+        dataOutputStream.writeByte(value.toInt())
     }
 
     @Throws(IOException::class)
-    override fun writeBytes(bytes: ByteArray?, offset: Int, count: Int) {
-        outputStream.write(bytes, offset, count)
+    override fun writeBytes(bytes: ByteArray, offset: Int, count: Int) {
+        dataOutputStream.write(bytes, offset, count)
     }
 
     @Throws(IOException::class)
@@ -79,6 +79,6 @@ class OutputStreamBackedEncoder(outputStream: OutputStream?) : AbstractEncoder()
 
     @Throws(IOException::class)
     override fun close() {
-        outputStream.close()
+        dataOutputStream.close()
     }
 }

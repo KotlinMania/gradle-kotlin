@@ -36,25 +36,25 @@ public class ToolchainReportRenderer extends TextReportRenderer {
     public void printDetectedToolchain(JvmToolchainMetadata toolchain) {
         StyledTextOutput output = getTextOutput();
         JvmInstallationMetadata metadata = toolchain.metadata;
-        output.withStyle(Identifier).println(" + " + metadata.displayName);
+        output.withStyle(Identifier).println(" + " + metadata.getDisplayName());
         printMetadata(DETECTED_TOOLCHAIN_INDENT, metadata);
-        printAttribute(DETECTED_TOOLCHAIN_INDENT, "Detected by", toolchain.location.source);
+        printAttribute(DETECTED_TOOLCHAIN_INDENT, "Detected by", toolchain.location.getSource());
         output.println();
     }
 
     public void printToolchainMetadata(JvmInstallationMetadata metadata) {
         StyledTextOutput output = getTextOutput();
-        output.withStyle(Identifier).println(metadata.displayName);
+        output.withStyle(Identifier).println(metadata.getDisplayName());
         printMetadata(TOOLCHAIN_METADATA_INDENT, metadata);
         output.println();
     }
 
     private void printMetadata(String indent, JvmInstallationMetadata metadata) {
-        printAttribute(indent, "Location", metadata.javaHome.toString());
-        printAttribute(indent, "Language Version", metadata.languageVersion.getMajorVersion());
-        printAttribute(indent, "Vendor", metadata.vendor.displayName);
-        printAttribute(indent, "Architecture", metadata.architecture);
-        printAttribute(indent, "Is JDK", String.valueOf(metadata.capabilities.containsAll(JavaInstallationCapability.JDK_CAPABILITIES)));
+        printAttribute(indent, "Location", metadata.getJavaHome().toString());
+        printAttribute(indent, "Language Version", metadata.getLanguageVersion().getMajorVersion());
+        printAttribute(indent, "Vendor", metadata.getVendor().getDisplayName());
+        printAttribute(indent, "Architecture", metadata.getArchitecture());
+        printAttribute(indent, "Is JDK", String.valueOf(metadata.getCapabilities().containsAll(JavaInstallationCapability.JDK_CAPABILITIES)));
     }
 
     private void printAttribute(String indent, String key, String value) {
@@ -69,7 +69,7 @@ public class ToolchainReportRenderer extends TextReportRenderer {
             output.withStyle(Identifier).println(" + Invalid toolchains");
             for (JvmToolchainMetadata toolchain : invalidToolchains) {
                 JvmInstallationMetadata metadata = toolchain.metadata;
-                output.withStyle(Identifier).println("     + " + metadata.javaHome);
+                output.withStyle(Identifier).println("     + " + metadata.getJavaHome());
                 printInvalidToolchainErrorLines(toolchain);
             }
             output.println();
@@ -78,9 +78,9 @@ public class ToolchainReportRenderer extends TextReportRenderer {
 
     private void printInvalidToolchainErrorLines(JvmToolchainMetadata invalidToolchain) {
         getTextOutput().withStyle(Normal).format("       | %s", Strings.padEnd("Error:", 20, ' '));
-        getTextOutput().withStyle(Description).println(invalidToolchain.metadata.errorMessage);
+        getTextOutput().withStyle(Description).println(invalidToolchain.metadata.getErrorMessage());
 
-        final Throwable errorCause = invalidToolchain.metadata.errorCause;
+        final Throwable errorCause = invalidToolchain.metadata.getErrorCause();
         Throwable cause = errorCause != null ? errorCause.getCause() : null;
         int reportedCauseLines = 0;
         while (cause != null) {

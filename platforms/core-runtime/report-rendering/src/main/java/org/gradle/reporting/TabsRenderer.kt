@@ -18,15 +18,15 @@ package org.gradle.reporting
 import org.gradle.internal.html.SimpleHtmlWriter
 import java.io.IOException
 
-class TabsRenderer<T> : ReportRenderer<T?, SimpleHtmlWriter?>() {
+class TabsRenderer<T> : ReportRenderer<T, SimpleHtmlWriter>() {
     private val tabs: MutableList<TabDefinition> = ArrayList<TabDefinition>()
 
-    fun add(title: String?, contentRenderer: ReportRenderer<T?, SimpleHtmlWriter?>) {
-        tabs.add(TabsRenderer.TabDefinition(title, "", contentRenderer))
+    fun add(title: String?, contentRenderer: ReportRenderer<T, SimpleHtmlWriter>) {
+        tabs.add(TabDefinition(title, "", contentRenderer))
     }
 
-    fun add(title: String?, tabClass: String?, contentRenderer: ReportRenderer<T?, SimpleHtmlWriter?>) {
-        tabs.add(TabsRenderer.TabDefinition(title, tabClass, contentRenderer))
+    fun add(title: String?, tabClass: String?, contentRenderer: ReportRenderer<T, SimpleHtmlWriter>) {
+        tabs.add(TabDefinition(title, tabClass, contentRenderer))
     }
 
     fun clear() {
@@ -34,24 +34,25 @@ class TabsRenderer<T> : ReportRenderer<T?, SimpleHtmlWriter?>() {
     }
 
     @Throws(IOException::class)
-    override fun render(model: T?, htmlWriterWriter: SimpleHtmlWriter) {
-        htmlWriterWriter.startElement("div").attribute("class", "tab-container")
-        htmlWriterWriter.startElement("ul").attribute("class", "tabLinks")
+    override fun render(model: T?, htmlWriterWriter: SimpleHtmlWriter?) {
+        val htmlWriter = htmlWriterWriter!!
+        htmlWriter.startElement("div").attribute("class", "tab-container")
+        htmlWriter.startElement("ul").attribute("class", "tabLinks")
         for (tab in this.tabs) {
-            htmlWriterWriter.startElement("li")
-            htmlWriterWriter.startElement("a").attribute("class", tab.tabClass).attribute("href", "#").characters(tab.title).endElement()
-            htmlWriterWriter.endElement()
+            htmlWriter.startElement("li")
+            htmlWriter.startElement("a").attribute("class", tab.tabClass).attribute("href", "#").characters(tab.title).endElement()
+            htmlWriter.endElement()
         }
-        htmlWriterWriter.endElement()
+        htmlWriter.endElement()
 
         for (tab in this.tabs) {
-            htmlWriterWriter.startElement("div").attribute("class", "tab")
-            htmlWriterWriter.startElement("h2").characters(tab.title).endElement()
-            tab.renderer.render(model, htmlWriterWriter)
-            htmlWriterWriter.endElement()
+            htmlWriter.startElement("div").attribute("class", "tab")
+            htmlWriter.startElement("h2").characters(tab.title).endElement()
+            tab.renderer.render(model, htmlWriter)
+            htmlWriter.endElement()
         }
-        htmlWriterWriter.endElement()
+        htmlWriter.endElement()
     }
 
-    private inner class TabDefinition(val title: String?, private val tabClass: String?, val renderer: ReportRenderer<T?, SimpleHtmlWriter?>)
+    private inner class TabDefinition(val title: String?, val tabClass: String?, val renderer: ReportRenderer<T, SimpleHtmlWriter>)
 }

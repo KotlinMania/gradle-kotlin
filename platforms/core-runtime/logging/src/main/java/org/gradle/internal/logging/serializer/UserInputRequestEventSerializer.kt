@@ -20,13 +20,13 @@ import org.gradle.internal.serialize.Decoder
 import org.gradle.internal.serialize.Encoder
 import org.gradle.internal.serialize.Serializer
 
-class UserInputRequestEventSerializer : Serializer<UserInputRequestEvent?> {
+class UserInputRequestEventSerializer : Serializer<UserInputRequestEvent> {
     @Throws(Exception::class)
-    override fun write(encoder: Encoder?, event: UserInputRequestEvent?) {
+    override fun write(encoder: Encoder, event: UserInputRequestEvent) {
     }
 
     @Throws(Exception::class)
-    override fun read(decoder: Decoder?): UserInputRequestEvent {
+    override fun read(decoder: Decoder): UserInputRequestEvent {
         return UserInputRequestEvent()
     }
 }

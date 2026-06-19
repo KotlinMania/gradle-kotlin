@@ -21,18 +21,16 @@ import java.util.stream.Collectors
 import javax.inject.Inject
 
 class OsXInstallationSupplier @Inject constructor(private val os: OperatingSystem, private val javaHomeCommand: OsXJavaHomeCommand) : InstallationSupplier {
-    override fun getSourceName(): String {
-        return "MacOS java_home"
-    }
+    override val sourceName: String = "MacOS java_home"
 
-    override fun get(): MutableSet<InstallationLocation?> {
+    override fun get(): MutableSet<InstallationLocation> {
         if (os.isMacOsX) {
-            return javaHomeCommand.findJavaHomes().stream().map<InstallationLocation?> { javaHome: File? -> this.asInstallation(javaHome) }.collect(Collectors.toSet())
+            return (javaHomeCommand.findJavaHomes() ?: emptySet()).filterNotNull().stream().map<InstallationLocation> { javaHome: File -> this.asInstallation(javaHome) }.collect(Collectors.toSet())
         }
-        return mutableSetOf<InstallationLocation?>()
+        return mutableSetOf()
     }
 
-    private fun asInstallation(javaHome: File?): InstallationLocation {
-        return InstallationLocation.Companion.autoDetected(javaHome, getSourceName())
+    private fun asInstallation(javaHome: File): InstallationLocation {
+        return InstallationLocation.Companion.autoDetected(javaHome, sourceName)
     }
 }

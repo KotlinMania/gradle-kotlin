@@ -21,7 +21,6 @@ import org.gradle.tooling.internal.consumer.Distribution
 import org.gradle.tooling.internal.consumer.versioning.ModelMapping
 import org.gradle.tooling.internal.protocol.InternalUnsupportedModelException
 import org.gradle.tooling.model.UnsupportedMethodException
-import java.lang.String
 import kotlin.text.format
 
 object Exceptions {

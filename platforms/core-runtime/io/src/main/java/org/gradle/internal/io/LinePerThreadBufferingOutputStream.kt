@@ -32,7 +32,7 @@ class LinePerThreadBufferingOutputStream(private val handler: TextStream) : Prin
         return printStream
     }
 
-    private fun maybeGetStream(): PrintStream {
+    private fun maybeGetStream(): PrintStream? {
         return stream.get()
     }
 

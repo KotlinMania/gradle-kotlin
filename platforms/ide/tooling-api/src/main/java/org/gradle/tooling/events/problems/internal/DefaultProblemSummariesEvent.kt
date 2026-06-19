@@ -17,12 +17,12 @@ package org.gradle.tooling.events.problems.internal
 
 import org.gradle.tooling.events.OperationDescriptor
 import org.gradle.tooling.events.internal.BaseProgressEvent
+import org.gradle.tooling.events.problems.Problem
 import org.gradle.tooling.events.problems.ProblemSummariesEvent
 import org.gradle.tooling.events.problems.ProblemSummary
 
-class DefaultProblemSummariesEvent(eventTime: Long, descriptor: OperationDescriptor, private val problemsSummaries: MutableList<ProblemSummary>) :
-    BaseProgressEvent(eventTime, if (descriptor == null) "<null>" else descriptor.displayName, descriptor), ProblemSummariesEvent {
-    override fun getProblemSummaries(): MutableList<ProblemSummary> {
-        return problemsSummaries
-    }
+class DefaultProblemSummariesEvent(eventTime: Long, descriptor: OperationDescriptor, private val problemsSummaries: MutableList<ProblemSummary?>?) :
+    BaseProgressEvent<OperationDescriptor?>(eventTime, if (descriptor == null) "<null>" else descriptor.displayName, descriptor), ProblemSummariesEvent {
+    override val problemSummaries: MutableList<ProblemSummary?>?
+        get() = problemsSummaries
 }

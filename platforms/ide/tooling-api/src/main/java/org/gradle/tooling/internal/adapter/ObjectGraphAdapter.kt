@@ -19,7 +19,7 @@ package org.gradle.tooling.internal.adapter
  * Converts or adapts objects to views over the objects.
  */
 interface ObjectGraphAdapter {
-    fun <T> adapt(targetType: Class<T?>, sourceObject: Any): T?
+    fun <T> adapt(targetType: Class<T?>, sourceObject: Any?): T?
 
     fun <T> builder(viewType: Class<T?>): ViewBuilder<T?>?
 }

@@ -30,9 +30,9 @@ import org.gradle.tooling.model.internal.Exceptions
 class DefaultTaskOperationDescriptor private constructor(
     descriptor: InternalTaskDescriptor,
     parent: OperationDescriptor?,
-    private val taskPath: String?,
-    private val dependencies: Supplier<MutableSet<OperationDescriptor?>?>,
-    private val originPlugin: Supplier<PluginIdentifier?>
+    override val taskPath: String?,
+    private val dependenciesSupplier: Supplier<MutableSet<OperationDescriptor?>?>,
+    private val originPluginSupplier: Supplier<PluginIdentifier?>
 ) : DefaultOperationDescriptor(descriptor, parent), TaskOperationDescriptor {
     constructor(descriptor: InternalTaskDescriptor, parent: OperationDescriptor?, taskPath: String?) : this(descriptor, parent, taskPath, unsupportedDependencies(), unsupportedOriginPlugin())
 
@@ -44,21 +44,17 @@ class DefaultTaskOperationDescriptor private constructor(
         originPlugin: PluginIdentifier?
     ) : this(descriptor, parent, taskPath, Suppliers.ofInstance<MutableSet<OperationDescriptor?>?>(dependencies), Suppliers.ofInstance<PluginIdentifier?>(originPlugin))
 
-    override fun getTaskPath(): String? {
-        return taskPath
-    }
 
-    override fun getDependencies(): MutableSet<out OperationDescriptor?>? {
-        return dependencies.get()
-    }
 
-    override fun getOriginPlugin(): PluginIdentifier? {
-        return originPlugin.get()
-    }
+    override val dependencies: MutableSet<out OperationDescriptor?>?
+        get() = dependenciesSupplier.get()
+
+    override val originPlugin: PluginIdentifier?
+        get() = originPluginSupplier.get()
 
     companion object {
-        private val DEPENDENCIES_METHOD = TaskOperationDescriptor::class.java.getSimpleName() + ".getDependencies()"
-        private val ORIGIN_PLUGIN_METHOD = TaskOperationDescriptor::class.java.getSimpleName() + ".getOriginPlugin()"
+        private val DEPENDENCIES_METHOD = TaskOperationDescriptor::class.java.getSimpleName() + ".dependencies"
+        private val ORIGIN_PLUGIN_METHOD = TaskOperationDescriptor::class.java.getSimpleName() + ".originPlugin"
 
         private fun unsupportedOriginPlugin(): Supplier<PluginIdentifier?> {
             return unsupportedMethodExceptionThrowingSupplier<PluginIdentifier?>(ORIGIN_PLUGIN_METHOD)

@@ -15,22 +15,4 @@
  */
 package org.gradle.tooling.internal.consumer.parameters
 
-import org.gradle.internal.Factory.create
-import org.gradle.tooling.internal.consumer.connection.AbstractConsumerConnection.configure
-import org.gradle.tooling.internal.consumer.connection.AbstractConsumerConnection.versionDetails
-import org.gradle.internal.logging.progress.ProgressLoggerFactory.newOperation
-import org.gradle.internal.logging.progress.ProgressLogger.setDescription
-import org.gradle.internal.logging.progress.ProgressLogger.started
-import org.gradle.internal.logging.progress.ProgressLogger.completed
-import org.gradle.internal.event.ListenerBroadcast.addAll
-import org.gradle.internal.event.ListenerBroadcast.getSource
-import org.gradle.tooling.internal.adapter.ProtocolToModelAdapter.unpack
-import org.gradle.internal.event.ListenerBroadcast.isEmpty
-import org.gradle.tooling.events.ProgressListener.statusChanged
-import org.gradle.internal.Cast.uncheckedNonnullCast
-import org.gradle.tooling.events.test.internal.source.DefaultNoSource.instance
-import org.gradle.tooling.events.test.internal.source.DefaultOtherSource.instance
-import org.gradle.tooling.events.test.Destination.Companion.fromCode
-import org.gradle.tooling.events.problems.internal.DefaultSeverity.Companion.from
-import org.gradle.tooling.events.task.internal.TaskExecutionDetails.Companion.unsupported
 

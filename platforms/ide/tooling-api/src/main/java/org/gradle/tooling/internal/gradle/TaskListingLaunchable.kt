@@ -15,6 +15,8 @@
  */
 package org.gradle.tooling.internal.gradle
 
+import java.util.SortedSet
+
 interface TaskListingLaunchable {
     val taskNames: SortedSet<String?>?
 }

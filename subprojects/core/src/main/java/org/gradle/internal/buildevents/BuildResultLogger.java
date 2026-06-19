@@ -72,7 +72,7 @@ public class BuildResultLogger {
             textOutput.withStyle(FailureHeader).text(action + " FAILED");
         }
 
-        long buildDurationMillis = clock.currentTime - buildStartedTime.getStartTime();
+        long buildDurationMillis = clock.getCurrentTime() - buildStartedTime.getStartTime();
         textOutput.formatln(" in %s", durationFormatter.format(buildDurationMillis));
     }
 }

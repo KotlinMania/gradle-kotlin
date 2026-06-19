@@ -14,8 +14,3 @@
  * limitations under the License.
  */
 package org.gradle.internal.event
-
-import org.gradle.internal.dispatch.Dispatch.dispatch
-import org.gradle.internal.dispatch.MethodInvocation.equals
-import org.gradle.internal.dispatch.MethodInvocation.methodName
-

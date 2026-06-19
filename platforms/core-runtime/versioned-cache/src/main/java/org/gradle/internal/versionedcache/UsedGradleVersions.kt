@@ -17,12 +17,13 @@ package org.gradle.internal.versionedcache
 
 import org.gradle.internal.service.scopes.Scope
 import org.gradle.internal.service.scopes.ServiceScope
+import org.gradle.util.GradleVersion
+import java.util.SortedSet
 
 @ServiceScope(Scope.UserHome::class)
 interface UsedGradleVersions {
     /**
      * Returns the set of Gradle versions known to be used.
      */
-    @JvmField
-    val usedGradleVersions: SortedSet<GradleVersion>?
+    val usedGradleVersions: SortedSet<GradleVersion>
 }

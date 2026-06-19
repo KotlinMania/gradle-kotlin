@@ -31,7 +31,7 @@ class SpecificExecutableJavaToolchain(metadata: JvmInstallationMetadata, fileFac
         this.javaExecutable = fileFactory.file(javaExecutableFile)
     }
 
-    override fun findExecutable(toolName: String): RegularFile {
+    override fun findExecutable(toolName: String?): RegularFile? {
         if (toolName == "java") {
             return javaExecutable
         } else {

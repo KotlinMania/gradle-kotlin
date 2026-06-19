@@ -18,8 +18,4 @@
  */
 package org.gradle.plugins.ear.descriptor
 
-import org.gradle.internal.service.ServiceRegistry.get
-import org.gradle.internal.UncheckedException.Companion.throwAsUncheckedException
-import org.gradle.internal.Cast.uncheckedCast
-import org.gradle.internal.deprecation.DeprecationLogger.whileDisabled
 

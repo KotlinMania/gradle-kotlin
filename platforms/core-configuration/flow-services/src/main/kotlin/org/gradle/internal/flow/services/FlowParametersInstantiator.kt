@@ -82,9 +82,9 @@ class FlowParametersInstantiator(
                             override fun add(dependency: Any) {
                                 errors.add(
                                     problemReporterInternal.internalCreate {
-                                        id("invalid-dependency", "Property cannot carry dependency", GradleCoreProblemGroup.validation().property())
+                                        id("invalid-dependency", "Property cannot carry dependency", GradleCoreProblemGroup.validation().property()!!)
                                         contextualLabel("Property '$propertyName' cannot carry a dependency on $dependency as these are not yet supported.")
-                                    }
+                                    }!!
                                 )
                             }
                         }
@@ -101,15 +101,16 @@ class FlowParametersInstantiator(
 
     private
     val problemReporterInternal: ProblemReporterInternal
-        get() = problemsService.internalReporter
+        get() = problemsService.getInternalReporter()!!
 
     private
     val instantiator by lazy {
         instantiatorFactory.decorateScheme().withServices(services).instantiator()
     }
 
+    @Suppress("UNCHECKED_CAST")
     private
-    val problemsService = services.get(ProblemsInternal::class.java)
+    val problemsService: ProblemsInternal = services.get(ProblemsInternal::class.java as Class<ProblemsInternal?>)!!
 
     private
     val inspection by lazy {

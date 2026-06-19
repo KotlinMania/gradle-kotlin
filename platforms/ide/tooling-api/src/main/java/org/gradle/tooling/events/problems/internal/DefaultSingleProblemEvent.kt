@@ -25,9 +25,7 @@ import org.jspecify.annotations.NullMarked
 class DefaultSingleProblemEvent(
     eventTime: Long,
     problemDescriptor: OperationDescriptor?,
-    private val problem: Problem
-) : BaseProgressEvent(eventTime, if (problemDescriptor == null) "<null>" else problemDescriptor.displayName, problemDescriptor), SingleProblemEvent {
-    override fun getProblem(): Problem {
-        return problem
-    }
+    override val problem: Problem
+) : BaseProgressEvent<OperationDescriptor?>(eventTime, if (problemDescriptor == null) "<null>" else problemDescriptor.displayName, problemDescriptor), SingleProblemEvent {
+
 }

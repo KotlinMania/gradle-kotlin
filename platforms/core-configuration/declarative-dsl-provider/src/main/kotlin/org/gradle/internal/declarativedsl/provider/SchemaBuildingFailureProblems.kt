@@ -16,10 +16,10 @@
 
 package org.gradle.internal.declarativedsl.provider
 
+import org.gradle.api.Action
 import org.gradle.api.problems.Problem
 import org.gradle.api.problems.ProblemGroup
 import org.gradle.api.problems.ProblemId
-import org.gradle.api.problems.ProblemId.create
 import org.gradle.api.problems.ProblemSpec
 import org.gradle.api.problems.internal.GradleCoreProblemGroup.scripts
 import org.gradle.api.problems.internal.ProblemsInternal
@@ -40,40 +40,40 @@ internal fun schemaBuildingFailuresAsProblems(
     stageFailure: NotEvaluated.StageFailure.SchemaBuildingFailures,
     problems: ProblemsInternal
 ): List<Problem> = stageFailure.failures.map { failure ->
-    problems.reporter.create(schemaBuildingFailureProblemId(failure)) { problem ->
+    problems.getReporter()!!.create(schemaBuildingFailureProblemId(failure), Action<ProblemSpec> { problem ->
         problem.details(SchemaFailureMessageFormatter.failureMessage(failure))
         problem.solutionFor(failure)
-    }
+    })!!
 }
 
 private object ProblemIds {
     val group = ProblemGroup.create("dcl-schema", "DCL Schema issues", scripts())
 
-    val SCHEMA_BUILDING_FAILURE = create("dcl-schema-building-failure", "Schema building failure", group)
-    val SCHEMA_DECLARATION_BOTH_VISIBLE_AND_HIDDEN = create("declaration-visible-and-hidden", "Declaration is both visible and hidden", group)
-    val SCHEMA_HIDDEN_DECLARATION_USED_IN_DEFINITION = create("declaration-hidden-type-used-in-definition", "A hidden declaration is used in definition", group)
+    val SCHEMA_BUILDING_FAILURE = ProblemId.create("dcl-schema-building-failure", "Schema building failure", group)
+    val SCHEMA_DECLARATION_BOTH_VISIBLE_AND_HIDDEN = ProblemId.create("declaration-visible-and-hidden", "Declaration is both visible and hidden", group)
+    val SCHEMA_HIDDEN_DECLARATION_USED_IN_DEFINITION = ProblemId.create("declaration-hidden-type-used-in-definition", "A hidden declaration is used in definition", group)
     val SCHEMA_ILLEGAL_USAGE_OF_TYPE_PARAMETER_BOUND_BY_CLASS =
-        create("illegal-usage-of-type-parameter-bound-by-class", "Illegal usage of type parameter bound by class", group)
+        ProblemId.create("illegal-usage-of-type-parameter-bound-by-class", "Illegal usage of type parameter bound by class", group)
     val SCHEMA_ILLEGAL_VARIANCE_IN_PARAMETERIZED_TYPE_USAGE =
-        create("illegal-variance-in-parameterized-type-usage", "Illegal variance in parameterized type usage", group)
-    val SCHEMA_NON_CLASSIFIABLE_TYPE = create("non-classifiable-type", "Non-classifiable type", group)
-    val SCHEMA_UNIT_ADDING_FUNCTION_WITH_LAMBDA = create("unit-adding-function-with-lambda", "Unit-adding function with lambda", group)
-    val SCHEMA_UNRECOGNIZED_MEMBER = create("unrecognized-member", "Unrecognized member", group)
-    val SCHEMA_UNSUPPORTED_GENERIC_CONTAINER_TYPE = create("unsupported-generic-container-type", "Unsupported generic container type", group)
-    val SCHEMA_UNSUPPORTED_MAP_FACTORY = create("unsupported-map-factory", "Unsupported map factory", group)
-    val SCHEMA_UNSUPPORTED_NULLABLE_READ_ONLY_PROPERTY = create("unsupported-nullable-read-only-property", "Unsupported nullable read-only property", group)
-    val SCHEMA_UNSUPPORTED_NULLABLE_TYPE = create("unsupported-nullable-type", "Unsupported nullable type", group)
-    val SCHEMA_UNSUPPORTED_PAIR_FACTORY = create("unsupported-pair-factory", "Unsupported pair factory", group)
+        ProblemId.create("illegal-variance-in-parameterized-type-usage", "Illegal variance in parameterized type usage", group)
+    val SCHEMA_NON_CLASSIFIABLE_TYPE = ProblemId.create("non-classifiable-type", "Non-classifiable type", group)
+    val SCHEMA_UNIT_ADDING_FUNCTION_WITH_LAMBDA = ProblemId.create("unit-adding-function-with-lambda", "Unit-adding function with lambda", group)
+    val SCHEMA_UNRECOGNIZED_MEMBER = ProblemId.create("unrecognized-member", "Unrecognized member", group)
+    val SCHEMA_UNSUPPORTED_GENERIC_CONTAINER_TYPE = ProblemId.create("unsupported-generic-container-type", "Unsupported generic container type", group)
+    val SCHEMA_UNSUPPORTED_MAP_FACTORY = ProblemId.create("unsupported-map-factory", "Unsupported map factory", group)
+    val SCHEMA_UNSUPPORTED_NULLABLE_READ_ONLY_PROPERTY = ProblemId.create("unsupported-nullable-read-only-property", "Unsupported nullable read-only property", group)
+    val SCHEMA_UNSUPPORTED_NULLABLE_TYPE = ProblemId.create("unsupported-nullable-type", "Unsupported nullable type", group)
+    val SCHEMA_UNSUPPORTED_PAIR_FACTORY = ProblemId.create("unsupported-pair-factory", "Unsupported pair factory", group)
     val SCHEMA_UNSUPPORTED_TYPE_PARAMETER_AS_CONTAINER_TYPE =
-        create("unsupported-type-parameter-as-container-type", "Unsupported type parameter as container type", group)
-    val SCHEMA_UNSUPPORTED_VARARG_TYPE = create("unsupported-vararg-type", "Unsupported vararg type", group)
-    val SCHEMA_UNSAFE_NON_INTERFACE_TYPE = create("unsafe-non-interface-type", "Unsafe non-interface type in safe feature API", group)
-    val SCHEMA_UNSAFE_NON_ABSTRACT_MEMBER = create("unsafe-non-abstract-member", "Unsafe non-abstract member in safe feature API", group)
-    val SCHEMA_UNSAFE_INJECT_PROPERTY = create("unsafe-inject-property", "Unsafe injected service property in safe feature API", group)
-    val SCHEMA_UNSAFE_JAVA_BEAN_PROPERTY = create("unsafe-java-bean-property", "Unsafe Java bean property in safe feature API", group)
-    val SCHEMA_UNSAFE_NON_PURE_FUNCTION = create("unsafe-non-pure-function", "Unsafe non-pure function in safe feature API", group)
-    val SCHEMA_UNSAFE_BECAUSE_HAS_HIDDEN_MEMBERS = create("unsafe-because-has-hidden-members", "Unsafe hidden members in safe feature API", group)
-    val SCHEMA_UNSAFE_BECAUSE_HAS_NON_PUBLIC_MEMBERS = create("unsafe-because-has-non-public-members", "Non-public members in safe feature API", group)
+        ProblemId.create("unsupported-type-parameter-as-container-type", "Unsupported type parameter as container type", group)
+    val SCHEMA_UNSUPPORTED_VARARG_TYPE = ProblemId.create("unsupported-vararg-type", "Unsupported vararg type", group)
+    val SCHEMA_UNSAFE_NON_INTERFACE_TYPE = ProblemId.create("unsafe-non-interface-type", "Unsafe non-interface type in safe feature API", group)
+    val SCHEMA_UNSAFE_NON_ABSTRACT_MEMBER = ProblemId.create("unsafe-non-abstract-member", "Unsafe non-abstract member in safe feature API", group)
+    val SCHEMA_UNSAFE_INJECT_PROPERTY = ProblemId.create("unsafe-inject-property", "Unsafe injected service property in safe feature API", group)
+    val SCHEMA_UNSAFE_JAVA_BEAN_PROPERTY = ProblemId.create("unsafe-java-bean-property", "Unsafe Java bean property in safe feature API", group)
+    val SCHEMA_UNSAFE_NON_PURE_FUNCTION = ProblemId.create("unsafe-non-pure-function", "Unsafe non-pure function in safe feature API", group)
+    val SCHEMA_UNSAFE_BECAUSE_HAS_HIDDEN_MEMBERS = ProblemId.create("unsafe-because-has-hidden-members", "Unsafe hidden members in safe feature API", group)
+    val SCHEMA_UNSAFE_BECAUSE_HAS_NON_PUBLIC_MEMBERS = ProblemId.create("unsafe-because-has-non-public-members", "Non-public members in safe feature API", group)
 }
 
 @Suppress("CyclomaticComplexMethod")

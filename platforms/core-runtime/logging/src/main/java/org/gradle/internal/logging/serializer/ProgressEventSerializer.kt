@@ -21,7 +21,7 @@ import org.gradle.internal.serialize.Decoder
 import org.gradle.internal.serialize.Encoder
 import org.gradle.internal.serialize.Serializer
 
-class ProgressEventSerializer : Serializer<ProgressEvent?> {
+class ProgressEventSerializer : Serializer<ProgressEvent> {
     @Throws(Exception::class)
     override fun write(encoder: Encoder, event: ProgressEvent) {
         encoder.writeSmallLong(event.progressOperationId.getId())

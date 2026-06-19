@@ -18,8 +18,7 @@ package org.gradle.internal.remote
 import org.gradle.internal.concurrent.AsyncStoppable
 
 interface ConnectionAcceptor : AsyncStoppable {
-    @JvmField
-    val address: Address?
+    fun getAddress(): Address?
 
     /**
      * Stops accepting incoming connections.

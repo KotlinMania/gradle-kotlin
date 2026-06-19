@@ -26,10 +26,10 @@ import java.io.File
 import java.lang.management.ManagementFactory
 
 class UnsupportedEnvironment : ProcessEnvironment {
-    private val pid: Long?
+    private val extractedPid: Long?
 
     init {
-        pid = extractPIDFromRuntimeMXBeanName()
+        extractedPid = extractPIDFromRuntimeMXBeanName()
     }
 
     /**
@@ -76,30 +76,29 @@ class UnsupportedEnvironment : ProcessEnvironment {
         return EnvironmentModificationResult.UNSUPPORTED_ENVIRONMENT
     }
 
-    @Throws(NativeIntegrationException::class)
-    override fun getProcessDir(): File? {
-        throw notSupported()
-    }
-
-    @Throws(NativeIntegrationException::class)
-    override fun setProcessDir(processDir: File?) {
-        throw notSupported()
-    }
+    override var processDir: File?
+        @Throws(NativeIntegrationException::class)
+        get() = throw notSupported()
+        @Throws(NativeIntegrationException::class)
+        set(processDir) {
+            throw notSupported()
+        }
 
     override fun maybeSetProcessDir(processDir: File?): Boolean {
         return false
     }
 
-    @Throws(NativeIntegrationException::class)
-    override fun getPid(): Long {
-        if (pid != null) {
-            return pid
+    override val pid: Long
+        @Throws(NativeIntegrationException::class)
+        get() {
+            if (extractedPid != null) {
+                return extractedPid
+            }
+            throw notSupported()
         }
-        throw notSupported()
-    }
 
     override fun maybeGetPid(): Long? {
-        return pid
+        return extractedPid
     }
 
     override fun maybeDetachProcess(): Boolean {

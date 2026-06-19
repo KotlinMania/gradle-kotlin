@@ -98,6 +98,7 @@ class ExponentialBackoff<S : ExponentialBackoff.Signal?> private constructor(pri
             /**
              * Creates a result that indicates that the operation was successful and should not be repeated.
              */
+            @JvmStatic
             fun <T> successful(value: T?): Result<T?> {
                 requireNotNull(value)
                 return object : Result<T?>() {
@@ -113,6 +114,7 @@ class ExponentialBackoff<S : ExponentialBackoff.Signal?> private constructor(pri
             /**
              * Creates a result that indicates that the operation was not successful and should be repeated.
              */
+            @JvmStatic
             fun <T> notSuccessful(value: T?): Result<T?> {
                 requireNotNull(value)
                 return object : Result<T?>() {
@@ -131,6 +133,7 @@ class ExponentialBackoff<S : ExponentialBackoff.Signal?> private constructor(pri
         private const val CAP_FACTOR = 100
         private const val SLOT_TIME: Long = 25
 
+        @JvmStatic
         fun of(amount: Int, unit: TimeUnit): ExponentialBackoff<Signal> {
             return of<Signal>(amount, unit, Signal.Companion.SLEEP)
         }

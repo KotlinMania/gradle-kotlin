@@ -23,11 +23,11 @@ import org.gradle.internal.resource.transfer.ExternalResourceReadResponse
 import java.io.InputStream
 import java.net.URI
 
-class SftpResource(private val clientFactory: SftpClientFactory, private val metaData: ExternalResourceMetaData?, val uRI: URI, private val credentials: PasswordCredentials?) :
+class SftpResource(private val clientFactory: SftpClientFactory, private val metaData: ExternalResourceMetaData?, val uRI: URI, private val credentials: PasswordCredentials) :
     ExternalResourceReadResponse {
     private var client: LockableSftpClient? = null
 
-    override fun openStream(): InputStream? {
+    override fun openStream(): InputStream {
         client = clientFactory.createSftpClient(this.uRI, credentials)
         try {
             return client!!.getSftpClient().get(uRI.getPath())
@@ -44,6 +44,6 @@ class SftpResource(private val clientFactory: SftpClientFactory, private val met
     }
 
     override fun close() {
-        clientFactory.releaseSftpClient(client)
+        clientFactory.releaseSftpClient(client!!)
     }
 }

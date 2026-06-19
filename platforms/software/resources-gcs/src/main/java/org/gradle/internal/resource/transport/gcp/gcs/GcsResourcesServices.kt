@@ -22,8 +22,8 @@ import org.gradle.internal.service.ServiceRegistrationProvider
 import org.gradle.internal.service.scopes.AbstractGradleModuleServices
 
 class GcsResourcesServices : AbstractGradleModuleServices() {
-    public override fun registerGlobalServices(registration: ServiceRegistration) {
-        registration.addProvider(GlobalScopeServices())
+    override fun registerGlobalServices(registration: ServiceRegistration?) {
+        registration!!.addProvider(GlobalScopeServices())
     }
 
     private class GlobalScopeServices : ServiceRegistrationProvider {

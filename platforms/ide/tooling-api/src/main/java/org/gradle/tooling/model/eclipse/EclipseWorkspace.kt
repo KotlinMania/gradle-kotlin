@@ -15,6 +15,8 @@
  */
 package org.gradle.tooling.model.eclipse
 
+import java.io.File
+
 /**
  * Information about the eclipse workspace.
  *

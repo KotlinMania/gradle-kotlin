@@ -33,6 +33,7 @@ object JavaClassUtil {
      * @throws IOException If the file does not exist or is malformed.
      */
     @Throws(IOException::class)
+    @JvmStatic
     fun getClassMajorVersion(file: File): Int {
         return getClassMajorVersion(FileInputStream(file))
     }
@@ -43,6 +44,7 @@ object JavaClassUtil {
      * @throws IOException If there is an error reading the class file contents.
      */
     @Throws(IOException::class)
+    @JvmStatic
     fun getClassMajorVersion(javaClass: Class<*>): Int {
         return getClassMajorVersion(javaClass.getName(), javaClass.getClassLoader())!!
     }
@@ -56,6 +58,7 @@ object JavaClassUtil {
      * @throws IOException If there is an error reading the class file contents.
      */
     @Throws(IOException::class)
+    @JvmStatic
     fun getClassMajorVersion(name: String, loader: ClassLoader): Int? {
         val `is` = loader.getResourceAsStream(name.replace('.', '/') + ".class")
         if (`is` == null) {
@@ -71,6 +74,7 @@ object JavaClassUtil {
      * @throws IOException If the stream contents are malformed.
      */
     @Throws(IOException::class)
+    @JvmStatic
     fun getClassMajorVersion(`is`: InputStream): Int {
         val data = DataInputStream(`is`)
         try {

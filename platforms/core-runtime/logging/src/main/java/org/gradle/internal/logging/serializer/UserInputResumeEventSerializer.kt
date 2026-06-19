@@ -20,7 +20,7 @@ import org.gradle.internal.serialize.Decoder
 import org.gradle.internal.serialize.Encoder
 import org.gradle.internal.serialize.Serializer
 
-class UserInputResumeEventSerializer : Serializer<UserInputResumeEvent?> {
+class UserInputResumeEventSerializer : Serializer<UserInputResumeEvent> {
     @Throws(Exception::class)
     override fun write(encoder: Encoder, event: UserInputResumeEvent) {
         encoder.writeLong(event.timestamp)

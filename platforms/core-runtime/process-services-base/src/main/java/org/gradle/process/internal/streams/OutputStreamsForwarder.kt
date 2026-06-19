@@ -25,7 +25,7 @@ import kotlin.concurrent.Volatile
 /**
  * Reads from the process' stdout and stderr (if not merged into stdout) and forwards to [OutputStream].
  */
-class OutputStreamsForwarder(private val standardOutput: OutputStream?, private val errorOutput: OutputStream?, private val readErrorStream: Boolean) : StreamsHandler {
+class OutputStreamsForwarder(private val standardOutput: OutputStream, private val errorOutput: OutputStream, private val readErrorStream: Boolean) : StreamsHandler {
     private val completed: CountDownLatch
     private var executor: Executor? = null
 

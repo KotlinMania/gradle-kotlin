@@ -22,10 +22,10 @@ import java.io.PrintWriter
 
 internal class JavaCompilationWriter : SelectiveProblemWriter {
     override fun write(problem: ProblemInternal, options: RenderOptions, output: PrintWriter) {
-        output.print(problem.details)
+        output.print(problem.getDetails())
     }
 
     override fun accepts(problemId: ProblemId): Boolean {
-        return problemId.group!!.equals(compilation().java()) && !problemId.name.equals("initialization-failed")
+        return problemId.getGroup()!!.equals(compilation().java()) && problemId.getName() != "initialization-failed"
     }
 }

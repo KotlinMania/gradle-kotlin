@@ -15,6 +15,7 @@
  */
 package org.gradle.tooling.events.task.java
 
+import java.time.Duration
 import org.gradle.tooling.events.task.TaskOperationResult
 
 /**

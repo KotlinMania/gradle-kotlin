@@ -15,6 +15,7 @@
  */
 package org.gradle.tooling.internal.consumer.connection
 
+import java.io.File
 import org.gradle.tooling.internal.adapter.ProtocolToModelAdapter
 import org.gradle.tooling.internal.consumer.parameters.ConsumerOperationParameters
 import org.gradle.tooling.internal.consumer.versioning.ModelMapping
@@ -30,6 +31,6 @@ import org.gradle.tooling.internal.protocol.InternalInvalidatableVirtualFileSyst
 open class NotifyDaemonsAboutChangedPathsConsumerConnection(delegate: ConnectionVersion4, modelMapping: ModelMapping, adapter: ProtocolToModelAdapter) :
     PhasedActionAwareConsumerConnection(delegate, modelMapping, adapter) {
     override fun notifyDaemonsAboutChangedPaths(changedPaths: MutableList<String>, operationParameters: ConsumerOperationParameters) {
-        (getDelegate() as InternalInvalidatableVirtualFileSystemConnection).notifyDaemonsAboutChangedPaths(changedPaths, operationParameters)
+        (delegate as InternalInvalidatableVirtualFileSystemConnection).notifyDaemonsAboutChangedPaths(ArrayList<String?>(changedPaths), operationParameters)
     }
 }

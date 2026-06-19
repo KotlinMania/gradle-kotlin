@@ -15,6 +15,7 @@
  */
 package org.gradle.tooling.events.problems.internal
 
+import org.gradle.tooling.events.problems.Problem
 import org.gradle.tooling.events.problems.ProblemAggregation
 import org.gradle.tooling.events.problems.ProblemContext
 import org.gradle.tooling.events.problems.ProblemDefinition
@@ -23,11 +24,9 @@ class DefaultProblemAggregation(
     var problemDefinition: ProblemDefinition,
     private val problemContextDetails: MutableList<ProblemContext>
 ) : ProblemAggregation {
-    override fun getDefinition(): ProblemDefinition {
-        return problemDefinition
-    }
+    override val definition: ProblemDefinition
+        get() = problemDefinition
 
-    override fun getProblemContext(): MutableList<ProblemContext> {
-        return problemContextDetails
-    }
+    override val problemContext: MutableList<ProblemContext>
+        get() = problemContextDetails
 }

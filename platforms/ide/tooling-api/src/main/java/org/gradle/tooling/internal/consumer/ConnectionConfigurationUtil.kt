@@ -33,33 +33,33 @@ object ConnectionConfigurationUtil {
         for (entry in System.getProperties().entries) {
             systemProperties.put(entry.key.toString(), (if (entry.value == null) null else entry.value.toString())!!)
         }
-        systemProperties.putAll(getSystemProperties(File(determineRootDir(connectionParameters), "gradle.properties")))
-        systemProperties.putAll(getSystemProperties(File(determineRealUserHomeDir(connectionParameters), "gradle.properties")))
+        getSystemProperties(File(determineRootDir(connectionParameters), "gradle.properties")).forEach { (key, value) -> if (key != null && value != null) systemProperties[key] = value }
+        getSystemProperties(File(determineRealUserHomeDir(connectionParameters), "gradle.properties")).forEach { (key, value) -> if (key != null && value != null) systemProperties[key] = value }
         return systemProperties
     }
 
     fun determineJvmArguments(connectionParameters: ConnectionParameters): MutableList<String> {
         val jvmArgs: MutableList<String> = ArrayList<String>()
-        jvmArgs.addAll(getJvmArgs(File(determineRootDir(connectionParameters), "gradle.properties")))
-        jvmArgs.addAll(getJvmArgs(File(determineRealUserHomeDir(connectionParameters), "gradle.properties")))
+        jvmArgs.addAll(getJvmArgs(File(determineRootDir(connectionParameters), "gradle.properties")).filterNotNull())
+        jvmArgs.addAll(getJvmArgs(File(determineRealUserHomeDir(connectionParameters), "gradle.properties")).filterNotNull())
         return jvmArgs
     }
 
     @JvmStatic
     fun determineRootDir(connectionParameters: ConnectionParameters): File {
         return BuildLayoutFactory().getLayoutFor(
-            connectionParameters.getProjectDir(),
-            if (connectionParameters.isSearchUpwards() != null) connectionParameters.isSearchUpwards() else true
-        ).getRootDirectory()
+            connectionParameters.projectDir!!,
+            connectionParameters.isSearchUpwards ?: true
+        ).rootDirectory
     }
 
     @JvmStatic
     fun determineRealUserHomeDir(connectionParameters: ConnectionParameters): File {
-        val distributionBaseDir = connectionParameters.getDistributionBaseDir()
+        val distributionBaseDir = connectionParameters.distributionBaseDir
         if (distributionBaseDir != null) {
             return distributionBaseDir
         }
-        val userHomeDir = connectionParameters.getGradleUserHomeDir()
+        val userHomeDir = connectionParameters.gradleUserHomeDir
         return if (userHomeDir != null) userHomeDir else gradleUserHome()
     }
 }

@@ -19,9 +19,6 @@ import org.gradle.tooling.events.configuration.ProjectConfigurationOperationDesc
 import org.gradle.tooling.events.configuration.ProjectConfigurationStartEvent
 import org.gradle.tooling.events.internal.DefaultStartEvent
 
-class DefaultProjectConfigurationStartEvent(eventTime: Long, displayName: String?, descriptor: ProjectConfigurationOperationDescriptor?) : DefaultStartEvent(eventTime, displayName, descriptor),
+class DefaultProjectConfigurationStartEvent(eventTime: Long, displayName: String?, descriptor: ProjectConfigurationOperationDescriptor?) : DefaultStartEvent<ProjectConfigurationOperationDescriptor?>(eventTime, displayName, descriptor),
     ProjectConfigurationStartEvent {
-    override fun getDescriptor(): ProjectConfigurationOperationDescriptor? {
-        return super.getDescriptor() as ProjectConfigurationOperationDescriptor?
-    }
 }

@@ -862,6 +862,10 @@ internal open class DefaultServiceRegistry(
         private var method: ServiceMethod? = method
         private var target: Any? = target
 
+        init {
+            validateImplementationForServiceTypes(serviceTypes, method.serviceType)
+        }
+
         override fun getDisplayName(): String {
             return if (method == null) {
                 super.getDisplayName()

@@ -16,13 +16,13 @@
 package org.gradle.internal.remote.internal.inet
 
 import org.gradle.internal.remote.Address
+import java.net.InetAddress
 
 /**
  * A Inet-based route. Has a port and a set of potential inet addresses.
  */
 interface InetEndpoint : Address {
-    @JvmField
-    val port: Int
+    fun getPort(): Int
 
-    val candidates: MutableList<InetAddress>?
+    fun getCandidates(): MutableList<InetAddress>
 }

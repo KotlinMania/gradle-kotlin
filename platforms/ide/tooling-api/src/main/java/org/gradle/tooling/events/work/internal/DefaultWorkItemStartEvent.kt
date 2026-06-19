@@ -19,8 +19,5 @@ import org.gradle.tooling.events.internal.DefaultStartEvent
 import org.gradle.tooling.events.work.WorkItemOperationDescriptor
 import org.gradle.tooling.events.work.WorkItemStartEvent
 
-class DefaultWorkItemStartEvent(eventTime: Long, displayName: String?, descriptor: WorkItemOperationDescriptor?) : DefaultStartEvent(eventTime, displayName, descriptor), WorkItemStartEvent {
-    override fun getDescriptor(): WorkItemOperationDescriptor? {
-        return super.getDescriptor() as WorkItemOperationDescriptor?
-    }
+class DefaultWorkItemStartEvent(eventTime: Long, displayName: String?, descriptor: WorkItemOperationDescriptor?) : DefaultStartEvent<WorkItemOperationDescriptor?>(eventTime, displayName, descriptor), WorkItemStartEvent {
 }

@@ -28,15 +28,21 @@ import org.gradle.tooling.internal.protocol.InternalCancellableConnection
  * Used for providers &gt;= 2.1.
  */
 open class CancellableConsumerConnection(delegate: ConnectionVersion4, modelMapping: ModelMapping, adapter: ProtocolToModelAdapter) :
-    AbstractPost12ConsumerConnection(delegate, VersionDetails.from(delegate.metaData.version)) {
-    private val actionRunner: ActionRunner
-    private val modelProducer: ModelProducer
+    AbstractPost12ConsumerConnection(delegate, VersionDetails.from(delegate.metaData!!.version!!)) {
+    private val cancellableActionRunner: ActionRunner
+    private val cancellableModelProducer: ModelProducer
+
+    override val actionRunner: ActionRunner
+        get() = cancellableActionRunner
+
+    override val modelProducer: ModelProducer
+        get() = cancellableModelProducer
 
     init {
-        val exceptionTransformer: CancellationExceptionTransformer = CancellationExceptionTransformer.Companion.transformerFor(getVersionDetails())
+        val exceptionTransformer: CancellationExceptionTransformer = CancellationExceptionTransformer.Companion.transformerFor(versionDetails)
         val connection = delegate as InternalCancellableConnection
-        modelProducer = createModelProducer(connection, modelMapping, adapter, exceptionTransformer)
-        actionRunner = CancellableActionRunner(connection, exceptionTransformer, getVersionDetails())
+        cancellableModelProducer = createModelProducer(connection, modelMapping, adapter, exceptionTransformer)
+        cancellableActionRunner = CancellableActionRunner(connection, exceptionTransformer, versionDetails)
     }
 
     private fun createModelProducer(
@@ -46,16 +52,12 @@ open class CancellableConsumerConnection(delegate: ConnectionVersion4, modelMapp
         exceptionTransformer: CancellationExceptionTransformer
     ): ModelProducer {
         return PluginClasspathInjectionSupportedCheckModelProducer(
-            CancellableModelBuilderBackedModelProducer(adapter, getVersionDetails(), modelMapping, connection, exceptionTransformer),
-            getVersionDetails()
+            CancellableModelBuilderBackedModelProducer(adapter, versionDetails, modelMapping, connection, exceptionTransformer),
+            versionDetails
         )
     }
 
-    override fun getActionRunner(): ActionRunner {
-        return actionRunner
-    }
 
-    override fun getModelProducer(): ModelProducer {
-        return modelProducer
-    }
+
+
 }

@@ -20,10 +20,10 @@ import org.gradle.internal.hash.HashCode
 import java.io.IOException
 
 @Immutable
-class HashCodeSerializer : AbstractSerializer<HashCode?>() {
+class HashCodeSerializer : AbstractSerializer<HashCode>() {
     @Throws(IOException::class)
     override fun read(decoder: Decoder): HashCode {
-        val hashSize = decoder.readByte()
+        val hashSize = decoder.readByte().toInt() and 0xff
         val hash = ByteArray(hashSize)
         decoder.readBytes(hash)
         return HashCode.fromBytes(hash)

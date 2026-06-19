@@ -23,38 +23,38 @@ import org.gradle.util.internal.DefaultGradleVersion
 import javax.annotation.CheckReturnValue
 
 @CheckReturnValue
-open class DeprecationMessageBuilder<T : DeprecationMessageBuilder<T?>?> {
-    protected var summary: String? = null
+open class DeprecationMessageBuilder<T : DeprecationMessageBuilder<T>> {
+    protected var summaryValue: String? = null
     private var deprecationTimeline: DeprecationTimeline? = null
     private var context: String? = null
     private var advice: String? = null
-    private var documentation: DocLink = null
+    private var documentation: DocLink? = null
     private var usageType = DeprecatedFeatureUsage.Type.USER_CODE_DIRECT
 
-    protected var problemIdDisplayName: String? = null
-    protected var problemId: String? = null
+    protected var problemIdDisplayNameValue: String? = null
+    protected var problemIdValue: String? = null
 
     protected open fun createDefaultDeprecationIdDisplayName(): String? {
-        return summary
+        return summaryValue
     }
 
-    fun withContext(context: String): T? {
+    fun withContext(context: String): T {
         this.context = context
         return this as T
     }
 
-    fun withAdvice(advice: String): T? {
+    fun withAdvice(advice: String): T {
         this.advice = advice
         return this as T
     }
 
-    fun withProblemIdDisplayName(problemIdDisplayName: String): T? {
-        this.problemIdDisplayName = problemIdDisplayName
+    fun withProblemIdDisplayName(problemIdDisplayNameValue: String): T {
+        this.problemIdDisplayNameValue = problemIdDisplayNameValue
         return this as T
     }
 
-    fun withProblemId(problemId: String): T? {
-        this.problemId = problemId
+    fun withProblemId(problemIdValue: String): T {
+        this.problemIdValue = problemIdValue
         return this as T
     }
 
@@ -122,20 +122,20 @@ open class DeprecationMessageBuilder<T : DeprecationMessageBuilder<T?>?> {
         this.usageType = DeprecatedFeatureUsage.Type.BUILD_INVOCATION
     }
 
-    fun setSummary(summary: String?) {
-        this.summary = summary
+    fun setSummary(summaryValue: String?) {
+        this.summaryValue = summaryValue
     }
 
     fun setAdvice(advice: String) {
         this.advice = advice
     }
 
-    fun setDocumentation(documentation: DocLink) {
+    fun setDocumentation(documentation: DocLink?) {
         this.documentation = documentation
     }
 
-    fun setProblemIdDisplayName(problemIdDisplayName: String?) {
-        this.problemIdDisplayName = problemIdDisplayName
+    fun setProblemIdDisplayName(problemIdDisplayNameValue: String?) {
+        this.problemIdDisplayNameValue = problemIdDisplayNameValue
     }
 
     fun setDeprecationTimeline(deprecationTimeline: DeprecationTimeline) {
@@ -143,23 +143,23 @@ open class DeprecationMessageBuilder<T : DeprecationMessageBuilder<T?>?> {
     }
 
     open fun build(): DeprecationMessage {
-        if (problemIdDisplayName == null) {
+        if (problemIdDisplayNameValue == null) {
             setProblemIdDisplayName(createDefaultDeprecationIdDisplayName())
         }
 
-        if (problemId == null) {
+        if (problemIdValue == null) {
             setProblemId(Companion.createDefaultDeprecationId(createDefaultDeprecationIdDisplayName()!!))
         }
 
-        return DeprecationMessage(summary!!, deprecationTimeline.toString(), advice, context, documentation, usageType, problemIdDisplayName!!, problemId!!)
+        return DeprecationMessage(summaryValue!!, deprecationTimeline.toString(), advice, context, documentation, usageType, problemIdDisplayNameValue!!, problemIdValue!!)
     }
 
-    fun setProblemId(problemId: String) {
-        this.problemId = problemId
+    fun setProblemId(problemIdValue: String) {
+        this.problemIdValue = problemIdValue
     }
 
     open class WithDeprecationTimeline(private val builder: DeprecationMessageBuilder<*>) : Documentation.AbstractBuilder<WithDocumentation>() {
-        override fun withDocumentation(documentation: DocLink): WithDocumentation {
+        override fun withDocumentation(documentation: DocLink?): WithDocumentation {
             builder.setDocumentation(documentation)
             return WithDocumentation(builder)
         }
@@ -174,7 +174,7 @@ open class DeprecationMessageBuilder<T : DeprecationMessageBuilder<T?>?> {
         }
     }
 
-    abstract class WithReplacement<T, SELF : WithReplacement<T?, SELF?>?> internal constructor(protected val subject: String) : DeprecationMessageBuilder<SELF?>() {
+    abstract class WithReplacement<T, SELF : WithReplacement<T, SELF>> internal constructor(protected val subject: String) : DeprecationMessageBuilder<SELF>() {
         private var replacement: T? = null
 
         /**
@@ -187,7 +187,7 @@ open class DeprecationMessageBuilder<T : DeprecationMessageBuilder<T?>?> {
          * deprecateInternalApi: Please use ${replacement} instead.
          * deprecateNamedParameter: Please use the ${replacement} named parameter instead.
          */
-        fun replaceWith(replacement: T?): SELF? {
+        fun replaceWith(replacement: T): SELF {
             this.replacement = replacement
             return this as SELF
         }
@@ -198,19 +198,20 @@ open class DeprecationMessageBuilder<T : DeprecationMessageBuilder<T?>?> {
 
         abstract fun formatSummary(subject: String): String?
 
-        abstract fun formatAdvice(replacement: T?): String?
+        abstract fun formatAdvice(replacement: T): String?
 
 
         override fun build(): DeprecationMessage {
             setSummary(formatSummary(formatSubject()))
+            val replacement = this.replacement
             if (replacement != null) {
                 setAdvice(formatAdvice(replacement)!!)
             }
 
-            if (problemIdDisplayName == null) {
-                setProblemIdDisplayName(summary)
+            if (problemIdDisplayNameValue == null) {
+                setProblemIdDisplayName(summaryValue)
             }
-            if (problemId == null) {
+            if (problemIdValue == null) {
                 setProblemId(Companion.createDefaultDeprecationId(createDefaultDeprecationIdDisplayName()!!))
             }
 
@@ -218,7 +219,7 @@ open class DeprecationMessageBuilder<T : DeprecationMessageBuilder<T?>?> {
         }
     }
 
-    class DeprecateAction internal constructor(subject: String) : WithReplacement<String?, DeprecateAction?>(subject) {
+    class DeprecateAction internal constructor(subject: String) : WithReplacement<String, DeprecateAction>(subject) {
         override fun createDefaultDeprecationIdDisplayName(): String {
             return subject
         }
@@ -232,7 +233,7 @@ open class DeprecationMessageBuilder<T : DeprecationMessageBuilder<T?>?> {
         }
     }
 
-    class DeprecateNamedParameter internal constructor(parameter: String) : WithReplacement<String?, DeprecateNamedParameter?>(parameter) {
+    class DeprecateNamedParameter internal constructor(parameter: String) : WithReplacement<String, DeprecateNamedParameter>(parameter) {
         override fun formatSummary(parameter: String): String {
             return String.format("The %s named parameter has been deprecated.", parameter)
         }
@@ -242,7 +243,7 @@ open class DeprecationMessageBuilder<T : DeprecationMessageBuilder<T?>?> {
         }
     }
 
-    class DeprecateProperty internal constructor(private val propertyClass: Class<*>, private val property: String) : WithReplacement<String?, DeprecateProperty?>(
+    class DeprecateProperty internal constructor(private val propertyClass: Class<*>, private val property: String) : WithReplacement<String, DeprecateProperty>(
         property
     ) {
         /**
@@ -251,12 +252,12 @@ open class DeprecationMessageBuilder<T : DeprecationMessageBuilder<T?>?> {
         @Deprecated("")
         fun willBeRemovedInGradle9(): WithDeprecationTimeline {
             setDeprecationTimeline(DeprecationTimeline.Companion.willBeRemovedInVersion(GRADLE10))
-            return DeprecateProperty.WithDeprecationTimeline(this)
+            return WithDeprecationTimeline(this)
         }
 
         override fun willBeRemovedInGradle10(): WithDeprecationTimeline {
             setDeprecationTimeline(DeprecationTimeline.Companion.willBeRemovedInVersion(GRADLE10))
-            return DeprecateProperty.WithDeprecationTimeline(this)
+            return WithDeprecationTimeline(this)
         }
 
         inner class WithDeprecationTimeline(private val builder: DeprecateProperty) : DeprecationMessageBuilder.WithDeprecationTimeline(
@@ -285,7 +286,7 @@ open class DeprecationMessageBuilder<T : DeprecationMessageBuilder<T?>?> {
         }
     }
 
-    class DeprecateSystemProperty internal constructor(private val systemProperty: String) : WithReplacement<String?, DeprecateSystemProperty?>(
+    class DeprecateSystemProperty internal constructor(private val systemProperty: String) : WithReplacement<String, DeprecateSystemProperty>(
         systemProperty
     ) {
         init {
@@ -326,7 +327,7 @@ open class DeprecationMessageBuilder<T : DeprecationMessageBuilder<T?>?> {
     }
 
     class DeprecateConfiguration internal constructor(configuration: String, private val deprecationType: ConfigurationDeprecationType) :
-        WithReplacement<MutableList<String?>?, DeprecateConfiguration?>(configuration) {
+        WithReplacement<MutableList<String>, DeprecateConfiguration>(configuration) {
         init {
             if (!deprecationType.inUserCode) {
                 setIndirectUsage()
@@ -345,7 +346,7 @@ open class DeprecationMessageBuilder<T : DeprecationMessageBuilder<T?>?> {
         }
     }
 
-    class DeprecateMethod internal constructor(private val methodClass: Class<*>, private val methodWithParams: String) : WithReplacement<String?, DeprecateMethod?>(
+    class DeprecateMethod internal constructor(private val methodClass: Class<*>, private val methodWithParams: String) : WithReplacement<String, DeprecateMethod>(
         methodWithParams
     ) {
         override fun formatSubject(): String {
@@ -361,13 +362,13 @@ open class DeprecationMessageBuilder<T : DeprecationMessageBuilder<T?>?> {
         }
 
         companion object {
-            private fun pleaseUseThisMethodInstead(replacement: String): String {
+            fun pleaseUseThisMethodInstead(replacement: String): String {
                 return String.format("Please use the %s method instead.", replacement)
             }
         }
     }
 
-    class DeprecateInvocation internal constructor(invocation: String) : WithReplacement<String?, DeprecateInvocation?>(invocation) {
+    class DeprecateInvocation internal constructor(invocation: String) : WithReplacement<String, DeprecateInvocation>(invocation) {
         override fun formatSummary(invocation: String): String {
             return String.format("Using method %s has been deprecated.", invocation)
         }
@@ -377,7 +378,7 @@ open class DeprecationMessageBuilder<T : DeprecationMessageBuilder<T?>?> {
         }
     }
 
-    class DeprecateType internal constructor(type: String) : WithReplacement<String?, DeprecateType?>(type) {
+    class DeprecateType internal constructor(type: String) : WithReplacement<String, DeprecateType>(type) {
         override fun formatSummary(type: String): String {
             return String.format("The %s type has been deprecated.", type)
         }
@@ -387,7 +388,7 @@ open class DeprecationMessageBuilder<T : DeprecationMessageBuilder<T?>?> {
         }
     }
 
-    class DeprecateTask internal constructor(task: String) : WithReplacement<String?, DeprecateTask?>(task) {
+    class DeprecateTask internal constructor(task: String) : WithReplacement<String, DeprecateTask>(task) {
         override fun formatSummary(task: String): String {
             return String.format("The %s task has been deprecated.", task)
         }
@@ -397,7 +398,7 @@ open class DeprecationMessageBuilder<T : DeprecationMessageBuilder<T?>?> {
         }
     }
 
-    class DeprecateTaskType internal constructor(task: String, private val path: String) : WithReplacement<Class<*>?, DeprecateTaskType?>(task) {
+    class DeprecateTaskType internal constructor(task: String, private val path: String) : WithReplacement<Class<*>, DeprecateTaskType>(task) {
         override fun formatSummary(type: String): String {
             return String.format("The task type %s (used by the %s task) has been deprecated.", type, path)
         }
@@ -407,7 +408,7 @@ open class DeprecationMessageBuilder<T : DeprecationMessageBuilder<T?>?> {
         }
     }
 
-    class DeprecatePlugin internal constructor(plugin: String) : WithReplacement<String?, DeprecatePlugin>(plugin) {
+    class DeprecatePlugin internal constructor(plugin: String) : WithReplacement<String, DeprecatePlugin>(plugin) {
         private var externalReplacement = false
 
         override fun formatSummary(plugin: String): String {
@@ -423,11 +424,11 @@ open class DeprecationMessageBuilder<T : DeprecationMessageBuilder<T?>?> {
          */
         fun replaceWithExternalPlugin(replacement: String): DeprecatePlugin {
             this.externalReplacement = true
-            return replaceWith(replacement)!!
+            return replaceWith(replacement)
         }
     }
 
-    class DeprecateInternalApi internal constructor(api: String) : WithReplacement<String?, DeprecateInternalApi?>(api) {
+    class DeprecateInternalApi internal constructor(api: String) : WithReplacement<String, DeprecateInternalApi>(api) {
         override fun formatSummary(api: String): String {
             return String.format("Internal API %s has been deprecated.", api)
         }
@@ -437,7 +438,7 @@ open class DeprecationMessageBuilder<T : DeprecationMessageBuilder<T?>?> {
         }
     }
 
-    class DeprecateBehaviour(private val behaviour: String) : DeprecationMessageBuilder<DeprecateBehaviour?>() {
+    class DeprecateBehaviour(private val behaviour: String) : DeprecationMessageBuilder<DeprecateBehaviour>() {
         override fun build(): DeprecationMessage {
             setSummary(String.format("%s This behavior has been deprecated.", behaviour))
             return super.build()
@@ -450,10 +451,10 @@ open class DeprecationMessageBuilder<T : DeprecationMessageBuilder<T?>?> {
 
         @JvmStatic
         fun withDocumentation(warning: ProblemInternal, withDeprecationTimeline: WithDeprecationTimeline): WithDocumentation {
-            val docLink = warning.definition.getDocumentationLink()
+            val docLink = warning.getDefinition()!!.getDocumentationLink()
             if (docLink != null) {
                 return withDeprecationTimeline
-                    .withDocumentation(warning.definition.getDocumentationLink())
+                    .withDocumentation(docLink)
             }
             return withDeprecationTimeline.undocumented()
         }
@@ -464,9 +465,6 @@ open class DeprecationMessageBuilder<T : DeprecationMessageBuilder<T?>?> {
         fun createDefaultDeprecationId(vararg ids: String): String {
             val sb = StringBuilder()
             for (id in ids) {
-                if (id == null) {
-                    continue
-                }
                 val cleanId: CharSequence = createDashedId(id)
                 if (cleanId.length > 0) {
                     sb.append(cleanId)

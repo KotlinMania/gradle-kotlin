@@ -32,7 +32,7 @@ internal open class ParameterAwareBuildControllerAdapter(
     rootDir: File
 ) : UnparameterizedBuildController(adapter, modelMapping, gradleVersion, rootDir) {
     @Throws(InternalUnsupportedModelException::class)
-    override fun getModel(target: Any?, modelIdentifier: ModelIdentifier, parameter: Any?): BuildResult<*> {
-        return buildController.getModel(target, modelIdentifier, parameter)
+    override fun getModelResult(target: Any?, modelIdentifier: ModelIdentifier, parameter: Any?): BuildResult<*> {
+        return buildController.getModel(target, modelIdentifier, parameter)!!
     }
 }

@@ -16,7 +16,7 @@
 package org.gradle.internal.dispatch
 
 class ReflectionDispatch(private val target: Any?) : Dispatch<MethodInvocation?> {
-    override fun dispatch(message: MethodInvocation) {
-        message.invokeOn(target)
+    override fun dispatch(message: MethodInvocation?) {
+        message!!.invokeOn(target)
     }
 }

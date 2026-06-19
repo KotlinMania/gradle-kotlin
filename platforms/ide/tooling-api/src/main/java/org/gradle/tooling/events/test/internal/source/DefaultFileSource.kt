@@ -19,12 +19,7 @@ import org.gradle.tooling.events.test.source.FilePosition
 import org.gradle.tooling.events.test.source.FileSource
 import java.io.File
 
-class DefaultFileSource(private val file: File, private val position: FilePosition?) : FileSource {
-    override fun getFile(): File {
-        return this.file
-    }
+class DefaultFileSource(override val file: File, override val position: FilePosition?) : FileSource {
 
-    override fun getPosition(): FilePosition? {
-        return position
-    }
+
 }

@@ -17,46 +17,43 @@ package org.gradle.internal.jvm.inspection
 
 import org.gradle.util.internal.VersionNumber
 import java.io.File
-import java.nio.file.Path
-import java.util.function.Function
 
-class JvmInstallationMetadataComparator(private val currentJavaHome: File?) : Comparator<JvmInstallationMetadata?> {
-    override fun compare(o1: JvmInstallationMetadata?, o2: JvmInstallationMetadata?): Int {
-        return Comparator
-            .comparing<JvmInstallationMetadata?, Boolean?>(Function { metadata: JvmInstallationMetadata? -> this.isCurrentJvm(metadata!!) }) // Prefer installations with compiler, javadoc and jar
-            .thenComparing<Boolean?>(Function { metadata: JvmInstallationMetadata? -> this.hasCompiler(metadata!!) })
-            .thenComparing<Boolean?>(Function { metadata: JvmInstallationMetadata? -> this.hasJavadoc(metadata!!) })
-            .thenComparing<Boolean?>(Function { metadata: JvmInstallationMetadata? -> this.hasJar(metadata!!) })
-            .thenComparing<JvmVendor.KnownJvmVendor?>(Function { metadata: JvmInstallationMetadata? -> this.extractVendor(metadata!!) }, Comparator.reverseOrder<JvmVendor.KnownJvmVendor?>())
-            .thenComparing<VersionNumber?>(Function { metadata: JvmInstallationMetadata? -> this.getToolchainVersion(metadata!!) }) // It is possible for different JDK builds to have exact same version. The input order
+class JvmInstallationMetadataComparator(private val currentJavaHome: File?) : Comparator<JvmInstallationMetadata> {
+    override fun compare(o1: JvmInstallationMetadata, o2: JvmInstallationMetadata): Int {
+        return compareBy<JvmInstallationMetadata> { metadata -> isCurrentJvm(metadata) } // Prefer installations with compiler, javadoc and jar
+            .thenBy { metadata -> hasCompiler(metadata) }
+            .thenBy { metadata -> hasJavadoc(metadata) }
+            .thenBy { metadata -> hasJar(metadata) }
+            .thenByDescending { metadata -> extractVendor(metadata) }
+            .thenBy { metadata -> getToolchainVersion(metadata) } // It is possible for different JDK builds to have exact same version. The input order
             // may change so the installation path breaks ties to keep sorted output consistent
             // between runs.
-            .thenComparing<Path?>(Function { obj: JvmInstallationMetadata? -> obj!!.getJavaHome() })
+            .thenBy { metadata -> metadata.javaHome }
             .reversed()
             .compare(o1, o2)
     }
 
     fun isCurrentJvm(metadata: JvmInstallationMetadata): Boolean {
-        return metadata.getJavaHome().toFile() == currentJavaHome
+        return metadata.javaHome.toFile() == currentJavaHome
     }
 
     private fun hasCompiler(metadata: JvmInstallationMetadata): Boolean {
-        return metadata.getCapabilities().contains(JavaInstallationCapability.JAVA_COMPILER)
+        return metadata.capabilities.contains(JavaInstallationCapability.JAVA_COMPILER)
     }
 
     private fun hasJavadoc(metadata: JvmInstallationMetadata): Boolean {
-        return metadata.getCapabilities().contains(JavaInstallationCapability.JAVADOC_TOOL)
+        return metadata.capabilities.contains(JavaInstallationCapability.JAVADOC_TOOL)
     }
 
     private fun hasJar(metadata: JvmInstallationMetadata): Boolean {
-        return metadata.getCapabilities().contains(JavaInstallationCapability.JAR_TOOL)
+        return metadata.capabilities.contains(JavaInstallationCapability.JAR_TOOL)
     }
 
-    private fun extractVendor(metadata: JvmInstallationMetadata): JvmVendor.KnownJvmVendor? {
-        return metadata.getVendor().getKnownVendor()
+    private fun extractVendor(metadata: JvmInstallationMetadata): JvmVendor.KnownJvmVendor {
+        return metadata.vendor.knownVendor
     }
 
-    private fun getToolchainVersion(metadata: JvmInstallationMetadata): VersionNumber? {
-        return VersionNumber.withPatchNumber().parse(metadata.getJavaVersion())
+    private fun getToolchainVersion(metadata: JvmInstallationMetadata): VersionNumber {
+        return VersionNumber.withPatchNumber().parse(metadata.javaVersion)
     }
 }

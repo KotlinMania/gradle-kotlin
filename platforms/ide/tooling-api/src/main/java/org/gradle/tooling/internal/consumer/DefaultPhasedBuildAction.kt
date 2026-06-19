@@ -19,24 +19,18 @@ import org.gradle.tooling.BuildAction
 import org.gradle.tooling.IntermediateResultHandler
 
 class DefaultPhasedBuildAction internal constructor(
-    private val projectsLoadedAction: PhasedBuildAction.BuildActionWrapper<*>?,
-    private val buildFinishedAction: PhasedBuildAction.BuildActionWrapper<*>?
+    override val projectsLoadedAction: PhasedBuildAction.BuildActionWrapper<*>?,
+    override val buildFinishedAction: PhasedBuildAction.BuildActionWrapper<*>?
 ) : PhasedBuildAction {
-    override fun getProjectsLoadedAction(): PhasedBuildAction.BuildActionWrapper<*>? {
-        return projectsLoadedAction
-    }
 
-    override fun getBuildFinishedAction(): PhasedBuildAction.BuildActionWrapper<*>? {
-        return buildFinishedAction
-    }
+
+
 
     internal class DefaultBuildActionWrapper<T>(private val buildAction: BuildAction<T?>?, private val resultHandler: IntermediateResultHandler<in T?>?) : PhasedBuildAction.BuildActionWrapper<T?> {
-        override fun getAction(): BuildAction<T?>? {
-            return buildAction
-        }
+        override val action: BuildAction<T?>?
+            get() = buildAction
 
-        override fun getHandler(): IntermediateResultHandler<in T?>? {
-            return resultHandler
-        }
+        override val handler: IntermediateResultHandler<in T?>?
+            get() = resultHandler
     }
 }

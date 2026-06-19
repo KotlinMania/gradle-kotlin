@@ -66,7 +66,7 @@ public class BuildOperationProgressEventListenerAdapter implements DefaultBuildO
     @Override
     public void progress(BuildOperationDescriptor descriptor, long progress, long total, String units, String status) {
         progress(descriptor, status);
-        buildOperationListener.progress(descriptor.getId(), new OperationProgressEvent(clock.currentTime, new OperationProgressDetails(progress, total, units)));
+        buildOperationListener.progress(descriptor.getId(), new OperationProgressEvent(clock.getCurrentTime(), new OperationProgressDetails(progress, total, units)));
     }
 
     @Override
@@ -75,7 +75,7 @@ public class BuildOperationProgressEventListenerAdapter implements DefaultBuildO
             statusProgressLogger.completed();
         }
         progressLogger.completed(context.getStatus(), context.getFailure() != null);
-        buildOperationListener.finished(descriptor, new OperationFinishEvent(operationState.getStartTime(), clock.currentTime, context.getFailure(), context.getResult()));
+        buildOperationListener.finished(descriptor, new OperationFinishEvent(operationState.getStartTime(), clock.getCurrentTime(), context.getFailure(), context.getResult()));
     }
 
     @Override

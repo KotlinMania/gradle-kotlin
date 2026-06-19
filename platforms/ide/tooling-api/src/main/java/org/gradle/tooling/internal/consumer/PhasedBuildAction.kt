@@ -15,6 +15,9 @@
  */
 package org.gradle.tooling.internal.consumer
 
+import org.gradle.tooling.BuildAction
+import org.gradle.tooling.IntermediateResultHandler
+
 /**
  * Internal consumer wrapper for all information required to run phased build actions.
  * Used by [org.gradle.tooling.internal.consumer.connection.PhasedActionAwareConsumerConnection].

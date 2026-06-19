@@ -71,10 +71,10 @@ public class IntermediateBuildActionRunner {
         List<Throwable> failures = new ArrayList<>();
         for (NestedAction<T> wrapper : wrappers) {
             Try<T> value = wrapper.value();
-            if (value.isSuccessful) {
+            if (value.isSuccessful()) {
                 results.add(value.get());
             } else {
-                failures.add(value.failure.get());
+                failures.add(value.getFailure().get());
             }
         }
         if (!failures.isEmpty()) {

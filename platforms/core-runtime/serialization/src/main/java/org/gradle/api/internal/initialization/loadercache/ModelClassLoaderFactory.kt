@@ -28,9 +28,9 @@ import java.net.MalformedURLException
 import java.net.URL
 
 class ModelClassLoaderFactory(private val rootClassLoader: ClassLoader?) : PayloadClassLoaderFactory {
-    override fun getClassLoaderFor(spec: ClassLoaderSpec?, parents: MutableList<out ClassLoader>): ClassLoader? {
+    override fun getClassLoaderFor(spec: ClassLoaderSpec, parents: MutableList<out ClassLoader>): ClassLoader {
         if (spec is SystemClassLoaderSpec) {
-            return rootClassLoader
+            return requireNotNull(rootClassLoader)
         }
         if (spec is MultiParentClassLoader.Spec) {
             return MultiParentClassLoader(parents)
@@ -39,7 +39,7 @@ class ModelClassLoaderFactory(private val rootClassLoader: ClassLoader?) : Paylo
         val parent: ClassLoader = parents.get(0)
         if (spec is VisitableURLClassLoader.Spec) {
             val clSpec = spec
-            return VisitableURLClassLoader(clSpec.getName(), parent, clSpec.getClasspath())
+            return VisitableURLClassLoader(clSpec.name, parent, clSpec.classpath)
         }
         if (spec is CachingClassLoader.Spec) {
             return CachingClassLoader(parent)
@@ -56,12 +56,12 @@ class ModelClassLoaderFactory(private val rootClassLoader: ClassLoader?) : Paylo
     }
 
     companion object {
-        private fun convertToURLs(clSpec: ClientOwnedClassLoaderSpec): MutableList<URL?> {
+        private fun convertToURLs(clSpec: ClientOwnedClassLoaderSpec): MutableList<URL> {
             val classpath = clSpec.classpath
-            val builder = ImmutableList.builderWithExpectedSize<URL?>(classpath.size)
+            val builder = ImmutableList.builderWithExpectedSize<URL>(classpath.size)
             for (uri in classpath) {
                 try {
-                    builder.add(uri.toURL())
+                    builder.add(requireNotNull(uri).toURL())
                 } catch (e: MalformedURLException) {
                     throw RuntimeException(e)
                 }

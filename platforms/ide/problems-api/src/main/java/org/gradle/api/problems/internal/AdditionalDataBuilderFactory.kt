@@ -29,7 +29,7 @@ class AdditionalDataBuilderFactory {
         additionalDataProviders.put(
             GeneralDataSpec::class.java, DataTypeAndProvider(
                 GeneralData::class.java,
-                object : Function<AdditionalData, AdditionalDataBuilder<out AdditionalData>> {
+                object : Function<AdditionalData?, AdditionalDataBuilder<out AdditionalData>> {
                     override fun apply(instance: AdditionalData?): AdditionalDataBuilder<out AdditionalData> {
                         return DefaultGeneralData.Companion.builder(instance as GeneralData?)
                     }
@@ -38,7 +38,7 @@ class AdditionalDataBuilderFactory {
         additionalDataProviders.put(
             DeprecationDataSpec::class.java, DataTypeAndProvider(
                 DeprecationData::class.java,
-                object : Function<AdditionalData, AdditionalDataBuilder<out AdditionalData>> {
+                object : Function<AdditionalData?, AdditionalDataBuilder<out AdditionalData>> {
                     override fun apply(instance: AdditionalData?): AdditionalDataBuilder<out AdditionalData> {
                         return DefaultDeprecationData.Companion.builder(instance as DeprecationData?)
                     }
@@ -47,7 +47,7 @@ class AdditionalDataBuilderFactory {
         additionalDataProviders.put(
             TypeValidationDataSpec::class.java, DataTypeAndProvider(
                 TypeValidationData::class.java,
-                object : Function<AdditionalData, AdditionalDataBuilder<out AdditionalData>> {
+                object : Function<AdditionalData?, AdditionalDataBuilder<out AdditionalData>> {
                     override fun apply(instance: AdditionalData?): AdditionalDataBuilder<out AdditionalData> {
                         return DefaultTypeValidationData.Companion.builder(instance as TypeValidationData?)
                     }
@@ -56,7 +56,7 @@ class AdditionalDataBuilderFactory {
         additionalDataProviders.put(
             PropertyTraceDataSpec::class.java, DataTypeAndProvider(
                 PropertyTraceData::class.java,
-                object : Function<AdditionalData, AdditionalDataBuilder<out AdditionalData>> {
+                object : Function<AdditionalData?, AdditionalDataBuilder<out AdditionalData>> {
                     override fun apply(instance: AdditionalData?): AdditionalDataBuilder<out AdditionalData> {
                         return DefaultPropertyTraceData.Companion.builder(instance as PropertyTraceData?)
                     }
@@ -70,7 +70,7 @@ class AdditionalDataBuilderFactory {
      * @param dataType The type of additional data to provide
      * @param provider The builder function, which will be called to create a builder for the given additional data type
      */
-    fun registerAdditionalDataProvider(dataType: Class<*>, provider: Function<AdditionalData, AdditionalDataBuilder<out AdditionalData>>) {
+    fun registerAdditionalDataProvider(dataType: Class<*>, provider: Function<AdditionalData?, AdditionalDataBuilder<out AdditionalData>>) {
         require(additionalDataProviders.put(dataType, DataTypeAndProvider(dataType, provider)) == null) { "Data type: '" + dataType + "' already has an additional data provider registered!" }
     }
 
@@ -86,11 +86,11 @@ class AdditionalDataBuilderFactory {
             return result.toString()
         }
 
-    private fun <S : AdditionalData?, U : AdditionalDataSpec?> builderFor(specType: Class<out U>, instance: S?, illegalArgumentMessage: String): AdditionalDataBuilder<S?> {
+    private fun <U : AdditionalDataSpec?> builderFor(specType: Class<out U>, instance: AdditionalData?, illegalArgumentMessage: String): AdditionalDataBuilder<out AdditionalData> {
         Preconditions.checkNotNull(specType)
         val dataTypeAndProvider = additionalDataProviders.get(specType)
         if (dataTypeAndProvider != null) {
-            return dataTypeAndProvider.builderProvider.apply(instance!!) as AdditionalDataBuilder<S?>
+            return dataTypeAndProvider.builderProvider.apply(instance)
         }
         throw IllegalArgumentException(illegalArgumentMessage)
     }
@@ -114,5 +114,5 @@ class AdditionalDataBuilderFactory {
         return dataTypeAndProvider != null && dataTypeAndProvider.dataType.isInstance(additionalData)
     }
 
-    private class DataTypeAndProvider(val dataType: Class<*>, val builderProvider: Function<AdditionalData, AdditionalDataBuilder<out AdditionalData>>)
+    private class DataTypeAndProvider(val dataType: Class<*>, val builderProvider: Function<AdditionalData?, AdditionalDataBuilder<out AdditionalData>>)
 }

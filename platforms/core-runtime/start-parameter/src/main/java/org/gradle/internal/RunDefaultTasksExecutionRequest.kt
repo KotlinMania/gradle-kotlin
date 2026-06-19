@@ -20,8 +20,8 @@ import java.io.File
 import java.io.Serializable
 
 class RunDefaultTasksExecutionRequest @JvmOverloads constructor(private val projectPath: String? = null, private val rootDir: File? = null) : TaskExecutionRequest, Serializable {
-    override fun getArgs(): MutableList<String?> {
-        return mutableListOf<String?>()
+    override fun getArgs(): MutableList<String> {
+        return mutableListOf<String>()
     }
 
     override fun getProjectPath(): String? {

@@ -59,8 +59,7 @@ protected constructor() {
      *
      * @since 8.13
      */
-    @JvmField
-    abstract val name: String?
+    abstract fun getName(): String?
 
     /**
      * A human-readable label describing the problem ID.
@@ -70,16 +69,14 @@ protected constructor() {
      *
      * @since 8.13
      */
-    @JvmField
-    abstract val displayName: String?
+    abstract fun getDisplayName(): String?
 
     /**
      * The parent group.
      *
      * @since 8.13
      */
-    @JvmField
-    abstract val group: ProblemGroup?
+    abstract fun getGroup(): ProblemGroup?
 
     companion object {
         /**

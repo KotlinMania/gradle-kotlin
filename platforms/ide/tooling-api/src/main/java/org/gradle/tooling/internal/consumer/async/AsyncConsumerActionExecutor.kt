@@ -34,8 +34,6 @@ interface AsyncConsumerActionExecutor {
      * Stops this connection, blocking until all operations on the connection have completed.
      */
     fun stop()
-
-    @JvmField
     val displayName: String?
 
     /**

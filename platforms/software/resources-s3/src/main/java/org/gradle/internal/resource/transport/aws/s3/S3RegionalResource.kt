@@ -24,11 +24,11 @@ import java.util.regex.Matcher
 import java.util.regex.Pattern
 
 class S3RegionalResource(private val uri: URI) {
-    var region: Optional<Region?>? = null
+    var region: Optional<Region> = Optional.absent<Region>()
         private set
-    var bucketName: String? = null
+    lateinit var bucketName: String
         private set
-    var key: String? = null
+    lateinit var key: String
         private set
 
     init {
@@ -49,7 +49,7 @@ class S3RegionalResource(private val uri: URI) {
                 derivedRegion = RegionUtils.getRegion(region)
             }
 
-            this.region = Optional.of<Region?>(derivedRegion)
+            this.region = Optional.of<Region>(derivedRegion)
             this.bucketName = bucketName
             this.key = key
 
@@ -58,7 +58,7 @@ class S3RegionalResource(private val uri: URI) {
 
         matcher = FALLBACK_ENDPOINT_PATTERN.matcher(uri.toString())
         if (matcher.find()) {
-            this.region = Optional.absent<Region?>()
+            this.region = Optional.absent<Region>()
             this.bucketName = getBucketName(matcher.group(1))
             this.key = matcher.group(2)
 

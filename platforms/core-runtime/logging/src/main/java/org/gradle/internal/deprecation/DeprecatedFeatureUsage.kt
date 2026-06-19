@@ -142,7 +142,7 @@ class DeprecatedFeatureUsage : FeatureUsage {
         append(outputBuilder, contextualAdvice)
         append(outputBuilder, advice)
         if (this.documentationUrl != null) {
-            append(outputBuilder, (this.documentationUrl as DocLinkInternal).consultDocumentationMessage)
+            append(outputBuilder, (this.documentationUrl as DocLinkInternal).getConsultDocumentationMessage())
         }
         return outputBuilder.toString()
     }

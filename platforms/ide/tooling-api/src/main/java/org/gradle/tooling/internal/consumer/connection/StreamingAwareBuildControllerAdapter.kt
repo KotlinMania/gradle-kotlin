@@ -22,20 +22,20 @@ import org.gradle.tooling.internal.protocol.InternalBuildControllerVersion2
 import org.gradle.tooling.internal.protocol.InternalStreamedValueRelay
 import java.io.File
 
-open class StreamingAwareBuildControllerAdapter(
+internal open class StreamingAwareBuildControllerAdapter(
     buildController: InternalBuildControllerVersion2,
     adapter: ProtocolToModelAdapter,
     modelMapping: ModelMapping,
     gradleVersion: VersionDetails,
     rootDir: File
-) : NestedActionAwareBuildControllerAdapter(buildController, adapter, modelMapping, gradleVersion, rootDir) {
+) : ParameterAwareBuildControllerAdapter(buildController, adapter, modelMapping, gradleVersion, rootDir) {
     private val relay: InternalStreamedValueRelay
 
     init {
         this.relay = buildController as InternalStreamedValueRelay
     }
 
-    override fun send(value: Any) {
+    override fun send(value: Any?) {
         relay.dispatch(value)
     }
 }

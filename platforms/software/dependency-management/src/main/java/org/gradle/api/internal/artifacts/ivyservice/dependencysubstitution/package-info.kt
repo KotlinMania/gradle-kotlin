@@ -15,15 +15,4 @@
  */
 package org.gradle.api.internal.artifacts.ivyservice.dependencysubstitution
 
-import org.gradle.api.internal.artifacts.DependencySubstitutionInternal.configuredTargetSelector
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.ComponentSelectionDescriptorFactory.newDescriptor
-import org.gradle.api.internal.artifacts.DependencySubstitutionInternal.configuredArtifactSelectors
-import org.gradle.api.internal.artifacts.DependencySubstitutionInternal.ruleDescriptors
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.ComponentSelectionDescriptorInternal.withDescription
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.ComponentSelectionDescriptorInternal.markAsEquivalentToForce
-import org.gradle.api.internal.artifacts.DependencySubstitutionInternal.useTarget
-import org.gradle.api.internal.artifacts.ComponentSelectorConverter.getModuleVersionId
-import org.gradle.internal.component.external.model.DefaultModuleComponentSelector.Companion.withAttributes
-import org.gradle.api.internal.artifacts.ImmutableModuleIdentifierFactory.module
-import org.gradle.internal.component.external.model.DefaultModuleComponentSelector.Companion.newSelector
 

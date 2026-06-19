@@ -15,6 +15,7 @@
  */
 package org.gradle.tooling.events.download
 
+import java.io.File
 import org.gradle.tooling.events.ProgressEvent
 
 /**
@@ -23,5 +24,5 @@ import org.gradle.tooling.events.ProgressEvent
  * @since 7.3
  */
 interface FileDownloadProgressEvent : ProgressEvent {
-    override fun getDescriptor(): FileDownloadOperationDescriptor?
+    override val descriptor: FileDownloadOperationDescriptor?
 }

@@ -90,7 +90,7 @@ public class TestExecutionRequestAction extends SubscribableBuildAction {
 
     private static StartParameterInternal configureStartParameter(StartParameterInternal startParameter, List<InternalTaskSpec> taskSpecs, boolean runDefaultTasks) {
         Preconditions.checkArgument(
-            startParameter.getTaskNames().isEmpty(),
+            !startParameter.getTaskNames().iterator().hasNext(),
             "Cannot pass task requests with start parameter here, got %s",
             startParameter.getTaskNames());
         if (!taskSpecs.isEmpty()) {

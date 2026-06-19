@@ -157,7 +157,8 @@ fun <reified T : Any> ReadContext.getSingletonProperty(): T =
     getSingletonProperty(T::class.java)
 
 
-suspend fun <T : Any> ReadContext.readNonNull() = read()!!.uncheckedCast<T>()
+@Suppress("UNCHECKED_CAST")
+suspend fun <T : Any> ReadContext.readNonNull(): T = read()!! as T
 
 
 interface IsolateContext {
@@ -442,7 +443,10 @@ inline fun <T> ReadContext.decodePreservingIdentity(
     }
 
     return when {
-        previousValue != null -> previousValue.uncheckedCast()
+        previousValue != null -> {
+            @Suppress("UNCHECKED_CAST")
+            previousValue as T
+        }
         else -> {
             decode(id).also {
                 require(identities.getInstance(id) === it) {

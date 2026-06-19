@@ -15,15 +15,12 @@
  */
 package org.gradle.tooling.events.test.internal.source
 
+import java.io.File
 import org.gradle.tooling.events.test.source.ClasspathResourceSource
 import org.gradle.tooling.events.test.source.FilePosition
 
-class DefaultClasspathResourceSource(private val classpathResourceName: String, private val position: FilePosition?) : ClasspathResourceSource {
-    override fun getClasspathResourceName(): String {
-        return classpathResourceName
-    }
+class DefaultClasspathResourceSource(override val classpathResourceName: String, override val position: FilePosition?) : ClasspathResourceSource {
 
-    override fun getPosition(): FilePosition? {
-        return position
-    }
+
+
 }

@@ -40,5 +40,5 @@ interface IsolatedAntBuilder {
      * have visible to it an isolated version of Ant, Groovy and the specified libraries (if any). Each call to this
      * method is given a separate Ant project.
      */
-    fun execute(antBuilderAction: Action<AntBuilderDelegate?>?)
+    fun execute(antBuilderAction: Action<AntBuilderDelegate>)
 }

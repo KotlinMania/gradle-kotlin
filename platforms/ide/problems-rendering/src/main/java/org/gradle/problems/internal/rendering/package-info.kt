@@ -14,7 +14,3 @@
  * limitations under the License.
  */
 package org.gradle.problems.internal.rendering
-
-import org.gradle.api.problems.internal.GradleCoreProblemGroup.compilation
-import org.gradle.api.problems.internal.GradleCoreProblemGroup.CompilationProblemGroup.java
-

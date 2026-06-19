@@ -15,19 +15,30 @@
  */
 package org.gradle.integtests.tooling.r48
 
+import org.gradle.tooling.*
+import org.gradle.tooling.model.*
+import org.gradle.tooling.model.build.*
+import org.gradle.tooling.model.eclipse.*
+import org.gradle.tooling.model.gradle.*
+import org.gradle.tooling.model.idea.*
+import org.gradle.tooling.model.kotlin.dsl.*
+import org.gradle.tooling.internal.adapter.ProtocolToModelAdapter
+import java.io.File
+import org.gradle.integtests.tooling.r48.*
+
 import org.gradle.api.Action
 import java.io.Serializable
 
 class CustomProjectsLoadedAction(// Task graph is not calculated yet. Plugins can add tasks to it.
     private val tasks: MutableList<String?>?
 ) : BuildAction<String?>, Serializable {
-    public override fun execute(controller: BuildController): String? {
+    public override fun execute(controller: BuildController?): String? {
         val model: CustomProjectsLoadedModel
         if (tasks == null || tasks.isEmpty()) {
             model = controller.getModel(CustomProjectsLoadedModel::class.java)
         } else {
-            model = controller.getModel(CustomProjectsLoadedModel::class.java, CustomParameter::class.java, object : Action<CustomParameter?>() {
-                public override fun execute(customParameter: CustomParameter) {
+            model = controller.getModel(CustomProjectsLoadedModel::class.java, CustomParameter::class.java, object : Action<CustomParameter?> {
+                public override fun execute(customParameter: CustomParameter?) {
                     customParameter.setTasks(tasks)
                 }
             })

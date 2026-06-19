@@ -23,11 +23,11 @@ import java.lang.reflect.Proxy
  * Adapts from interface T to a [Dispatch]
  */
 class ProxyDispatchAdapter<T> {
-    val type: Class<T?>?
+    val type: Class<T>
     @JvmField
-    val source: T?
+    val source: T
 
-    constructor(dispatch: Dispatch<in MethodInvocation?>, type: Class<T?>) {
+    constructor(dispatch: Dispatch<in MethodInvocation?>, type: Class<T>) {
         this.type = type
         source = type.cast(
             Proxy.newProxyInstance(
@@ -38,11 +38,11 @@ class ProxyDispatchAdapter<T> {
         )
     }
 
-    constructor(dispatch: Dispatch<in MethodInvocation?>, type: Class<T?>, extraType: Class<*>) {
+    constructor(dispatch: Dispatch<in MethodInvocation?>, type: Class<T>, extraType: Class<*>) {
         this.type = type
         source = type.cast(
             Proxy.newProxyInstance(
-                selectClassLoader<T?>(type, extraType),
+                selectClassLoader<T>(type, extraType),
                 arrayOf<Class<*>>(type, extraType),
                 DispatchingInvocationHandler(type, dispatch)
             )
@@ -50,10 +50,10 @@ class ProxyDispatchAdapter<T> {
     }
 
     private class DispatchingInvocationHandler(private val type: Class<*>, private val dispatch: Dispatch<in MethodInvocation?>) : InvocationHandler {
-        override fun invoke(target: Any?, method: Method, parameters: Array<Any?>): Any? {
+        override fun invoke(target: Any?, method: Method, parameters: Array<Any?>?): Any? {
             when (method.getName()) {
                 "equals" -> {
-                    val parameter = parameters[0]
+                    val parameter = parameters?.getOrNull(0)
                     if (parameter == null || !Proxy.isProxyClass(parameter.javaClass)) {
                         return false
                     }
@@ -77,16 +77,16 @@ class ProxyDispatchAdapter<T> {
     }
 
     companion object {
-        private fun <T> selectClassLoader(type: Class<T?>, extraType: Class<*>): ClassLoader? {
+        private fun <T> selectClassLoader(type: Class<T>, extraType: Class<*>): ClassLoader? {
             val typeClassLoader = type.getClassLoader()
             val candidate = extraType.getClassLoader()
-            return if (candidate !== typeClassLoader && candidate != null && isCanLoadType<T?>(candidate, type))
+            return if (candidate !== typeClassLoader && candidate != null && isCanLoadType<T>(candidate, type))
                 candidate
             else
                 typeClassLoader
         }
 
-        private fun <T> isCanLoadType(candidate: ClassLoader, type: Class<T?>): Boolean {
+        private fun <T> isCanLoadType(candidate: ClassLoader, type: Class<T>): Boolean {
             try {
                 if (candidate.loadClass(type.getName()) != null) {
                     return true

@@ -106,7 +106,7 @@ object ConnectorServices {
         private val ownerRegistry: CloseableServiceRegistry = ConnectorServiceRegistry.Companion.create()
 
         override fun createConnector(): GradleConnector {
-            return ownerRegistry.get<GradleConnectorFactory?>(GradleConnectorFactory::class.java)!!.createConnector()
+            return ownerRegistry.get(GradleConnectorFactory::class.java as Class<GradleConnectorFactory?>)!!.createConnector()
         }
 
         override fun close() {
@@ -173,7 +173,7 @@ object ConnectorServices {
         }
 
         companion object {
-            private fun create(): CloseableServiceRegistry {
+            fun create(): CloseableServiceRegistry {
                 return ServiceRegistryBuilder.builder()
                     .displayName("connector services")
                     .provider(ConnectorServiceRegistry())

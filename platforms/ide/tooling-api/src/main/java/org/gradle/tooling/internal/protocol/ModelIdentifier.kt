@@ -35,14 +35,12 @@ interface ModelIdentifier : InternalProtocolInterface {
      * Note that the model name is not necessarily a class name. It simply uniquely identifies the model.
      * Use [.NULL_MODEL] to indicate that no model is desired.
      */
-    @JvmField
     val name: String?
 
     companion object {
         /**
          * The name of the null model.
          */
-        @JvmField
-        val NULL_MODEL: String = Void::class.java.getName()
+        const val NULL_MODEL: String = "java.lang.Void"
     }
 }

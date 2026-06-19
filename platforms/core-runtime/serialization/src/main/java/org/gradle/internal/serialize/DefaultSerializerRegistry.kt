@@ -17,7 +17,6 @@ package org.gradle.internal.serialize
 
 import com.google.common.base.Objects
 import org.gradle.internal.Cast
-import java.lang.Boolean
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentSkipListMap
 import javax.annotation.concurrent.ThreadSafe
@@ -41,32 +40,32 @@ import kotlin.requireNotNull
  */
 @ThreadSafe
 open class DefaultSerializerRegistry @JvmOverloads constructor(supportClassHierarchy: Boolean = true) : SerializerRegistry {
-    private val serializerMap: MutableMap<Class<*>?, SerializerFactory<*>?> = ConcurrentSkipListMap<Class<*>?, SerializerFactory<*>?>(CLASS_COMPARATOR)
+    private val serializerMap: MutableMap<Class<*>, SerializerFactory<*>> = ConcurrentSkipListMap<Class<*>, SerializerFactory<*>>(CLASS_COMPARATOR)
 
     // We are using a ConcurrentHashMap here because:
     //   - We don't want to use a Set with CLASS_COMPARATOR, since that would treat two classes with the same name originating from different classloaders as identical, allowing only one in the Set.
     //   - ConcurrentHashMap.newKeySet() isn't available on Java 6, yet, and that is where this code needs to run.
     //   - CopyOnWriteArraySet has slower insert performance, since it is not hash based.
-    private val javaSerialization: MutableMap<Class<*>, Boolean?> = ConcurrentHashMap<Class<*>, Boolean?>()
+    private val javaSerialization: MutableMap<Class<*>, Boolean> = ConcurrentHashMap<Class<*>, Boolean>()
     private val classMatcher: SerializerClassMatcherStrategy
 
     init {
         this.classMatcher = if (supportClassHierarchy) SerializerClassMatcherStrategy.Companion.HIERARCHY else SerializerClassMatcherStrategy.Companion.STRICT
     }
 
-    override fun <T> register(implementationType: Class<T?>?, serializer: Serializer<T?>?) {
-        registerWithFactory<T?>(implementationType, InstanceBasedSerializerFactory<T?>(serializer))
+    override fun <T : Any> register(implementationType: Class<T>, serializer: Serializer<T>) {
+        registerWithFactory<T>(implementationType, InstanceBasedSerializerFactory<T>(serializer))
     }
 
-    protected fun <T> registerWithFactory(implementationType: Class<T?>?, serializerProvider: SerializerFactory<T?>?) {
+    protected fun <T : Any> registerWithFactory(implementationType: Class<T>, serializerProvider: SerializerFactory<T>) {
         serializerMap.put(implementationType, serializerProvider)
     }
 
-    override fun <T> useJavaSerialization(implementationType: Class<T?>?) {
-        javaSerialization.put(implementationType!!, Boolean.TRUE)
+    override fun <T : Any> useJavaSerialization(implementationType: Class<T>) {
+        javaSerialization.put(implementationType, true)
     }
 
-    override fun canSerialize(baseType: Class<*>?): kotlin.Boolean {
+    override fun canSerialize(baseType: Class<*>): kotlin.Boolean {
         for (candidate in serializerMap.keys) {
             if (classMatcher.matches(baseType, candidate)) {
                 return true
@@ -80,14 +79,14 @@ open class DefaultSerializerRegistry @JvmOverloads constructor(supportClassHiera
         return false
     }
 
-    override fun <T> build(baseType: Class<T?>): Serializer<T?>? {
-        val matches: MutableMap<Class<*>?, SerializerFactory<*>?> = LinkedHashMap<Class<*>?, SerializerFactory<*>?>()
+    override fun <T : Any> build(baseType: Class<T>): Serializer<T> {
+        val matches: MutableMap<Class<*>, SerializerFactory<*>> = LinkedHashMap<Class<*>, SerializerFactory<*>>()
         for (entry in serializerMap.entries) {
             if (baseType.isAssignableFrom(entry.key)) {
                 matches.put(entry.key, entry.value)
             }
         }
-        val matchingJavaSerialization: MutableSet<Class<*>?> = LinkedHashSet<Class<*>?>()
+        val matchingJavaSerialization: MutableSet<Class<*>> = LinkedHashSet<Class<*>>()
         for (candidate in javaSerialization.keys) {
             if (baseType.isAssignableFrom(candidate)) {
                 matchingJavaSerialization.add(candidate)
@@ -95,16 +94,16 @@ open class DefaultSerializerRegistry @JvmOverloads constructor(supportClassHiera
         }
         require(!(matches.isEmpty() && matchingJavaSerialization.isEmpty())) { String.format("Don't know how to serialize objects of type %s.", baseType.getName()) }
         if (matches.size == 1 && matchingJavaSerialization.isEmpty()) {
-            return Cast.uncheckedNonnullCast<Serializer<T?>?>(matches.values.iterator().next()!!.serializerInstance())
+            return Cast.uncheckedNonnullCast<Serializer<T>>(matches.values.iterator().next().serializerInstance())
         }
-        return TaggedTypeSerializer<T?>(matches, matchingJavaSerialization)
+        return TaggedTypeSerializer<T>(matches, matchingJavaSerialization)
     }
 
     private class TypeInfo(val tag: Int, val useForSubtypes: kotlin.Boolean, val serializer: Serializer<*>)
 
-    private class TaggedTypeSerializer<T>(serializerMap: MutableMap<Class<*>?, SerializerFactory<*>?>, javaSerialization: MutableSet<Class<*>?>) : AbstractSerializer<T?>() {
-        private val serializersByType: MutableMap<Class<*>?, TypeInfo?> = HashMap<Class<*>?, TypeInfo?>()
-        private val typeHierarchies: MutableMap<Class<*>?, TypeInfo?> = HashMap<Class<*>?, TypeInfo?>()
+    private class TaggedTypeSerializer<T : Any>(serializerMap: MutableMap<Class<*>, SerializerFactory<*>>, javaSerialization: MutableSet<Class<*>>) : AbstractSerializer<T>() {
+        private val serializersByType: MutableMap<Class<*>, TypeInfo> = HashMap<Class<*>, TypeInfo>()
+        private val typeHierarchies: MutableMap<Class<*>, TypeInfo> = HashMap<Class<*>, TypeInfo>()
         private val serializersByTag: Array<TypeInfo?>
 
         init {
@@ -112,7 +111,7 @@ open class DefaultSerializerRegistry @JvmOverloads constructor(supportClassHiera
             serializersByTag[JAVA_TYPE] = JAVA_SERIALIZATION
             var nextTag = 2
             for (entry in serializerMap.entries) {
-                add(nextTag, entry.key!!, entry.value!!.serializerInstance()!!)
+                add(nextTag, entry.key, entry.value.serializerInstance())
                 nextTag++
             }
             for (type in javaSerialization) {
@@ -131,18 +130,18 @@ open class DefaultSerializerRegistry @JvmOverloads constructor(supportClassHiera
         }
 
         @Throws(Exception::class)
-        override fun read(decoder: Decoder): T? {
+        override fun read(decoder: Decoder): T {
             val tag = decoder.readSmallInt()
             val typeInfo: TypeInfo = (if (tag >= serializersByTag.size) null else serializersByTag[tag])!!
             requireNotNull(typeInfo) { String.format("Unexpected type tag %d found.", tag) }
-            return Cast.uncheckedNonnullCast<T?>(typeInfo.serializer.read(decoder))
+            return Cast.uncheckedNonnullCast<T>(typeInfo.serializer.read(decoder))
         }
 
         @Throws(Exception::class)
-        override fun write(encoder: Encoder, value: T?) {
-            val typeInfo = map(value!!.javaClass)
+        override fun write(encoder: Encoder, value: T) {
+            val typeInfo = map(value.javaClass)
             encoder.writeSmallInt(typeInfo.tag)
-            Cast.uncheckedNonnullCast<Serializer<T?>?>(typeInfo.serializer).write(encoder, value)
+            Cast.uncheckedNonnullCast<Serializer<T>>(typeInfo.serializer).write(encoder, value)
         }
 
         override fun equals(obj: Any?): kotlin.Boolean {
@@ -166,8 +165,8 @@ open class DefaultSerializerRegistry @JvmOverloads constructor(supportClassHiera
                 return typeInfo
             }
             for (entry in typeHierarchies.entries) {
-                if (entry.key!!.isAssignableFrom(valueType)) {
-                    return entry.value!!
+                if (entry.key.isAssignableFrom(valueType)) {
+                    return entry.value
                 }
             }
             throw IllegalArgumentException(String.format("Don't know how to serialize an object of type %s.", valueType.getName()))
@@ -180,7 +179,7 @@ open class DefaultSerializerRegistry @JvmOverloads constructor(supportClassHiera
     }
 
     private interface SerializerClassMatcherStrategy {
-        fun matches(baseType: Class<*>?, candidate: Class<*>?): kotlin.Boolean
+        fun matches(baseType: Class<*>, candidate: Class<*>): kotlin.Boolean
 
         companion object {
             val STRICT: SerializerClassMatcherStrategy = StrictSerializerMatcher()
@@ -194,11 +193,11 @@ open class DefaultSerializerRegistry @JvmOverloads constructor(supportClassHiera
      * @param <S> The type supported by the serializer
     </S> */
     protected interface SerializerFactory<S> {
-        fun serializerInstance(): Serializer<S?>?
+        fun serializerInstance(): Serializer<S>
     }
 
-    private class InstanceBasedSerializerFactory<S>(private val instance: Serializer<S?>?) : SerializerFactory<S?> {
-        override fun serializerInstance(): Serializer<S?>? {
+    private class InstanceBasedSerializerFactory<S : Any>(private val instance: Serializer<S>) : SerializerFactory<S> {
+        override fun serializerInstance(): Serializer<S> {
             return instance
         }
     }
@@ -210,13 +209,13 @@ open class DefaultSerializerRegistry @JvmOverloads constructor(supportClassHiera
     }
 
     private class StrictSerializerMatcher : SerializerClassMatcherStrategy {
-        override fun matches(baseType: Class<*>, candidate: Class<*>?): kotlin.Boolean {
+        override fun matches(baseType: Class<*>, candidate: Class<*>): kotlin.Boolean {
             return baseType == candidate
         }
     }
 
     companion object {
-        private val CLASS_COMPARATOR: Comparator<Class<*>?> = object : Comparator<Class<*>?> {
+        private val CLASS_COMPARATOR: Comparator<Class<*>> = object : Comparator<Class<*>> {
             override fun compare(o1: Class<*>, o2: Class<*>): Int {
                 return o1.getName().compareTo(o2.getName())
             }

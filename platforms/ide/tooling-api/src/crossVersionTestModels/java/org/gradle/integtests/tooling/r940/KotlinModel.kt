@@ -15,8 +15,17 @@
  */
 package org.gradle.integtests.tooling.r940
 
+import org.gradle.tooling.*
+import org.gradle.tooling.model.*
+import org.gradle.tooling.model.build.*
+import org.gradle.tooling.model.eclipse.*
+import org.gradle.tooling.model.gradle.*
+import org.gradle.tooling.model.idea.*
+import org.gradle.tooling.model.kotlin.dsl.*
+
 import org.gradle.tooling.Failure
 import java.io.File
+import org.gradle.integtests.tooling.r48.*
 import java.io.Serializable
 import java.util.Map
 import java.util.function.Function
@@ -28,6 +37,6 @@ internal class KotlinModel(scriptModels: MutableMap<File?, KotlinDslScriptModel?
 
     init {
         this.scriptModels = scriptModels
-        this.failures = failures.entries.stream().collect(Collectors.toMap(Function { Map.Entry.key }, Function { e: MutableMap.MutableEntry<File?, Failure?>? -> e!!.value.getDescription() }))
+        this.failures = failures.mapValues { it.value.getDescription() }.toMutableMap()
     }
 }

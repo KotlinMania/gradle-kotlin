@@ -86,7 +86,7 @@ class JavaUtilLoggingSystem : LoggingSourceSystem {
         logger.setLevel(level)
     }
 
-    private class SnapshotImpl(private val installed: Boolean, private val javaUtilLevel: Level?, private val requestedLevel: LogLevel?) : LoggingSystem.Snapshot
+    private class SnapshotImpl(val installed: Boolean, val javaUtilLevel: Level?, val requestedLevel: LogLevel?) : LoggingSystem.Snapshot
     companion object {
         private val LOG_LEVEL_MAPPING: MutableMap<LogLevel?, Level?> = HashMap<LogLevel?, Level?>()
 

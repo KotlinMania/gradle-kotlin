@@ -28,7 +28,7 @@ class DefaultOffsetInFileLocation private constructor(path: String, private val 
         return length
     }
 
-    override fun equals(o: Any): Boolean {
+    override fun equals(o: Any?): Boolean {
         if (o !is DefaultOffsetInFileLocation) {
             return false
         }

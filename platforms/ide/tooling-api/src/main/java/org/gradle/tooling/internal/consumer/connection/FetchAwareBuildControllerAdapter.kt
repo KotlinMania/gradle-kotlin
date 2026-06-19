@@ -44,20 +44,20 @@ internal class FetchAwareBuildControllerAdapter(
 
     override fun <M, P> fetch(
         target: Model?,
-        modelType: Class<M?>,
+        modelType: Class<M?>?,
         parameterType: Class<P?>?,
         parameterInitializer: Action<in P?>?
     ): FetchModelResult<M?> {
         val originalTarget = unpackModelTarget(target)
-        val modelIdentifier = getModelIdentifierFromModelType<M?>(modelType)
+        val modelIdentifier = getModelIdentifierFromModelType<M?>(modelType!!)
         val parameter: P? = if (parameterInitializer != null) UnparameterizedBuildController.Companion.initializeParameter<P?>(parameterType, parameterInitializer) else null
-        val result = fetch.fetch<Any>(originalTarget, modelIdentifier, parameter)
+        val result = fetch.fetch<Any>(originalTarget, modelIdentifier, parameter)!!
         return adaptResult<Model?, M?>(target, modelType, result)
     }
 
-    private fun <T : Model?, M> adaptResult(target: T?, modelType: Class<M?>, result: InternalFetchModelResult<Any>): FetchModelResult<M?> {
+    private fun <T : Model?, M> adaptResult(target: T?, modelType: Class<M?>, result: InternalFetchModelResult<Any?>): FetchModelResult<M?> {
         val model = result.model
         val adaptedModel = if (model != null) adaptModel<M?>(target, modelType, model) else null
-        return DefaultFetchModelResult.of<M?>(adaptedModel, result.failures)
+        return DefaultFetchModelResult.of<M?>(adaptedModel, result.failures ?: mutableListOf())
     }
 }

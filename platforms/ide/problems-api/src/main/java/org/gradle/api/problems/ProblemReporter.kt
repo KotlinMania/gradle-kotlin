@@ -34,7 +34,7 @@ interface ProblemReporter {
      * @return The new problem.
      * @since 8.13
      */
-    fun create(problemId: ProblemId?, action: Action<in ProblemSpec?>?): Problem?
+    fun create(problemId: ProblemId, action: Action<in ProblemSpec>): Problem?
 
     /**
      * Configures and reports a new problem.
@@ -43,7 +43,7 @@ interface ProblemReporter {
      * @param spec the problem configuration
      * @since 8.13
      */
-    fun report(problemId: ProblemId?, spec: Action<in ProblemSpec?>?)
+    fun report(problemId: ProblemId, spec: Action<in ProblemSpec>)
 
     /**
      * Reports the target problem.
@@ -51,7 +51,7 @@ interface ProblemReporter {
      * @param problem The problem to report.
      * @since 8.13
      */
-    fun report(problem: Problem?)
+    fun report(problem: Problem)
 
     /**
      * Reports the target problems.
@@ -59,7 +59,7 @@ interface ProblemReporter {
      * @param problems The problems to report.
      * @since 8.13
      */
-    fun report(problems: MutableCollection<out Problem?>?)
+    fun report(problems: MutableCollection<out Problem>)
 
     /**
      * Configures a new problem, reports it, and uses it to throw a new exception.
@@ -70,7 +70,7 @@ interface ProblemReporter {
      * @return never returns by throwing the exception, but using `throw` statement at the call site is encouraged to indicate the intent and benefit from local control flow.
      * @since 8.13
      */
-    fun throwing(exception: Throwable?, problemId: ProblemId?, spec: Action<in ProblemSpec?>?): RuntimeException?
+    fun throwing(exception: Throwable, problemId: ProblemId, spec: Action<in ProblemSpec>): RuntimeException
 
     /**
      * Configures a new problem, reports it, and uses it to throw a new exception.
@@ -80,7 +80,7 @@ interface ProblemReporter {
      * @return never returns by throwing the exception, but using `throw` statement at the call site is encouraged to indicate the intent and benefit from local control flow.
      * @since 8.13
      */
-    fun throwing(exception: Throwable?, problem: Problem?): RuntimeException?
+    fun throwing(exception: Throwable, problem: Problem): RuntimeException
 
     /**
      * Reports the target problems and throws a runtime exception. When this method is used, all reported problems will be associated with the thrown exception.
@@ -90,5 +90,5 @@ interface ProblemReporter {
      * @return nothing, the method throws an exception
      * @since 8.13
      */
-    fun throwing(exception: Throwable?, problems: MutableCollection<out Problem?>?): RuntimeException?
+    fun throwing(exception: Throwable, problems: MutableCollection<out Problem>): RuntimeException
 }

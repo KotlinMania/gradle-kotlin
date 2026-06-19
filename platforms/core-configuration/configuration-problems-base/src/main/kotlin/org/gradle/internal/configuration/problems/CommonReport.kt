@@ -43,7 +43,7 @@ import java.util.concurrent.TimeUnit
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.contract
 
-val logger: Logger = getLogger(CommonReport::class.java)
+val logger: Logger = getLogger(CommonReport::class.java)!!
 
 enum class DiagnosticKind {
     PROBLEM,
@@ -371,8 +371,8 @@ class CommonReport(
         val root = this@hashWithoutMessages
         val hasher = Hashing.newHasher()
         for (failure in sequence { visitFailures(root) }) {
-            hasher.putString(failure.exceptionType.name)
-            for (element in failure.stackTrace) {
+            hasher.putString(failure.getExceptionType()!!.name)
+            for (element in failure.getStackTrace().orEmpty()) {
                 hasher.putString(element.toString())
             }
         }
@@ -382,7 +382,11 @@ class CommonReport(
     private
     suspend fun SequenceScope<Failure>.visitFailures(failure: Failure) {
         yield(failure)
-        failure.suppressed.forEach { visitFailures(it) }
-        failure.causes.forEach { visitFailures(it) }
+        for (suppressed in failure.getSuppressed().orEmpty()) {
+            visitFailures(suppressed)
+        }
+        for (cause in failure.getCauses().orEmpty()) {
+            visitFailures(cause)
+        }
     }
 }

@@ -27,13 +27,14 @@ abstract class AbstractProcessEnvironment : ProcessEnvironment {
     //for updates to private JDK caches of the environment state
     private val reflectiveEnvironment = ReflectiveEnvironment()
 
-    override fun maybeSetEnvironment(source: MutableMap<String?, String?>): EnvironmentModificationResult {
+    override fun maybeSetEnvironment(source: MutableMap<String?, String?>?): EnvironmentModificationResult {
+        val environment = source!!
         // need to take copy to prevent ConcurrentModificationException
-        val keysToRemove: MutableList<String?> = Lists.newArrayList<String?>(Sets.difference<String?>(System.getenv().keys, source.keys))
+        val keysToRemove: MutableList<String?> = Lists.newArrayList<String?>(Sets.difference<String?>(System.getenv().keys, environment.keys))
         for (key in keysToRemove) {
             removeEnvironmentVariable(key)
         }
-        for (entry in source.entries) {
+        for (entry in environment.entries) {
             setEnvironmentVariable(entry.key, entry.value)
         }
         return EnvironmentModificationResult.SUCCESS
@@ -70,16 +71,23 @@ abstract class AbstractProcessEnvironment : ProcessEnvironment {
         return EnvironmentModificationResult.SUCCESS
     }
 
-    @Throws(NativeIntegrationException::class)
-    override fun setProcessDir(processDir: File) {
-        setNativeProcessDir(processDir)
-        System.setProperty("user.dir", processDir.getAbsolutePath())
-    }
+    override var processDir: File?
+        @Throws(NativeIntegrationException::class)
+        get() = getNativeProcessDir()
+        @Throws(NativeIntegrationException::class)
+        set(processDir) {
+            setNativeProcessDir(processDir)
+            if (processDir != null) {
+                System.setProperty("user.dir", processDir.getAbsolutePath())
+            }
+        }
+
+    protected abstract fun getNativeProcessDir(): File?
 
     protected abstract fun setNativeProcessDir(processDir: File?)
 
-    override fun maybeSetProcessDir(processDir: File): Boolean {
-        setProcessDir(processDir)
+    override fun maybeSetProcessDir(processDir: File?): Boolean {
+        this.processDir = processDir
         return true
     }
 

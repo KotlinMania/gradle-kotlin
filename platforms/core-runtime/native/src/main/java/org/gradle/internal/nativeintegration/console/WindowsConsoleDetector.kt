@@ -25,7 +25,7 @@ class WindowsConsoleDetector : ConsoleDetector {
         // Use Jansi's detection mechanism
         try {
             WindowsAnsiProcessor(PrintStream(ByteArrayOutputStream()), true)
-            val disableUnicodeSupportDetection: Boolean = NativePlatformConsoleDetector.Companion.isWindowsWithNonUnicodeCodePage()
+            val disableUnicodeSupportDetection: Boolean = NativePlatformConsoleDetector.isWindowsWithNonUnicodeCodePage
             return object : UnicodeProxyConsoleMetaData(FallbackConsoleMetaData.ATTACHED) {
                 override fun supportsUnicode(): Boolean {
                     if (disableUnicodeSupportDetection) {

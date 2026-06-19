@@ -239,7 +239,7 @@ abstract public class DefaultCacheConfigurations implements CacheConfigurationsI
             return () -> {
                 EntryRetention retentionValue = entryRetention.get();
                 if (retentionValue.isRelative()) {
-                    return clock.currentTime - retentionValue.getTimeInMillis();
+                    return clock.getCurrentTime() - retentionValue.getTimeInMillis();
                 }
                 return retentionValue.getTimeInMillis();
             };

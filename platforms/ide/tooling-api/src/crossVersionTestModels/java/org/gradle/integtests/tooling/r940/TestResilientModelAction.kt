@@ -15,13 +15,24 @@
  */
 package org.gradle.integtests.tooling.r940
 
+import org.gradle.tooling.*
+import org.gradle.tooling.model.*
+import org.gradle.tooling.model.build.*
+import org.gradle.tooling.model.eclipse.*
+import org.gradle.tooling.model.gradle.*
+import org.gradle.tooling.model.idea.*
+import org.gradle.tooling.model.kotlin.dsl.*
+import org.gradle.tooling.internal.adapter.ProtocolToModelAdapter
+import java.io.File
+import org.gradle.integtests.tooling.r48.*
+
 import org.gradle.tooling.BuildAction
 import java.io.Serializable
 import kotlin.collections.ArrayList
 import kotlin.collections.MutableList
 
 class TestResilientModelAction(private val modelType: Class<*>, private val queryStrategy: QueryStrategy?) : BuildAction<TestResilientModelAction.Result?>, Serializable {
-    public override fun execute(controller: BuildController): Result {
+    public override fun execute(controller: BuildController?): Result {
         val gradleBuild: GradleBuild = checkNotNull(controller.fetch(GradleBuild::class.java).getModel())
         val successfulQueriedProjects: MutableList<String?> = ArrayList<String?>()
         val failedQueriedProjects: MutableList<String?> = ArrayList<String?>()
@@ -35,13 +46,13 @@ class TestResilientModelAction(private val modelType: Class<*>, private val quer
         return Result(successfulQueriedProjects, failedQueriedProjects)
     }
 
-    private fun queryRootBuild(controller: BuildController, gradleBuild: GradleBuild, successfulQueriedProjects: MutableList<String?>, failedQueriedProjects: MutableList<String?>) {
+    private fun queryRootBuild(controller: BuildController?, gradleBuild: GradleBuild, successfulQueriedProjects: MutableList<String?>, failedQueriedProjects: MutableList<String?>) {
         for (project in gradleBuild.getProjects()) {
             queryModelForProject(controller, project, successfulQueriedProjects, failedQueriedProjects)
         }
     }
 
-    private fun queryEditableBuilds(controller: BuildController, gradleBuild: GradleBuild, successfulQueriedProjects: MutableList<String?>, failedQueriedProjects: MutableList<String?>) {
+    private fun queryEditableBuilds(controller: BuildController?, gradleBuild: GradleBuild, successfulQueriedProjects: MutableList<String?>, failedQueriedProjects: MutableList<String?>) {
         for (includedBuild in gradleBuild.getEditableBuilds()) {
             for (project in includedBuild.getProjects()) {
                 queryModelForProject(controller, project, successfulQueriedProjects, failedQueriedProjects)
@@ -49,7 +60,7 @@ class TestResilientModelAction(private val modelType: Class<*>, private val quer
         }
     }
 
-    private fun queryModelForProject(controller: BuildController, project: BasicGradleProject, successfulQueriedProjects: MutableList<String?>, failedQueriedProjects: MutableList<String?>) {
+    private fun queryModelForProject(controller: BuildController?, project: BasicGradleProject, successfulQueriedProjects: MutableList<String?>, failedQueriedProjects: MutableList<String?>) {
         val result: FetchModelResult<*> = controller.fetch(project, modelType)
         if (result.getFailures().isEmpty() && result.getModel() != null) {
             successfulQueriedProjects.add(project.getName())

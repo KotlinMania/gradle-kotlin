@@ -15,10 +15,4 @@
  */
 package org.gradle.tooling.internal.adapter
 
-import org.gradle.internal.UncheckedException.Companion.throwAsUncheckedException
-import org.gradle.internal.Cast.uncheckedCast
-import org.gradle.internal.Cast.uncheckedNonnullCast
-import org.gradle.internal.time.Time.startCountdownTimer
-import org.gradle.internal.time.CountdownTimer.hasExpired
-import org.gradle.internal.time.Timer.reset
 

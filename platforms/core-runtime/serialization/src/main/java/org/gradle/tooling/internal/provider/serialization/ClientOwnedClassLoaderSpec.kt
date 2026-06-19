@@ -18,7 +18,7 @@ package org.gradle.tooling.internal.provider.serialization
 import org.gradle.internal.classloader.ClassLoaderSpec
 import java.net.URI
 
-class ClientOwnedClassLoaderSpec(@JvmField val classpath: MutableList<URI?>) : ClassLoaderSpec() {
+class ClientOwnedClassLoaderSpec(@JvmField val classpath: MutableList<URI>) : ClassLoaderSpec() {
     override fun toString(): String {
         return "{client-owned-class-loader classpath: " + classpath + "}"
     }

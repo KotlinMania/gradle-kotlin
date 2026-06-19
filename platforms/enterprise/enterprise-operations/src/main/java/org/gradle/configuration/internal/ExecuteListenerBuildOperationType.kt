@@ -25,6 +25,7 @@ import org.gradle.internal.operations.BuildOperationType
  * @since 4.10
  */
 object ExecuteListenerBuildOperationType : BuildOperationType<ExecuteListenerBuildOperationType.Details, ExecuteListenerBuildOperationType.Result> {
+    @JvmField
     val RESULT: Result = object : Result {
     }
 

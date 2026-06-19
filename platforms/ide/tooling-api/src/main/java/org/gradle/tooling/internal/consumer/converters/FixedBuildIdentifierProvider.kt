@@ -15,18 +15,19 @@
  */
 package org.gradle.tooling.internal.consumer.converters
 
+import java.io.Serializable
 import org.gradle.tooling.internal.adapter.ViewBuilder
 import org.gradle.tooling.internal.gradle.DefaultBuildIdentifier
 import org.gradle.tooling.internal.gradle.DefaultProjectIdentifier
 import org.gradle.tooling.model.BuildModel
+import org.gradle.tooling.model.ProjectIdentifier
 import org.gradle.tooling.model.ProjectModel
-import java.io.Serializable
 
 class FixedBuildIdentifierProvider(val projectIdentifier: DefaultProjectIdentifier) : Serializable {
     val buildIdentifier: DefaultBuildIdentifier?
 
     init {
-        this.buildIdentifier = projectIdentifier.getBuildIdentifier()
+        this.buildIdentifier = projectIdentifier.buildIdentifier
     }
 
     fun <T> applyTo(builder: ViewBuilder<T?>): ViewBuilder<T?> {

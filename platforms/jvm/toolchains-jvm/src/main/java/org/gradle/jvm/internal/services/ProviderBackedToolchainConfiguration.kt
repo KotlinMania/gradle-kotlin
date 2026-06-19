@@ -59,7 +59,7 @@ class ProviderBackedToolchainConfiguration internal constructor(
         return providerFactory.gradleProperty(propertyName)
     }
 
-    var javaInstallationsFromEnvironment: MutableCollection<String>
+    override var javaInstallationsFromEnvironment: MutableCollection<String>
         get() = Arrays.asList<String>(
             *fromGradleProperty(EnvironmentVariableListInstallationSupplier.JAVA_INSTALLATIONS_FROM_ENV_PROPERTY).getOrElse(
                 ""
@@ -69,7 +69,7 @@ class ProviderBackedToolchainConfiguration internal constructor(
             throw UnsupportedOperationException()
         }
 
-    var installationsFromPaths: MutableCollection<String>
+    override var installationsFromPaths: MutableCollection<String>
         get() = Arrays.asList<String>(
             *fromGradleProperty(LocationListInstallationSupplier.JAVA_INSTALLATIONS_PATHS_PROPERTY).getOrElse("").split(",".toRegex()).dropLastWhile { it.isEmpty() }
                 .toTypedArray())
@@ -77,21 +77,21 @@ class ProviderBackedToolchainConfiguration internal constructor(
             throw UnsupportedOperationException()
         }
 
-    var isAutoDetectEnabled: Boolean
+    override var isAutoDetectEnabled: Boolean
         get() = fromGradleProperty(ToolchainConfiguration.AUTO_DETECT).map<Boolean>(Transformer { s: String? -> s.toBoolean() })
             .getOrElse(java.lang.Boolean.TRUE)
         set(enabled) {
             throw UnsupportedOperationException()
         }
 
-    var isDownloadEnabled: Boolean
+    override var isDownloadEnabled: Boolean
         get() = fromGradleProperty(AutoInstalledInstallationSupplier.AUTO_DOWNLOAD).map<Boolean>(Transformer { s: String? -> s.toBoolean() })
             .getOrElse(java.lang.Boolean.TRUE)
         set(enabled) {
             throw UnsupportedOperationException()
         }
 
-    val asdfDataDirectory: File
+    override val asdfDataDirectory: File
         get() {
             val asdfEnvVar = providerFactory.environmentVariable("ASDF_DATA_DIR").getOrNull()
             if (asdfEnvVar != null) {
@@ -100,7 +100,7 @@ class ProviderBackedToolchainConfiguration internal constructor(
             return File(systemProperties.getUserHome(), ".asdf")
         }
 
-    var intelliJdkDirectory: File
+    override var intelliJdkDirectory: File?
         get() = fromGradleProperty(IntellijInstallationSupplier.INTELLIJ_JDK_DIR_PROPERTY).map<File>(Transformer { pathname: String? ->
             File(
                 pathname
@@ -117,7 +117,7 @@ class ProviderBackedToolchainConfiguration internal constructor(
         return File(systemProperties.getUserHome(), ".jdks")
     }
 
-    val jabbaHomeDirectory: File
+    override val jabbaHomeDirectory: File?
         get() {
             val jabbaHome = providerFactory.environmentVariable("JABBA_HOME").getOrNull()
             if (jabbaHome != null) {
@@ -126,7 +126,7 @@ class ProviderBackedToolchainConfiguration internal constructor(
             return null
         }
 
-    val sdkmanCandidatesDirectory: File
+    override val sdkmanCandidatesDirectory: File
         get() {
             val asdfEnvVar = providerFactory.environmentVariable("SDKMAN_CANDIDATES_DIR").getOrNull()
             if (asdfEnvVar != null) {

@@ -47,7 +47,7 @@ import org.gradle.internal.problems.failure.FailureFactory
 import java.io.File
 import java.util.concurrent.atomic.AtomicInteger
 
-private val logger: Logger = Logging.getLogger(DefaultProblemsReportCreator::class.java)
+private val logger: Logger = Logging.getLogger(DefaultProblemsReportCreator::class.java)!!
 
 class DefaultProblemsReportCreator(
     executorFactory: ExecutorFactory,
@@ -76,7 +76,7 @@ class DefaultProblemsReportCreator(
         report.onProblem(JsonProblemWriter(problem, failureDecorator, failureFactory))
     }
 
-    override fun createReportFile(reportDir: File, problemSummaries: List<ProblemSummaryData>) {
+    override fun createReportFile(reportDir: File, problemSummaries: MutableList<ProblemSummaryData>) {
         val reportFile = report.writeReportFileTo(reportDir.resolve("reports/problems"), object : JsonSource {
             override fun writeToJson(jsonWriter: JsonWriter) = with(jsonWriter) {
                 property("problemsReport") {
@@ -110,7 +110,7 @@ class DefaultProblemsReportCreator(
     }
 
     private fun JsonWriter.writeRequestedTasks() {
-        property("requestedTasks", taskNames.joinToString(" "))
+        property("requestedTasks", (taskNames ?: emptyList<String>()).joinToString(" "))
     }
 
     private fun JsonWriter.writeDocumentationLink() {
@@ -137,14 +137,15 @@ internal class JsonProblemWriter(
 
     override fun writeToJson(jsonWriter: JsonWriter) = with(jsonWriter) {
         jsonObject {
-            writeProblemId(problem.definition.id)
-            writeSeverity(problem.definition.severity)
-            writeContextualLabel(problem.contextualLabel)
-            writeDetails(problem.details)
-            writeDocumentationLink(problem.definition.documentationLink)
-            writeException(problem.exception)
-            writeLocations(problem.originLocations, problem.contextualLocations)
-            writeSolutions(problem.solutions)
+            val definition = problem.getDefinition()!!
+            writeProblemId(definition.getId()!!)
+            writeSeverity(definition.getSeverity()!!)
+            writeContextualLabel(problem.getContextualLabel())
+            writeDetails(problem.getDetails())
+            writeDocumentationLink(definition.getDocumentationLink())
+            writeException(problem.getException())
+            writeLocations(problem.getOriginLocations() ?: emptyList(), problem.getContextualLocations() ?: emptyList())
+            writeSolutions(problem.getSolutions() ?: emptyList())
         }
     }
 
@@ -166,27 +167,27 @@ internal class JsonProblemWriter(
 
     private fun JsonWriter.writeDocumentationLink(docLink: DocLink?) {
         if (docLink != null) {
-            property("documentationLink", docLink.url)
+            property("documentationLink", docLink.getUrl()!!)
         }
     }
 
     private fun JsonWriter.writeException(exception: Throwable?) {
         if (exception != null) {
-            writeError(failureDecorator.decorate(failureFactory.create(exception)))
+            writeError(failureDecorator.decorate(failureFactory.create(exception)!!))
         }
     }
 
     private fun JsonWriter.writeLocations(originLocations: List<ProblemLocation>, contextualLocations: List<ProblemLocation>) {
         val locations = (originLocations + contextualLocations)
-            .mapNotNull { location -> if (location is StackTraceLocation) location.fileLocation else location }
+            .mapNotNull { location -> if (location is StackTraceLocation) location.getFileLocation() else location }
             .filter { it is FileLocation || it is PluginIdLocation || it is TaskLocation }
         if (locations.isNotEmpty()) {
             property("locations") {
                 jsonObjectList(locations) { location ->
                     when (location) {
                         is FileLocation -> writeFileLocation(location)
-                        is PluginIdLocation -> property("pluginId", location.pluginId)
-                        is TaskLocation -> property("taskPath", location.buildTreePath)
+                        is PluginIdLocation -> property("pluginId", location.getPluginId()!!)
+                        is TaskLocation -> property("taskPath", location.getBuildTreePath()!!)
                     }
                 }
             }
@@ -194,11 +195,11 @@ internal class JsonProblemWriter(
     }
 
     private fun JsonWriter.writeFileLocation(location: FileLocation) {
-        property("path", location.path)
+        property("path", location.getPath()!!)
         if (location is LineInFileLocation) {
-            if (location.line >= 0) property("line", location.line)
-            if (location.column >= 0) property("column", location.column)
-            if (location.length >= 0) property("length", location.length)
+            if (location.getLine() >= 0) property("line", location.getLine())
+            if (location.getColumn() >= 0) property("column", location.getColumn())
+            if (location.getLength() >= 0) property("length", location.getLength())
         }
     }
 
@@ -214,10 +215,10 @@ internal class JsonProblemWriter(
 @Suppress("USELESS_ELVIS")
 private fun JsonWriter.writeProblemId(id: ProblemId) {
     property("problemId") {
-        val list = generateSequence(id.group) { it.parent }.toList().reversed() + ProblemGroup.create(id.name, id.displayName)
+        val list = generateSequence(id.getGroup()) { it.getParent() }.toList().reversed() + ProblemGroup.create(id.getName()!!, id.getDisplayName()!!)
         jsonObjectList(list) { group ->
-            property("name", group.name ?: "<no name provided>")
-            property("displayName", group.displayName ?: "<no display name provided>")
+            property("name", group.getName() ?: "<no name provided>")
+            property("displayName", group.getDisplayName() ?: "<no display name provided>")
         }
     }
 }

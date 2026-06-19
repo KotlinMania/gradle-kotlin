@@ -34,7 +34,7 @@ class ConsoleLayoutCalculator
         if (maximumAvailableLines == -1) {
             // Disallow work-in-progress to take up more than half of the console display
             // If the screen size is unknown, allow 4 lines
-            val rows = consoleMetaData.rows
+            val rows = consoleMetaData.getRows()
             maximumAvailableLines = if (rows == 0) 4 else rows / 2
         }
 

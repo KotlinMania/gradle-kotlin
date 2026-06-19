@@ -32,7 +32,7 @@ import javax.annotation.concurrent.ThreadSafe
 class PayloadSerializer(private val classLoaderRegistry: PayloadClassLoaderRegistry) {
     fun serialize(payload: Any?): SerializedPayload {
         if (payload == null) {
-            return SerializedPayload(null, mutableListOf<ByteArray?>())
+            return SerializedPayload(null, mutableListOf<ByteArray>())
         }
 
         val map = classLoaderRegistry.newSerializeSession()
@@ -46,7 +46,7 @@ class PayloadSerializer(private val classLoaderRegistry: PayloadClassLoaderRegis
                 IOUtils.closeQuietly(objectStream)
             }
 
-            val classLoaders: MutableMap<Short?, ClassLoaderDetails?> = HashMap<Short?, ClassLoaderDetails?>()
+            val classLoaders: MutableMap<Short, ClassLoaderDetails> = HashMap<Short, ClassLoaderDetails>()
             map.collectClassLoaderDefinitions(classLoaders)
             return SerializedPayload(classLoaders, buffer.readAsListOfByteArrays())
         } catch (e: IOException) {
@@ -55,15 +55,15 @@ class PayloadSerializer(private val classLoaderRegistry: PayloadClassLoaderRegis
     }
 
     fun deserialize(payload: SerializedPayload): Any? {
-        if (payload.getSerializedModel().isEmpty()) {
+        if (payload.serializedModel.isEmpty()) {
             return null
         }
 
         val map = classLoaderRegistry.newDeserializeSession()
         try {
-            val classLoaderDetails = Cast.uncheckedNonnullCast<MutableMap<Short?, ClassLoaderDetails?>?>(payload.getHeader())
-            val buffer = of(payload.getSerializedModel())
-            val objectStream: ObjectInputStream = PayloadSerializerObjectInputStream(buffer.inputStream, javaClass.getClassLoader(), classLoaderDetails, map)
+            val classLoaderDetails = Cast.uncheckedNonnullCast<MutableMap<Short, ClassLoaderDetails>>(payload.header)
+            val buffer = of(payload.serializedModel)
+            val objectStream: ObjectInputStream = PayloadSerializerObjectInputStream(buffer.inputStream, requireNotNull(javaClass.classLoader), classLoaderDetails, map)
             return objectStream.readObject()
         } catch (e: Exception) {
             throw UncheckedException.throwAsUncheckedException(e)

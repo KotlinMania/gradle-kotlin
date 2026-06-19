@@ -18,5 +18,4 @@
  */
 package org.gradle.tooling.events.work
 
-import org.gradle.tooling.events.internal.BaseProgressEvent.getDescriptor
 

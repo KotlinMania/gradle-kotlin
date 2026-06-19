@@ -19,9 +19,7 @@ import org.gradle.tooling.events.configuration.ProjectConfigurationOperationResu
 import org.gradle.tooling.events.configuration.ProjectConfigurationSuccessResult
 import org.gradle.tooling.events.internal.DefaultOperationSuccessResult
 
-class DefaultProjectConfigurationSuccessResult(startTime: Long, endTime: Long, private val pluginApplicationResults: MutableList<out ProjectConfigurationOperationResult.PluginApplicationResult?>?) :
+class DefaultProjectConfigurationSuccessResult(startTime: Long, endTime: Long, override val pluginApplicationResults: MutableList<out ProjectConfigurationOperationResult.PluginApplicationResult?>?) :
     DefaultOperationSuccessResult(startTime, endTime), ProjectConfigurationSuccessResult {
-    override fun getPluginApplicationResults(): MutableList<out ProjectConfigurationOperationResult.PluginApplicationResult?>? {
-        return pluginApplicationResults
-    }
+
 }

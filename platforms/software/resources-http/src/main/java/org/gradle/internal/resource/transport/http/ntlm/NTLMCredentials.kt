@@ -29,7 +29,7 @@ open class NTLMCredentials(username: String, password: String?) {
     init {
         var username = username
         val domain: String?
-        Preconditions.checkNotNull<String?>(username, "Username must not be null!")
+        Preconditions.checkNotNull(username, "Username must not be null!")
         var slashPos = username.indexOf('\\')
         slashPos = if (slashPos >= 0) slashPos else username.indexOf('/')
         if (slashPos >= 0) {

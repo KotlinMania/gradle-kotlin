@@ -110,7 +110,7 @@ open class ExternalResourceName private constructor(
         return ExternalResourceName(encodedRoot, this.path + path)
     }
 
-    override fun equals(obj: Any): Boolean {
+    override fun equals(obj: Any?): Boolean {
         if (obj === this) {
             return true
         }

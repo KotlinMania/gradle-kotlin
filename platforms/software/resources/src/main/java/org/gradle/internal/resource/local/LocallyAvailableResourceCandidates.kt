@@ -21,7 +21,7 @@ import org.gradle.internal.hash.HashCode
  * A set of locally available resources that were "selected" through some means.
  */
 interface LocallyAvailableResourceCandidates {
-    val isNone: Boolean
+    fun isNone(): Boolean
 
-    fun findByHashValue(hashValue: HashCode?): LocallyAvailableResource?
+    fun findByHashValue(hashValue: HashCode): LocallyAvailableResource?
 }

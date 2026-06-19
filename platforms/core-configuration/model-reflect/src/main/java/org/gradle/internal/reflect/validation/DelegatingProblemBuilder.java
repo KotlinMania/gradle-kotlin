@@ -143,7 +143,7 @@ class DelegatingProblemBuilder implements ProblemBuilderInternal {
 
     @Override
     public ProblemsInfrastructure getInfrastructure() {
-        return delegate.infrastructure;
+        return delegate.getInfrastructure();
     }
 
     @Override

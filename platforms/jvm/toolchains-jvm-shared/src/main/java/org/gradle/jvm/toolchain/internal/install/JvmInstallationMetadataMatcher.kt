@@ -32,12 +32,12 @@ class JvmInstallationMetadataMatcher(
     languageVersion: JavaLanguageVersion,
     vendorSpec: JvmVendorSpec,
     jvmImplementation: JvmImplementation,
-    requiredCapabilities: MutableSet<JavaInstallationCapability>
+    requiredCapabilities: Set<JavaInstallationCapability>
 ) : Predicate<JvmInstallationMetadata> {
     private val languageVersion: JavaLanguageVersion
     private val vendorSpec: DefaultJvmVendorSpec
     private val jvmImplementation: JvmImplementation
-    private val requiredCapabilities: MutableSet<JavaInstallationCapability>
+    private val requiredCapabilities: Set<JavaInstallationCapability>
 
     init {
         this.languageVersion = languageVersion
@@ -46,10 +46,10 @@ class JvmInstallationMetadataMatcher(
         this.requiredCapabilities = ImmutableSet.copyOf<JavaInstallationCapability>(requiredCapabilities)
     }
 
-    constructor(spec: JavaToolchainSpec, requiredCapabilities: MutableSet<JavaInstallationCapability>) : this(
-        spec.getLanguageVersion().get(),
-        spec.getVendor().get(),
-        spec.getImplementation().get(),
+    constructor(spec: JavaToolchainSpec, requiredCapabilities: Set<JavaInstallationCapability>) : this(
+        spec.languageVersion.get(),
+        spec.vendor.get(),
+        spec.implementation.get(),
         requiredCapabilities
     )
 

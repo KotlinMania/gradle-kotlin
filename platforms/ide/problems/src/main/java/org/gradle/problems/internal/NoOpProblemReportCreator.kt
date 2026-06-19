@@ -21,7 +21,7 @@ import org.gradle.api.problems.internal.ProblemSummaryData
 import java.io.File
 
 class NoOpProblemReportCreator : ProblemReportCreator {
-    override fun createReportFile(reportDir: File, cutOffProblems: MutableList<ProblemSummaryData>) {
+    override fun createReportFile(reportDir: File, problemSummaries: MutableList<ProblemSummaryData>) {
         // no op
     }
 

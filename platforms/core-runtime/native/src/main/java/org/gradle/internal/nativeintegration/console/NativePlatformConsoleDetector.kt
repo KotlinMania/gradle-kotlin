@@ -26,7 +26,7 @@ class NativePlatformConsoleDetector(private val terminals: Terminals) : ConsoleD
         // TODO - remove this when we use Terminal rather than JAnsi to render to console
         val term = System.getenv("TERM")
         val operatingSystem = OperatingSystem.current()
-        if ("dumb" == term || (operatingSystem.isUnix() && term == null)) {
+        if ("dumb" == term || (operatingSystem.isUnix && term == null)) {
             return null
         }
 
@@ -59,6 +59,6 @@ class NativePlatformConsoleDetector(private val terminals: Terminals) : ConsoleD
         val isWindowsWithNonUnicodeCodePage: Boolean
             get() =//see https://learn.microsoft.com/en-us/windows/win32/intl/code-page-identifiers (e.g. code page 65001 is UTF-8)
                 OperatingSystem.current()
-                    .isWindows() && Kernel32.GetConsoleOutputCP() != WINDOWS_UTF8_CODEPAGE_ID
+                    .isWindows && Kernel32.GetConsoleOutputCP() != WINDOWS_UTF8_CODEPAGE_ID
     }
 }

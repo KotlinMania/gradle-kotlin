@@ -105,7 +105,7 @@ class DefaultDeclarativeKotlinScriptEvaluator(
         sequence.steps.map { step ->
             stepRunner.runInterpretationSequenceStep(
                 scriptSource.fileName,
-                scriptSource.resource.text,
+                scriptSource.resource.getText()!!,
                 step,
                 ConversionStepContext(target, { classLoaderScope.localClassLoader }, { classLoaderScope.parent.localClassLoader },defaultAnalysisContext, true)
             ).also { if (it is NotEvaluated) return it }

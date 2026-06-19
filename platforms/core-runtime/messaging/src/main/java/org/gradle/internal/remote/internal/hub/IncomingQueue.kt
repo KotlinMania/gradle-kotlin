@@ -19,7 +19,7 @@ import org.gradle.internal.remote.internal.hub.protocol.EndOfStream
 import org.gradle.internal.remote.internal.hub.queue.MultiChannelQueue
 import java.util.concurrent.locks.Lock
 
-internal class IncomingQueue(lock: Lock?) : MultiChannelQueue(lock) {
+internal class IncomingQueue(lock: Lock) : MultiChannelQueue(lock) {
     fun requestStop() {
         queue(EndOfStream())
     }

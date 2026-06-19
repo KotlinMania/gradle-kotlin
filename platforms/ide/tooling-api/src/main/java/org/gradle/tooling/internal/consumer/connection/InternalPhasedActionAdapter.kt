@@ -19,14 +19,10 @@ import org.gradle.tooling.internal.protocol.InternalBuildActionVersion2
 import org.gradle.tooling.internal.protocol.InternalPhasedAction
 
 class InternalPhasedActionAdapter internal constructor(
-    private val projectsLoadedAction: InternalBuildActionVersion2<*>?,
-    private val buildFinishedAction: InternalBuildActionVersion2<*>?
+    override val projectsLoadedAction: InternalBuildActionVersion2<*>?,
+    override val buildFinishedAction: InternalBuildActionVersion2<*>?
 ) : InternalPhasedAction {
-    override fun getProjectsLoadedAction(): InternalBuildActionVersion2<*>? {
-        return projectsLoadedAction
-    }
 
-    override fun getBuildFinishedAction(): InternalBuildActionVersion2<*>? {
-        return buildFinishedAction
-    }
+
+
 }

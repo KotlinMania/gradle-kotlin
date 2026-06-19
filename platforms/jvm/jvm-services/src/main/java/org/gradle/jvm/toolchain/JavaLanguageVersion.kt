@@ -75,7 +75,7 @@ interface JavaLanguageVersion : Comparable<JavaLanguageVersion> {
     companion object {
         @JvmStatic
         fun of(version: Int): JavaLanguageVersion {
-            return DefaultJavaLanguageVersion.Companion.of(version)
+            return DefaultJavaLanguageVersion.Companion.of(version)!!
         }
 
         @JvmStatic
@@ -96,7 +96,7 @@ interface JavaLanguageVersion : Comparable<JavaLanguageVersion> {
         @JvmStatic
         @Incubating
         fun current(): JavaLanguageVersion {
-            return DefaultJavaLanguageVersion.Companion.fromFullVersion(System.getProperty("java.version"))
+            return DefaultJavaLanguageVersion.Companion.fromFullVersion(System.getProperty("java.version"))!!
         }
     }
 }

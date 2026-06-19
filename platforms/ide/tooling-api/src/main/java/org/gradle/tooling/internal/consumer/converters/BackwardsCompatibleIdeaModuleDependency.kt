@@ -16,6 +16,7 @@
 package org.gradle.tooling.internal.consumer.converters
 
 import org.gradle.tooling.model.idea.IdeaModuleDependency
+import org.gradle.tooling.model.idea.IdeaModule
 
 /**
  * This is used for compatibility with clients &lt;2.14

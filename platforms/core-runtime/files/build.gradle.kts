@@ -22,6 +22,7 @@ dependencies {
     }
     testImplementation(testFixtures(projects.native))
     implementation(kotlin("stdlib-jdk8"))
+    testFixturesCompileOnly(kotlin("stdlib"))
 }
 
 gradleModule {

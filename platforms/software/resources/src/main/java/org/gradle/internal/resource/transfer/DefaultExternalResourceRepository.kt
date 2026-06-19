@@ -21,24 +21,24 @@ import org.gradle.internal.resource.ExternalResourceRepository
 
 
 class DefaultExternalResourceRepository(
-    private val name: String?,
-    private val accessor: ExternalResourceAccessor?,
-    private val uploader: ExternalResourceUploader?,
-    private val lister: ExternalResourceLister?
+    private val name: String,
+    private val accessor: ExternalResourceAccessor,
+    private val uploader: ExternalResourceUploader,
+    private val lister: ExternalResourceLister
 ) : ExternalResourceRepository {
     override fun withProgressLogging(): ExternalResourceRepository {
         return this
     }
 
-    override fun resource(resource: ExternalResourceName?, revalidate: Boolean): ExternalResource {
+    override fun resource(resource: ExternalResourceName, revalidate: Boolean): ExternalResource {
         return AccessorBackedExternalResource(resource, accessor, uploader, lister, revalidate)
     }
 
-    override fun resource(resource: ExternalResourceName?): ExternalResource {
+    override fun resource(resource: ExternalResourceName): ExternalResource {
         return resource(resource, false)
     }
 
     override fun toString(): String {
-        return name!!
+        return name
     }
 }

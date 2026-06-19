@@ -25,5 +25,5 @@ interface ConditionalInvalidation<T> {
     /**
      * Instructs the cache to drop the stored items matching the predicate.
      */
-    fun invalidateItemsMatching(predicate: Predicate<T?>?)
+    fun invalidateItemsMatching(predicate: Predicate<T>)
 }

@@ -24,7 +24,6 @@ import org.gradle.tooling.events.OperationDescriptor
  * @since 2.4
  */
 interface TestOperationDescriptor : OperationDescriptor {
-    @JvmField
     @get:Incubating
     val testDisplayName: String?
 }

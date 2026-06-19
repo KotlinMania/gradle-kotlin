@@ -42,6 +42,5 @@ interface ProgressEvent {
      *
      * @return The description of the operation.
      */
-    @JvmField
     val descriptor: OperationDescriptor?
 }

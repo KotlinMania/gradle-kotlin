@@ -23,18 +23,15 @@ import org.gradle.authentication.Authentication
 interface AuthenticationInternal : Authentication {
     fun supports(credentials: Credentials?): Boolean
 
-    @JvmField
     var credentials: Credentials?
 
-    @JvmField
-    val type: Class<out Authentication?>?
+    val type: Class<out Authentication>
 
     fun requiresCredentials(): Boolean
 
     fun addHost(host: String?, port: Int)
 
-    @JvmField
-    val hostsForAuthentication: MutableCollection<HostAndPort?>?
+    val hostsForAuthentication: MutableCollection<HostAndPort>
 
     interface HostAndPort {
         /**
@@ -42,7 +39,6 @@ interface AuthenticationInternal : Authentication {
          *
          * null means "any host"
          */
-        @JvmField
         val host: String?
 
         /**
@@ -50,7 +46,6 @@ interface AuthenticationInternal : Authentication {
          *
          * -1 means "any port"
          */
-        @JvmField
         val port: Int
     }
 }

@@ -18,16 +18,4 @@
  */
 package org.gradle.jvm.tasks
 
-import org.gradle.internal.UncheckedException.Companion.throwAsUncheckedException
-import org.gradle.internal.Cast.uncheckedCast
-import org.gradle.api.specs.Spec.isSatisfiedBy
-import org.gradle.internal.service.ServiceRegistry.get
-import org.gradle.api.internal.artifacts.JavaEcosystemSupport.configureServices
-import org.gradle.internal.logging.text.TreeFormatter.node
-import org.gradle.internal.logging.text.TreeFormatter.startChildren
-import org.gradle.internal.logging.text.TreeFormatter.endChildren
-import org.gradle.internal.serialization.Cached.get
-import org.gradle.internal.service.ServiceRegistration.addProvider
-import org.gradle.internal.jvm.inspection.ConditionalInvalidation.invalidateItemsMatching
-import org.gradle.internal.service.ServiceRegistration.add
 

@@ -18,18 +18,10 @@ package org.gradle.jvm.toolchain.internal
 import org.gradle.jvm.toolchain.JavaToolchainDownload
 import java.net.URI
 
-class DefaultJavaToolchainDownload private constructor(uri: URI) : JavaToolchainDownload {
-    private val uri: URI
-
-    init {
-        this.uri = uri
-    }
-
-    override fun getUri(): URI {
-        return uri
-    }
+class DefaultJavaToolchainDownload private constructor(override val uri: URI) : JavaToolchainDownload {
 
     companion object {
+        @JvmStatic
         fun fromUri(uri: URI): DefaultJavaToolchainDownload {
             return DefaultJavaToolchainDownload(uri)
         }

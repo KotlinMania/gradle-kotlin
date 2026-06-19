@@ -24,5 +24,5 @@ interface MBeanAttributeProvider {
      *
      * @throws UnsupportedOperationException if this method isn't available on this JVM.
      */
-    fun <T> getMbeanAttribute(mbean: String, attribute: String, type: Class<T?>): T?
+    fun <T> getMbeanAttribute(mbean: String, attribute: String, type: Class<T>): T
 }

@@ -48,7 +48,7 @@ abstract class AbstractBroadcastDispatch<T>(protected val type: Class<T?>) : Dis
      * This method will try to dispatch the invocation in an efficient way based on the number of dispatchers.
      *
      */
-    protected fun dispatch(invocation: MethodInvocation, dispatchers: MutableList<out Dispatch<MethodInvocation>>) {
+    protected fun dispatch(invocation: MethodInvocation, dispatchers: MutableList<out Dispatch<MethodInvocation?>>) {
         when (dispatchers.size) {
             0 -> {}
             1 -> dispatch(invocation, dispatchers.get(0))
@@ -59,7 +59,7 @@ abstract class AbstractBroadcastDispatch<T>(protected val type: Class<T?>) : Dis
     /**
      * Dispatch an invocation to multiple handlers.
      */
-    private fun dispatch(invocation: MethodInvocation, handlers: MutableIterator<out Dispatch<MethodInvocation>>) {
+    private fun dispatch(invocation: MethodInvocation, handlers: MutableIterator<out Dispatch<MethodInvocation?>>) {
         // Defer creation of failures list, assume dispatch will succeed
         var failures: MutableList<Throwable>? = null
         while (handlers.hasNext()) {
@@ -70,7 +70,7 @@ abstract class AbstractBroadcastDispatch<T>(protected val type: Class<T?>) : Dis
                 if (failures == null) {
                     failures = ArrayList<Throwable>()
                 }
-                if (invocation.equals(e.getEvent())) {
+                if (invocation == e.event) {
                     failures.addAll(e.getCauses())
                 } else {
                     failures.add(e)

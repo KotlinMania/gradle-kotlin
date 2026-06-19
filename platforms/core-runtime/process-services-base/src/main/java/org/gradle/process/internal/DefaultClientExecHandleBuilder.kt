@@ -45,7 +45,7 @@ open class DefaultClientExecHandleBuilder(private val fileResolver: PathToFileRe
     private var streamsHandler: StreamsHandler? = null
     private var timeoutMillis = Int.MAX_VALUE
     protected var daemon: Boolean = false
-    private var executable: String? = null
+    override var executable: String? = null
     private var workingDir: File? = null
 
     init {
@@ -119,16 +119,12 @@ open class DefaultClientExecHandleBuilder(private val fileResolver: PathToFileRe
     }
 
     override fun getArgs(): MutableList<String> {
-        return argumentsSpec.getArgs()
+        return argumentsSpec.args
     }
 
     override fun setArgs(args: Iterable<*>): ClientExecHandleBuilder {
         argumentsSpec.setArgs(args)
         return this
-    }
-
-    override fun getExecutable(): String {
-        return executable!!
     }
 
     override fun setExecutable(executable: Any) {
@@ -146,23 +142,23 @@ open class DefaultClientExecHandleBuilder(private val fileResolver: PathToFileRe
     }
 
     override fun getErrorOutput(): OutputStream {
-        return streamsSpec.getErrorOutput()
+        return streamsSpec.errorOutput!!
     }
 
     override fun getCommandLine(): MutableList<String> {
-        return argumentsSpec.getCommandLine()
+        return argumentsSpec.commandLine
     }
 
     override fun getStandardOutput(): OutputStream {
-        return streamsSpec.getStandardOutput()
+        return streamsSpec.standardOutput!!
     }
 
     override fun getAllArguments(): MutableList<String> {
-        return argumentsSpec.getAllArguments()
+        return argumentsSpec.allArguments
     }
 
     override fun getArgumentProviders(): MutableList<CommandLineArgumentProvider> {
-        return argumentsSpec.getArgumentProviders()
+        return argumentsSpec.argumentProviders
     }
 
     override fun getEnvironment(): MutableMap<String, Any> {
@@ -178,22 +174,28 @@ open class DefaultClientExecHandleBuilder(private val fileResolver: PathToFileRe
     }
 
     override fun setEnvironment(environmentVariables: MutableMap<String, *>) {
-        environment = Maps.newHashMap<String, Any>(environmentVariables)
+        val newEnvironment = Maps.newHashMap<String, Any>()
+        for (entry in environmentVariables.entries) {
+            newEnvironment[entry.key] = entry.value as Any
+        }
+        environment = newEnvironment
     }
 
     override fun environment(environmentVariables: MutableMap<String, *>) {
-        getEnvironment().putAll(environmentVariables)
+        for (entry in environmentVariables.entries) {
+            getEnvironment()[entry.key] = entry.value as Any
+        }
     }
 
     override fun getStandardInput(): InputStream {
-        return streamsSpec.getStandardInput()
+        return streamsSpec.standardInput!!
     }
 
-    override fun getWorkingDir(): File? {
+    override fun getWorkingDir(): File {
         if (workingDir == null) {
             workingDir = fileResolver.resolve(".")
         }
-        return workingDir
+        return workingDir!!
     }
 
     override fun setWorkingDir(dir: File?): ClientExecHandleBuilder {
@@ -207,7 +209,7 @@ open class DefaultClientExecHandleBuilder(private val fileResolver: PathToFileRe
     }
 
     override fun build(): ExecHandle {
-        return buildWithEffectiveArguments(argumentsSpec.getAllArguments())
+        return buildWithEffectiveArguments(argumentsSpec.allArguments)
     }
 
     override fun buildWithEffectiveArguments(effectiveArguments: MutableList<String>): ExecHandle {
@@ -217,7 +219,7 @@ open class DefaultClientExecHandleBuilder(private val fileResolver: PathToFileRe
         return DefaultExecHandle(
             displayName,
             getWorkingDir(),
-            executable,
+            executable!!,
             effectiveArguments,
             effectiveEnvironment,
             effectiveOutputHandler,
@@ -248,8 +250,8 @@ open class DefaultClientExecHandleBuilder(private val fileResolver: PathToFileRe
             }
             val shouldReadErrorStream = !redirectErrorStream
             return OutputStreamsForwarder(
-                streamsSpec.getStandardOutput(),
-                streamsSpec.getErrorOutput(),
+                streamsSpec.standardOutput!!,
+                streamsSpec.errorOutput!!,
                 shouldReadErrorStream
             )
         }

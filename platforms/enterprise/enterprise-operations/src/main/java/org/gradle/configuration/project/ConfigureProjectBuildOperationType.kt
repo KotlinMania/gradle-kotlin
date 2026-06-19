@@ -24,6 +24,7 @@ import java.io.File
  * @since 4.0
  */
 object ConfigureProjectBuildOperationType : BuildOperationType<ConfigureProjectBuildOperationType.Details, ConfigureProjectBuildOperationType.Result> {
+    @JvmField
     val RESULT: Result = object : Result {
     }
 

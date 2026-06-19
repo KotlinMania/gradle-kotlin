@@ -25,6 +25,9 @@ import spock.lang.Specification
 import static org.gradle.internal.file.PathTraversalChecker.isUnsafePathName
 
 class PathTraversalCheckerTest extends Specification {
+    private static boolean isUnsafePathName(String path) {
+        return PathTraversalChecker.INSTANCE.isUnsafePathName(path)
+    }
 
     def "identifies potentially unsafe zip entry names"() {
         expect:

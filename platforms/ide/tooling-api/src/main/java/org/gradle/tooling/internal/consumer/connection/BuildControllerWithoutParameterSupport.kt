@@ -28,7 +28,7 @@ import org.gradle.tooling.model.Model
 import java.io.File
 
 @Suppress("deprecation")
-class BuildControllerWithoutParameterSupport(
+internal class BuildControllerWithoutParameterSupport(
     private val buildController: InternalBuildController,
     adapter: ProtocolToModelAdapter,
     modelMapping: ModelMapping,
@@ -36,15 +36,15 @@ class BuildControllerWithoutParameterSupport(
     gradleVersion: VersionDetails
 ) : UnparameterizedBuildController(adapter, modelMapping, gradleVersion, rootDir) {
     @Throws(UnsupportedVersionException::class)
-    override fun <T, P> getModel(target: Model, modelType: Class<T?>, parameterType: Class<P?>, parameterInitializer: Action<in P?>): T? {
+    override fun <T, P> getModel(target: Model?, modelType: Class<T?>?, parameterType: Class<P?>?, parameterInitializer: Action<in P?>?): T? {
         if (parameterType != null) {
-            throw UnsupportedVersionException(String.format("Gradle version %s does not support parameterized tooling models.", gradleVersion.getVersion()))
+            throw UnsupportedVersionException(String.format("Gradle version %s does not support parameterized tooling models.", gradleVersion.version))
         }
         return super.getModel<T?, P?>(target, modelType, parameterType, parameterInitializer)
     }
 
     @Throws(InternalUnsupportedModelException::class)
-    override fun getModel(target: Any?, modelIdentifier: ModelIdentifier, parameter: Any?): BuildResult<*> {
-        return buildController.getModel(target, modelIdentifier)
+    override fun getModelResult(target: Any?, modelIdentifier: ModelIdentifier, parameter: Any?): BuildResult<*> {
+        return buildController.getModel(target, modelIdentifier)!!
     }
 }

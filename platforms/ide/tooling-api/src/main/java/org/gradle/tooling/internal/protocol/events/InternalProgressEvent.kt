@@ -40,6 +40,5 @@ interface InternalProgressEvent : InternalProtocolInterface {
      *
      * @return The build description
      */
-    @JvmField
     val descriptor: InternalOperationDescriptor?
 }

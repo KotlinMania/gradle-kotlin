@@ -15,6 +15,9 @@
  */
 package org.gradle.tooling.model.java
 
+import java.io.File
+import org.gradle.api.JavaVersion
+
 /**
  * Represents a Java virtual machine installation.
  *

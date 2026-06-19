@@ -37,7 +37,7 @@ interface ProblemSpec {
      * @return this
      * @since 8.8
      */
-    fun contextualLabel(contextualLabel: String?): ProblemSpec?
+    fun contextualLabel(contextualLabel: String): ProblemSpec?
 
     /**
      * Declares where this problem is documented.
@@ -45,7 +45,7 @@ interface ProblemSpec {
      * @return this
      * @since 8.6
      */
-    fun documentedAt(url: String?): ProblemSpec?
+    fun documentedAt(url: String): ProblemSpec?
 
     /**
      * Declares that this problem is in a file.
@@ -54,7 +54,7 @@ interface ProblemSpec {
      * @return this
      * @since 8.6
      */
-    fun fileLocation(path: String?): ProblemSpec?
+    fun fileLocation(path: String): ProblemSpec?
 
     /**
      * Declares that this problem is in a file on a line.
@@ -64,7 +64,7 @@ interface ProblemSpec {
      * @return this
      * @since 8.6
      */
-    fun lineInFileLocation(path: String?, line: Int): ProblemSpec?
+    fun lineInFileLocation(path: String, line: Int): ProblemSpec?
 
     /**
      * Declares that this problem is in a file with on a line at a certain position.
@@ -75,7 +75,7 @@ interface ProblemSpec {
      * @return this
      * @since 8.6
      */
-    fun lineInFileLocation(path: String?, line: Int, column: Int): ProblemSpec?
+    fun lineInFileLocation(path: String, line: Int, column: Int): ProblemSpec?
 
     /**
      * Declares that this problem is in a file with on a line at a certain position.
@@ -87,7 +87,7 @@ interface ProblemSpec {
      * @return this
      * @since 8.6
      */
-    fun lineInFileLocation(path: String?, line: Int, column: Int, length: Int): ProblemSpec?
+    fun lineInFileLocation(path: String, line: Int, column: Int, length: Int): ProblemSpec?
 
     /**
      * Declares that this problem is in a file at a certain global position with a given length.
@@ -98,7 +98,7 @@ interface ProblemSpec {
      * @return this
      * @since 8.6
      */
-    fun offsetInFileLocation(path: String?, offset: Int, length: Int): ProblemSpec?
+    fun offsetInFileLocation(path: String, offset: Int, length: Int): ProblemSpec?
 
     /**
      * Declares that this problem is at the same place where it's reported. The stack trace will be used to determine the location.
@@ -119,7 +119,7 @@ interface ProblemSpec {
      * @return this
      * @since 8.6
      */
-    fun details(details: String?): ProblemSpec?
+    fun details(details: String): ProblemSpec?
 
     /**
      * Declares solutions and advice that contain context-sensitive data, e.g. the message contains references to variables, locations, etc.
@@ -128,7 +128,7 @@ interface ProblemSpec {
      * @return this
      * @since 8.6
      */
-    fun solution(solution: String?): ProblemSpec?
+    fun solution(solution: String): ProblemSpec?
 
     /**
      * Declares additional data attached to the problem.
@@ -162,7 +162,7 @@ interface ProblemSpec {
      * @return this
      * @since 8.13
      */
-    fun <T : AdditionalData?> additionalData(type: Class<T?>?, config: Action<in T?>?): ProblemSpec?
+    fun <T : AdditionalData> additionalData(type: Class<T>, config: Action<in T>): ProblemSpec?
 
     /**
      * Declares the exception causing this problem.
@@ -171,7 +171,7 @@ interface ProblemSpec {
      * @return this
      * @since 8.11
      */
-    fun withException(t: Throwable?): ProblemSpec?
+    fun withException(t: Throwable): ProblemSpec?
 
     /**
      * Declares the severity of the problem.
@@ -181,5 +181,5 @@ interface ProblemSpec {
      * @since 8.6
      */
     @Deprecated("Severity is now determined automatically: use {@link ProblemReporter#report} for warnings and {@link ProblemReporter#throwing} for errors.")
-    fun severity(severity: Severity?): ProblemSpec?
+    fun severity(severity: Severity): ProblemSpec?
 }

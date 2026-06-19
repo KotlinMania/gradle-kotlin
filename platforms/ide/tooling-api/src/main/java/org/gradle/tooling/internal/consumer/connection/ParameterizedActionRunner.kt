@@ -24,6 +24,6 @@ import org.gradle.tooling.internal.protocol.InternalParameterAcceptingConnection
 internal class ParameterizedActionRunner(private val executor: InternalParameterAcceptingConnection, exceptionTransformer: CancellationExceptionTransformer, versionDetails: VersionDetails) :
     CancellableActionRunner(null, exceptionTransformer, versionDetails) {
     override fun <T> execute(buildActionAdapter: InternalBuildActionAdapter<T?>, cancellationTokenAdapter: InternalCancellationToken, operationParameters: BuildParameters): BuildResult<T?> {
-        return executor.run<T?>(buildActionAdapter, cancellationTokenAdapter, operationParameters)
+        return executor.run<T?>(buildActionAdapter, cancellationTokenAdapter, operationParameters)!!
     }
 }

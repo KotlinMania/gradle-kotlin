@@ -19,21 +19,7 @@ import org.gradle.jvm.toolchain.JavaToolchainRequest
 import org.gradle.jvm.toolchain.JavaToolchainSpec
 import org.gradle.platform.BuildPlatform
 
-class DefaultJavaToolchainRequest(spec: JavaToolchainSpec, buildPlatform: BuildPlatform) : JavaToolchainRequest {
-    private val spec: JavaToolchainSpec
-
-    private val buildPlatform: BuildPlatform
-
-    init {
-        this.spec = spec
-        this.buildPlatform = buildPlatform
-    }
-
-    override fun getJavaToolchainSpec(): JavaToolchainSpec {
-        return spec
-    }
-
-    override fun getBuildPlatform(): BuildPlatform {
-        return buildPlatform
-    }
-}
+class DefaultJavaToolchainRequest(
+    override val javaToolchainSpec: JavaToolchainSpec,
+    override val buildPlatform: BuildPlatform
+) : JavaToolchainRequest

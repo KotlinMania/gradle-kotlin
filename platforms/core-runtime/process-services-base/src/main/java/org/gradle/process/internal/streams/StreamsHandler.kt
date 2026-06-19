@@ -22,7 +22,7 @@ interface StreamsHandler : Stoppable {
     /**
      * Collects whatever state is required the given process. Should not start work.
      */
-    fun connectStreams(process: Process?, processName: String?, executor: Executor?)
+    fun connectStreams(process: Process, processName: String?, executor: Executor)
 
     /**
      * Starts reading/writing/whatever the process' streams. May block until the streams reach some particular state, e.g. indicate that the process has started successfully.

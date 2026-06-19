@@ -23,7 +23,7 @@ import java.util.concurrent.Executor
  * A handler that writes nothing to the process' stdin
  */
 class EmptyStdInStreamsHandler : StreamsHandler {
-    override fun connectStreams(process: Process, processName: String?, executor: Executor?) {
+    override fun connectStreams(process: Process, processName: String?, executor: Executor) {
         try {
             process.getOutputStream().close()
         } catch (e: IOException) {

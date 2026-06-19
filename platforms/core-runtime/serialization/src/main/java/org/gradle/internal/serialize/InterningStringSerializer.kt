@@ -17,15 +17,14 @@ package org.gradle.internal.serialize
 
 import com.google.common.collect.Interner
 
-class InterningStringSerializer(private val stringInterner: Interner<String>) : AbstractSerializer<String?>() {
+class InterningStringSerializer(private val stringInterner: Interner<String>) : AbstractSerializer<String>() {
     @Throws(Exception::class)
     override fun read(decoder: Decoder): String {
-        return stringInterner.intern(decoder.readString()!!)
+        return stringInterner.intern(decoder.readString())
     }
 
     @Throws(Exception::class)
-    override fun write(encoder: Encoder, value: String?) {
+    override fun write(encoder: Encoder, value: String) {
         encoder.writeString(value)
     }
 }
-

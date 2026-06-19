@@ -15,6 +15,17 @@
  */
 package org.gradle.integtests.tooling.r930
 
+import org.gradle.tooling.*
+import org.gradle.tooling.model.*
+import org.gradle.tooling.model.build.*
+import org.gradle.tooling.model.eclipse.*
+import org.gradle.tooling.model.gradle.*
+import org.gradle.tooling.model.idea.*
+import org.gradle.tooling.model.kotlin.dsl.*
+import org.gradle.tooling.internal.adapter.ProtocolToModelAdapter
+import java.io.File
+import org.gradle.integtests.tooling.r48.*
+
 import org.gradle.integtests.tooling.r16.CustomModel
 import org.gradle.tooling.BuildAction
 import java.util.TreeMap
@@ -24,20 +35,20 @@ import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
 internal class FetchCustomModelPerProjectAction : BuildAction<Result<MutableMap<String?, String?>?>?> {
-    public override fun execute(controller: BuildController): Result<MutableMap<String?, String?>?> {
-        val gradleBuildResult: FetchModelResult<GradleBuild?> = controller.fetch(GradleBuild::class.java, null, null)
+    public override fun execute(controller: BuildController?): Result<MutableMap<String?, String?>?> {
+        val gradleBuildResult: FetchModelResult<GradleBuild?> = controller.fetch(GradleBuild::class.java)
         assert(gradleBuildResult.getModel() is GradleBuild)
         assert(gradleBuildResult.getFailures().isEmpty())
-        val gradleBuild: GradleBuild = gradleBuildResult.getModel()
+        val gradleBuild: GradleBuild = checkNotNull(gradleBuildResult.getModel())
         val failures: MutableList<String?> = ArrayList<String?>()
         val causes: MutableList<String?> = ArrayList<String?>()
         val values: MutableMap<String?, String?> = TreeMap<String?, String?>()
         for (project in gradleBuild.getProjects()) {
-            val result: FetchModelResult<CustomModel?> = controller.fetch(CustomModel::class.java, null, null)
+            val result: FetchModelResult<CustomModel?> = controller.fetch(CustomModel::class.java)
             val model: CustomModel? = result.getModel()
             values.put(project.getName(), if (model != null) model.value else null)
-            failures.addAll(result.getFailures().stream().map(Failure::getMessage).collect(Collectors.toList()))
-            causes.addAll(result.getFailures().stream().flatMap({ f -> f.getCauses().stream() }).map(Failure::getMessage).collect(Collectors.toList()))
+            failures.addAll(result.getFailures().stream().map { it.getMessage() }.collect(Collectors.toList()))
+            causes.addAll(result.getFailures().stream().flatMap({ f -> f.getCauses().stream() }).map { it.getMessage() }.collect(Collectors.toList()))
         }
         return Result<MutableMap<String?, String?>?>(values, failures, causes)
     }

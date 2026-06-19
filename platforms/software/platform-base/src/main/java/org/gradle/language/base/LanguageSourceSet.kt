@@ -18,6 +18,7 @@ package org.gradle.language.base
 import org.gradle.api.BuildableComponentSpec
 import org.gradle.api.Incubating
 import org.gradle.api.Task
+import org.gradle.api.file.SourceDirectorySet
 import org.gradle.internal.HasInternalProtocol
 
 /**
@@ -32,8 +33,7 @@ interface LanguageSourceSet : BuildableComponentSpec {
     /**
      * The source files.
      */
-    @JvmField
-    val source: SourceDirectorySet?
+    val source: SourceDirectorySet
 
     fun generatedBy(generatorTask: Task?)
 

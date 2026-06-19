@@ -17,12 +17,11 @@ package org.gradle.tooling.events.problems.internal
 
 import org.gradle.tooling.events.OperationDescriptor
 import org.gradle.tooling.events.internal.BaseProgressEvent
+import org.gradle.tooling.events.problems.Problem
 import org.gradle.tooling.events.problems.ProblemAggregation
 import org.gradle.tooling.events.problems.ProblemAggregationEvent
 
-class DefaultProblemAggregationEvent(eventTime: Long, descriptor: OperationDescriptor?, private val problemAggregation: ProblemAggregation) :
-    BaseProgressEvent(eventTime, if (descriptor == null) "<null>" else descriptor.displayName, descriptor), ProblemAggregationEvent {
-    override fun getProblemAggregation(): ProblemAggregation {
-        return problemAggregation
-    }
+class DefaultProblemAggregationEvent(eventTime: Long, descriptor: OperationDescriptor?, override val problemAggregation: ProblemAggregation) :
+    BaseProgressEvent<OperationDescriptor?>(eventTime, if (descriptor == null) "<null>" else descriptor.displayName, descriptor), ProblemAggregationEvent {
+
 }

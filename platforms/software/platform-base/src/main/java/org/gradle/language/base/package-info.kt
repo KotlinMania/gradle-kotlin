@@ -18,5 +18,4 @@
  */
 package org.gradle.language.base
 
-import org.gradle.internal.service.ServiceRegistry.get
 

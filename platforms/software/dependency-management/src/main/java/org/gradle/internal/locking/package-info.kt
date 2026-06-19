@@ -15,12 +15,4 @@
  */
 package org.gradle.internal.locking
 
-import org.gradle.api.logging.Logging.getLogger
-import org.gradle.api.internal.DocumentationRegistry.getDocumentationRecommendationFor
-import org.gradle.api.specs.Spec.isSatisfiedBy
-import org.gradle.StartParameter.isWriteDependencyLocks
-import org.gradle.StartParameter.lockedDependenciesToUpdate
-import org.gradle.api.logging.Logger.lifecycle
-import org.gradle.internal.lazy.Lazy.Companion.locking
-import org.gradle.internal.lazy.Lazy.Factory.of
 

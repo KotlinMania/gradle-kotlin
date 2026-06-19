@@ -29,6 +29,7 @@ import org.slf4j.LoggerFactory
 import java.io.File
 import java.io.FileFilter
 import java.util.Arrays
+import java.util.SortedSet
 import java.util.TreeSet
 import java.util.function.Consumer
 import java.util.regex.Pattern
@@ -55,18 +56,18 @@ class UnusedVersionsCacheCleanup private constructor(private val cacheNamePatter
     private fun determineUsedVersions() {
         usedVersions = TreeSet<CacheVersion>()
         for (gradleVersion in this.usedGradleVersionsSmallerThanCurrent) {
-            cacheVersionMapping.getVersionUsedBy(gradleVersion).ifPresent(Consumer { e: CacheVersion? -> usedVersions!!.add(e!!) })
+            cacheVersionMapping.getVersionUsedBy(gradleVersion).ifPresent(Consumer { e: CacheVersion -> usedVersions!!.add(e) })
         }
     }
 
     private val usedGradleVersionsSmallerThanCurrent: SortedSet<GradleVersion>
-        get() = usedGradleVersions.getUsedGradleVersions().headSet(GradleVersion.current())
+        get() = usedGradleVersions.usedGradleVersions.headSet(GradleVersion.current())
 
     override fun shouldDelete(cacheDir: File): Boolean {
         val matcher = cacheNamePattern.matcher(cacheDir.getName())
         if (matcher.matches()) {
             val version = CacheVersion.parse(matcher.group(1))
-            return version.compareTo(cacheVersionMapping.getLatestVersion()) < 0 && !usedVersions!!.contains(version)
+            return version.compareTo(cacheVersionMapping.latestVersion) < 0 && !usedVersions!!.contains(version)
         }
         return false
     }

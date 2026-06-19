@@ -69,7 +69,7 @@ object ProcessBootstrap {
             val mainClass = runtimeClassLoader.loadClass(mainClassName)
             val entryPoint: Any = mainClass.getConstructor().newInstance()
             val mainMethod = mainClass.getMethod("run", Array<String>::class.java)
-            mainMethod.invoke(entryPoint, args ?: emptyArray())
+            mainMethod.invoke(entryPoint, args ?: emptyArray<String>())
         } finally {
             Thread.currentThread().setContextClassLoader(oldClassLoader)
 

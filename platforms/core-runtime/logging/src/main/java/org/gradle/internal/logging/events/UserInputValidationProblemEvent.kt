@@ -19,12 +19,12 @@ import org.gradle.api.logging.LogLevel
 import org.gradle.internal.logging.text.StyledTextOutput
 import org.gradle.internal.operations.OperationIdentifier
 
-class UserInputValidationProblemEvent(timestamp: Long, private val prompt: String?) : RenderableOutputEvent(timestamp, "prompt", LogLevel.QUIET, null), InteractiveEvent {
+class UserInputValidationProblemEvent(timestamp: Long, private val prompt: String) : RenderableOutputEvent(timestamp, "prompt", LogLevel.QUIET, null), InteractiveEvent {
     public override fun render(output: StyledTextOutput) {
         output.text(prompt)
     }
 
-    public override fun withBuildOperationId(buildOperationId: OperationIdentifier?): RenderableOutputEvent? {
+    public override fun withBuildOperationId(buildOperationId: OperationIdentifier): RenderableOutputEvent {
         throw UnsupportedOperationException()
     }
 }

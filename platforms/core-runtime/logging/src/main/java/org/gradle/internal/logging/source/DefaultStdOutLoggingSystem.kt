@@ -19,12 +19,12 @@ import org.gradle.internal.logging.events.OutputEventListener
 import org.gradle.internal.time.Clock
 import java.io.PrintStream
 
-class DefaultStdOutLoggingSystem(listener: OutputEventListener?, clock: Clock?) : PrintStreamLoggingSystem(listener, "system.out", clock), StdOutLoggingSystem {
-    override fun get(): PrintStream? {
+class DefaultStdOutLoggingSystem(listener: OutputEventListener, clock: Clock) : PrintStreamLoggingSystem(listener, "system.out", clock), StdOutLoggingSystem {
+    override fun get(): PrintStream {
         return System.out
     }
 
-    override fun set(printStream: PrintStream?) {
+    override fun set(printStream: PrintStream) {
         System.setOut(printStream)
     }
 }

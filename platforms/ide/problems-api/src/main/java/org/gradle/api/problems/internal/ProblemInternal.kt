@@ -15,7 +15,10 @@
  */
 package org.gradle.api.problems.internal
 
+import org.gradle.api.problems.AdditionalData
 import org.gradle.api.problems.Problem
+import org.gradle.api.problems.ProblemDefinition
+import org.gradle.api.problems.ProblemLocation
 
 interface ProblemInternal : Problem {
     /**
@@ -26,21 +29,18 @@ interface ProblemInternal : Problem {
     /**
      * Returns the problem definition, i.e. the data that is independent of the report context.
      */
-    @JvmField
-    val definition: ProblemDefinition?
+    fun getDefinition(): ProblemDefinition?
 
     /**
      * Declares a short, but context-dependent message for this problem.
      *
      */
-    @JvmField
-    val contextualLabel: String?
+    fun getContextualLabel(): String?
 
     /**
      * Returns solutions and advice that contain context-sensitive data, e.g. the message contains references to variables, locations, etc.
      */
-    @JvmField
-    val solutions: MutableList<String>?
+    fun getSolutions(): MutableList<String>?
 
     /**
      * A long description detailing the problem.
@@ -49,8 +49,7 @@ interface ProblemInternal : Problem {
      * Details can elaborate on the problem, and provide more information about the problem.
      * They can be multiple lines long, but should not detail solutions; for that, use [.getSolutions].
      */
-    @JvmField
-    val details: String?
+    fun getDetails(): String?
 
     /**
      * Returns the locations where the problem originated.
@@ -58,8 +57,7 @@ interface ProblemInternal : Problem {
      *
      * Might be empty if the origin is not known.
      */
-    @JvmField
-    val originLocations: MutableList<ProblemLocation>?
+    fun getOriginLocations(): MutableList<ProblemLocation>?
 
     /**
      * Returns additional locations, which can help to understand the problem further.
@@ -70,14 +68,12 @@ interface ProblemInternal : Problem {
      *
      * Might be empty if there is no meaningful contextual information.
      */
-    @JvmField
-    val contextualLocations: MutableList<ProblemLocation>?
+    fun getContextualLocations(): MutableList<ProblemLocation>?
 
     /**
      * The exception that caused the problem.
      */
-    @JvmField
-    val exception: Throwable?
+    fun getException(): Throwable?
 
     /**
      * Additional data attached to the problem.
@@ -85,6 +81,5 @@ interface ProblemInternal : Problem {
      *
      * The supported types are listed on [AdditionalData].
      */
-    @JvmField
-    val additionalData: AdditionalData?
+    fun getAdditionalData(): AdditionalData?
 }

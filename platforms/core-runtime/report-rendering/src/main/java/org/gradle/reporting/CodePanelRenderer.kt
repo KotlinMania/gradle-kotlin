@@ -19,16 +19,18 @@ import org.gradle.internal.html.SimpleHtmlWriter
 import org.jspecify.annotations.NullMarked
 import java.io.IOException
 
-class CodePanelRenderer : ReportRenderer<CodePanelRenderer.Data?, SimpleHtmlWriter?>() {
+class CodePanelRenderer : ReportRenderer<CodePanelRenderer.Data, SimpleHtmlWriter>() {
     @NullMarked
-    class Data(private val text: String, private val codePanelId: String)
+    class Data(val text: String, val codePanelId: String)
 
     @Throws(IOException::class)
-    override fun render(data: Data, htmlWriter: SimpleHtmlWriter) {
+    override fun render(data: Data?, htmlWriter: SimpleHtmlWriter?) {
+        val renderedData = data!!
+        val writer = htmlWriter!!
         // Wrap in a <span>, to work around CSS problem in IE
-        htmlWriter.startElement("span").attribute("class", "code")
-            .startElement("pre").attribute("id", data.codePanelId).characters(data.text).endElement()
-        HtmlWriterTools.addClipboardCopyButton(htmlWriter, data.codePanelId)
-        htmlWriter.endElement()
+        writer.startElement("span").attribute("class", "code")
+            .startElement("pre").attribute("id", renderedData.codePanelId).characters(renderedData.text).endElement()
+        HtmlWriterTools.addClipboardCopyButton(writer, renderedData.codePanelId)
+        writer.endElement()
     }
 }

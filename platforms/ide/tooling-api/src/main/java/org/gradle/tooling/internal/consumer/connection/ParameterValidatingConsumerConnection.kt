@@ -27,9 +27,8 @@ class ParameterValidatingConsumerConnection(private val targetVersionDetails: Ve
         delegate.stop()
     }
 
-    override fun getDisplayName(): String {
-        return delegate.getDisplayName()
-    }
+    override val displayName: String?
+        get() = delegate.displayName
 
     @Throws(UnsupportedOperationException::class, IllegalStateException::class)
     override fun <T> run(type: Class<T?>, operationParameters: ConsumerOperationParameters): T? {
@@ -64,16 +63,16 @@ class ParameterValidatingConsumerConnection(private val targetVersionDetails: Ve
 
     private fun validateParameters(operationParameters: ConsumerOperationParameters) {
         if (!targetVersionDetails.supportsEnvironmentVariablesCustomization()) {
-            if (operationParameters.getEnvironmentVariables() != null) {
-                throw Exceptions.unsupportedFeature("environment variables customization feature", targetVersionDetails.getVersion(), "3.5")
+            if (operationParameters.environmentVariables != null) {
+                throw Exceptions.unsupportedFeature("environment variables customization feature", targetVersionDetails.version!!, "3.5")
             }
         }
     }
 
     private fun validateBuildActionParameters(operationParameters: ConsumerOperationParameters) {
         if (!targetVersionDetails.supportsRunTasksBeforeExecutingAction()) {
-            if (operationParameters.getTasks() != null) {
-                throw Exceptions.unsupportedFeature("forTasks() method on BuildActionExecuter", targetVersionDetails.getVersion(), "3.5")
+            if (operationParameters.tasks != null) {
+                throw Exceptions.unsupportedFeature("forTasks() method on BuildActionExecuter", targetVersionDetails.version!!, "3.5")
             }
         }
     }

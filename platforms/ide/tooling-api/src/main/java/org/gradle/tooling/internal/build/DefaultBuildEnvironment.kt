@@ -15,44 +15,41 @@
  */
 package org.gradle.tooling.internal.build
 
+import java.io.File
+import java.io.Serializable
 import org.gradle.tooling.internal.gradle.DefaultBuildIdentifier
 import org.gradle.tooling.internal.gradle.GradleBuildIdentity
 import org.gradle.tooling.internal.protocol.InternalBuildEnvironment
+import org.gradle.tooling.model.build.BuildEnvironment
 import org.gradle.tooling.model.build.GradleEnvironment
 import org.gradle.tooling.model.build.JavaEnvironment
-import java.io.File
-import java.io.Serializable
 
 class DefaultBuildEnvironment(
-    val buildIdentifier: DefaultBuildIdentifier,
-    private val gradleUserHome: File?, private val gradleVersion: String?,
+    override val buildIdentifier: DefaultBuildIdentifier,
+    private val gradleUserHome: File?,
+    private val gradleVersion: String?,
     private val javaHome: File?,
     private val jvmArguments: MutableList<String?>?,
-    val versionInfo: String?
-) : InternalBuildEnvironment, Serializable, GradleBuildIdentity {
-    override fun getRootDir(): File? {
-        return buildIdentifier.getRootDir()
-    }
+    override val versionInfo: String?
+) : BuildEnvironment, InternalBuildEnvironment, Serializable, GradleBuildIdentity {
+    override val rootDir: File?
+        get() = buildIdentifier.rootDir
 
-    val gradle: GradleEnvironment
+    override val gradle: GradleEnvironment
         get() = object : GradleEnvironment {
-            override fun getGradleUserHome(): File? {
-                return gradleUserHome
-            }
+            override val gradleUserHome: File?
+                get() = this@DefaultBuildEnvironment.gradleUserHome
 
-            override fun getGradleVersion(): String? {
-                return gradleVersion
-            }
+            override val gradleVersion: String?
+                get() = this@DefaultBuildEnvironment.gradleVersion
         }
 
-    val java: JavaEnvironment
+    override val java: JavaEnvironment
         get() = object : JavaEnvironment {
-            override fun getJavaHome(): File? {
-                return javaHome
-            }
+            override val javaHome: File?
+                get() = this@DefaultBuildEnvironment.javaHome
 
-            override fun getJvmArguments(): MutableList<String?>? {
-                return jvmArguments
-            }
+            override val jvmArguments: MutableList<String?>?
+                get() = this@DefaultBuildEnvironment.jvmArguments
         }
 }

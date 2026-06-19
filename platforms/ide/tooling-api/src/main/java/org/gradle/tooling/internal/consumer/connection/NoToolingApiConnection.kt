@@ -32,33 +32,32 @@ class NoToolingApiConnection(private val distribution: Distribution) : ConsumerC
     override fun stop() {
     }
 
-    override fun getDisplayName(): String {
-        return distribution.displayName
-    }
+    override val displayName: String?
+        get() = distribution.displayName
 
     @Throws(UnsupportedOperationException::class, IllegalStateException::class)
     override fun <T> run(type: Class<T?>, operationParameters: ConsumerOperationParameters): T? {
-        throw Exceptions.unsupportedFeature(operationParameters.getEntryPointName(), distribution, "1.2")
+        throw Exceptions.unsupportedFeature(operationParameters.entryPointName, distribution, "1.2")
     }
 
     @Throws(UnsupportedOperationException::class, IllegalStateException::class)
     override fun <T> run(action: BuildAction<T?>, operationParameters: ConsumerOperationParameters): T? {
-        throw Exceptions.unsupportedFeature(operationParameters.getEntryPointName(), distribution, "1.8")
+        throw Exceptions.unsupportedFeature(operationParameters.entryPointName, distribution, "1.8")
     }
 
     override fun run(phasedBuildAction: PhasedBuildAction, operationParameters: ConsumerOperationParameters) {
-        throw Exceptions.unsupportedFeature(operationParameters.getEntryPointName(), distribution, "4.8")
+        throw Exceptions.unsupportedFeature(operationParameters.entryPointName, distribution, "4.8")
     }
 
     override fun runTests(testExecutionRequest: TestExecutionRequest, operationParameters: ConsumerOperationParameters) {
-        throw Exceptions.unsupportedFeature(operationParameters.getEntryPointName(), distribution, "2.6")
+        throw Exceptions.unsupportedFeature(operationParameters.entryPointName, distribution, "2.6")
     }
 
     override fun notifyDaemonsAboutChangedPaths(changedPaths: MutableList<String>, operationParameters: ConsumerOperationParameters) {
-        throw Exceptions.unsupportedFeature(operationParameters.getEntryPointName(), distribution, "6.1")
+        throw Exceptions.unsupportedFeature(operationParameters.entryPointName, distribution, "6.1")
     }
 
     override fun stopWhenIdle(operationParameters: ConsumerOperationParameters) {
-        throw Exceptions.unsupportedFeature(operationParameters.getEntryPointName(), distribution, "6.5")
+        throw Exceptions.unsupportedFeature(operationParameters.entryPointName, distribution, "6.5")
     }
 }

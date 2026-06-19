@@ -21,7 +21,7 @@ import org.gradle.tooling.StreamedValueListener
 class FailsafeStreamedValueListener(private val delegate: StreamedValueListener?) : StreamedValueListener {
     private var failure: RuntimeException? = null
 
-    override fun onValue(value: Any) {
+    override fun onValue(value: Any?) {
         if (failure != null) {
             // Stop handling further values after a failure
             return
@@ -40,7 +40,7 @@ class FailsafeStreamedValueListener(private val delegate: StreamedValueListener?
 
     fun rethrowErrors() {
         if (failure != null) {
-            throw failure
+            throw failure!!
         }
     }
 }

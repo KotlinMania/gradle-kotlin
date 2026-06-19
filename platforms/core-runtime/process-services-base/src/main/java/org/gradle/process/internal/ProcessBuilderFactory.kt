@@ -20,7 +20,7 @@ package org.gradle.process.internal
  */
 class ProcessBuilderFactory {
     fun createProcessBuilder(processSettings: ProcessSettings): ProcessBuilder {
-        val commandWithArguments: MutableList<String?> = ArrayList<String?>()
+        val commandWithArguments: MutableList<String> = ArrayList<String>()
         commandWithArguments.add(processSettings.getCommand())
         commandWithArguments.addAll(processSettings.getArguments())
 

@@ -82,12 +82,12 @@ public class DefaultFailure implements Serializable, InternalFailure {
         // Iterate through the cause hierarchy and convert them to a corresponding Failure with the same cause structure. If the current failure has a
         // corresponding problem (ie the exception was thrown via ProblemReporter.throwing()), then the problem will be also available in the new failure object.
         String failureString = FailurePrinter.printToString(buildFailure);
-        List<InternalFailure> causeFailures = convertCausesToFailures(buildFailure.causes, mapper);
-        List<InternalBasicProblemDetailsVersion3> problemDetails = buildFailure.problems.stream()
+        List<InternalFailure> causeFailures = convertCausesToFailures(buildFailure.getCauses(), mapper);
+        List<InternalBasicProblemDetailsVersion3> problemDetails = buildFailure.getProblems().stream()
             .map(mapper)
             .collect(toList());
 
-        return new DefaultFailure(buildFailure.message, failureString, causeFailures, problemDetails);
+        return new DefaultFailure(buildFailure.getMessage(), failureString, causeFailures, problemDetails);
     }
 
     private static List<InternalFailure> convertCausesToFailures(
@@ -97,8 +97,8 @@ public class DefaultFailure implements Serializable, InternalFailure {
         return causes.stream()
             // Skip multi cause exceptions - no idea why
             // For example TaskExecutionException is a MultiCauseException and skipped, so the task that failed is not added as a context here.
-            .flatMap(cause -> cause.original instanceof MultiCauseException
-                ? cause.causes.stream()
+            .flatMap(cause -> cause.getOriginal() instanceof MultiCauseException
+                ? cause.getCauses().stream()
                 : Stream.of(cause))
             .map(cause -> fromFailure(cause, mapper))
             .collect(toList());

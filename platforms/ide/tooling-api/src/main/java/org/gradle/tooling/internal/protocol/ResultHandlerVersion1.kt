@@ -15,6 +15,8 @@
  */
 package org.gradle.tooling.internal.protocol
 
+import org.gradle.tooling.Failure
+
 interface ResultHandlerVersion1<T> {
     fun onComplete(result: T?)
 

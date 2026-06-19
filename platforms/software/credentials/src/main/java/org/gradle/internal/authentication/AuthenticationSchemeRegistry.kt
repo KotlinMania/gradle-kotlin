@@ -21,6 +21,6 @@ import org.gradle.internal.service.scopes.ServiceScope
 
 @ServiceScope(Scope.Build::class)
 interface AuthenticationSchemeRegistry {
-    fun <T : Authentication?> registerScheme(type: Class<T?>?, implementationType: Class<out T?>?)
-    fun <T : Authentication?> getRegisteredSchemes(): MutableMap<Class<T?>?, Class<out T?>?>?
+    fun <T : Authentication> registerScheme(type: Class<T>, implementationType: Class<out T>)
+    fun <T : Authentication> getRegisteredSchemes(): MutableMap<Class<T>, Class<out T>>
 }

@@ -23,20 +23,20 @@ import java.lang.management.ManagementFactory
 import java.util.stream.Collectors
 
 class CurrentProcess protected constructor(@JvmField val jvm: JavaInfo?, val jvmOptions: JvmOptions?) {
-    constructor(fileCollectionFactory: FileCollectionFactory?) : this(Jvm.current(), inferJvmOptions(fileCollectionFactory, ManagementFactory.getRuntimeMXBean().getInputArguments()))
+    constructor(fileCollectionFactory: FileCollectionFactory) : this(Jvm.current(), inferJvmOptions(fileCollectionFactory, ManagementFactory.getRuntimeMXBean().getInputArguments()))
 
     val isLowMemoryProcess: Boolean
         get() = Runtime.getRuntime().maxMemory() <= 64L * 1024 * 1024 // 64MB is our default for a launcher process
 
     companion object {
-        fun inferJvmOptions(fileCollectionFactory: FileCollectionFactory?, arguments: MutableList<String?>): JvmOptions {
+        fun inferJvmOptions(fileCollectionFactory: FileCollectionFactory, arguments: MutableList<String?>): JvmOptions {
             // Try to infer the effective jvm options for the currently running process.
             // We only care about 'managed' jvm args, anything else is unimportant to the running build
             val jvmOptions = JvmOptions(fileCollectionFactory)
             // TODO(mlopatkin) figure out a nicer way of handling the presence of agent in the foreground daemon.
             //  Currently it is hard to have a proper "-javaagent:/path/to/jar" in clients that start the daemon, so all code deals with a boolean flag shouldApplyAgent instead.
             //  It is also possible to have the agent attached at runtime, without the flag, so flag checking is preferred.
-            jvmOptions.setAllJvmArgs(arguments.stream().filter { arg: String? -> !AgentUtils.isGradleInstrumentationAgentSwitch(arg!!) }.collect(Collectors.toList()))
+            jvmOptions.allJvmArgs = arguments.stream().filter { arg: String? -> !AgentUtils.isGradleInstrumentationAgentSwitch(arg!!) }.collect(Collectors.toList())
             return jvmOptions
         }
     }

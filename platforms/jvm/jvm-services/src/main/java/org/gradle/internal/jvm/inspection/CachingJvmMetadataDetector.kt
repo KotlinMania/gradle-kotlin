@@ -22,16 +22,16 @@ import java.io.IOException
 import java.util.Collections
 import java.util.function.Predicate
 
-class CachingJvmMetadataDetector(private val delegate: JvmMetadataDetector) : JvmMetadataDetector, ConditionalInvalidation<JvmInstallationMetadata?> {
-    private val javaMetadata: MutableMap<File?, JvmInstallationMetadata?> = Collections.synchronizedMap<File?, JvmInstallationMetadata?>(HashMap<File?, JvmInstallationMetadata?>())
+class CachingJvmMetadataDetector(private val delegate: JvmMetadataDetector) : JvmMetadataDetector, ConditionalInvalidation<JvmInstallationMetadata> {
+    private val javaMetadata: MutableMap<File, JvmInstallationMetadata> = Collections.synchronizedMap(HashMap<File, JvmInstallationMetadata>())
 
     init {
         getMetadata(InstallationLocation.Companion.autoDetected(Jvm.current().getJavaHome(), "current Java home"))
     }
 
-    override fun getMetadata(javaInstallationLocation: InstallationLocation): JvmInstallationMetadata? {
-        val javaHome = resolveSymlink(javaInstallationLocation.getLocation())
-        return javaMetadata.computeIfAbsent(javaHome) { file: File? -> delegate.getMetadata(javaInstallationLocation) }
+    override fun getMetadata(javaInstallationLocation: InstallationLocation): JvmInstallationMetadata {
+        val javaHome = resolveSymlink(javaInstallationLocation.location)
+        return javaMetadata.computeIfAbsent(javaHome) { delegate.getMetadata(javaInstallationLocation) }
     }
 
     private fun resolveSymlink(jdkPath: File): File {
@@ -42,9 +42,9 @@ class CachingJvmMetadataDetector(private val delegate: JvmMetadataDetector) : Jv
         }
     }
 
-    override fun invalidateItemsMatching(predicate: Predicate<JvmInstallationMetadata?>) {
+    override fun invalidateItemsMatching(predicate: Predicate<JvmInstallationMetadata>) {
         synchronized(javaMetadata) {
-            javaMetadata.entries.removeIf { it: MutableMap.MutableEntry<File?, JvmInstallationMetadata?>? -> predicate.test(it!!.value) }
+            javaMetadata.entries.removeIf { predicate.test(it.value) }
         }
     }
 }

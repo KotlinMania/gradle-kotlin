@@ -317,7 +317,8 @@ inline fun <T : Any?> WriteContext.writeArray(array: Array<T>, writeElement: (T)
 inline fun <T : Any?> ReadContext.readArray(readElement: () -> T): Array<T> {
     val componentType = readClass()
     val size = readSmallInt()
-    val array: Array<T> = java.lang.reflect.Array.newInstance(componentType, size).uncheckedCast()
+    @Suppress("UNCHECKED_CAST")
+    val array: Array<T> = java.lang.reflect.Array.newInstance(componentType, size) as Array<T>
     for (i in 0 until size) {
         array[i] = readElement()
     }

@@ -20,12 +20,8 @@ import org.gradle.tooling.events.test.TestSkippedResult
 /**
  * Implementation of the `TestSkippedResult` interface.
  */
-class DefaultTestSkippedResult(private val startTime: Long, private val endTime: Long) : TestSkippedResult {
-    override fun getStartTime(): Long {
-        return startTime
-    }
+class DefaultTestSkippedResult(override val startTime: Long, override val endTime: Long) : TestSkippedResult {
 
-    override fun getEndTime(): Long {
-        return endTime
-    }
+
+
 }

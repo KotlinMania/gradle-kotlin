@@ -87,10 +87,10 @@ internal class ClassPathToClassLoaderCache(private val groovySystemLoaderFactory
      */
     fun withCachedClassLoader(
         libClasspath: ClassPath,
-        gradleApiGroovy: GroovySystemLoader?,
-        antBuilderAdapterGroovy: GroovySystemLoader?,
-        factory: Factory<out ClassLoader?>,
-        action: Action<in CachedClassLoader?>
+        gradleApiGroovy: GroovySystemLoader,
+        antBuilderAdapterGroovy: GroovySystemLoader,
+        factory: Factory<out ClassLoader>,
+        action: Action<in CachedClassLoader>
     ) {
         var cachedClassLoader: CachedClassLoader?
         lock.lock()
@@ -102,11 +102,11 @@ internal class ClassPathToClassLoaderCache(private val groovySystemLoaderFactory
                     LOG.debug("Classloader cache miss for classpath : {}. Creating classloader.", libClasspath.getAsURIs())
                 }
                 // Lock is held while creating ClassLoader - nothing else can happen while this is running
-                val classLoader: ClassLoader? = factory.create()
+                val classLoader: ClassLoader = factory.create()
                 cachedClassLoader = CachedClassLoader(libClasspath, classLoader)
                 cacheEntry = CacheEntry(libClasspath, cachedClassLoader)
-                val groovySystemForLoader = groovySystemLoaderFactory.forClassLoader(classLoader!!)
-                val cleanup = Cleanup(libClasspath, cachedClassLoader, finalizerThread.getReferenceQueue(), classLoader, groovySystemForLoader, gradleApiGroovy, antBuilderAdapterGroovy)
+                val groovySystemForLoader = groovySystemLoaderFactory.forClassLoader(classLoader)
+                val cleanup = Cleanup(libClasspath, cachedClassLoader, finalizerThread.referenceQueue, classLoader, groovySystemForLoader, gradleApiGroovy, antBuilderAdapterGroovy)
                 finalizerThread.putCleanup(libClasspath, cleanup)
                 cacheEntries.put(libClasspath, cacheEntry)
             } else {
@@ -124,7 +124,7 @@ internal class ClassPathToClassLoaderCache(private val groovySystemLoaderFactory
         }
 
         try {
-            action.execute(cachedClassLoader)
+            action.execute(cachedClassLoader!!)
         } finally {
             lock.lock()
             try {

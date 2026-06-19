@@ -21,8 +21,7 @@ interface ConsoleDetector {
      *
      * @return Information about the console, or null if this process is not attached to the console.
      */
-    @JvmField
-    val console: ConsoleMetaData?
+    fun getConsole(): ConsoleMetaData?
 
-    val isInteractiveConsole: Boolean
+    fun isInteractiveConsole(): Boolean
 }

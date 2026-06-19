@@ -40,21 +40,21 @@ import javax.annotation.concurrent.ThreadSafe
 class SftpClientFactory : Stoppable {
     private val sftpClientCreator = SftpClientCreator()
     private val lock = Any()
-    private val allClients: MutableList<LockableSftpClient?> = ArrayList<LockableSftpClient?>()
-    private val idleClients: ListMultimap<SftpHost?, LockableSftpClient?> = ArrayListMultimap.create<SftpHost?, LockableSftpClient?>()
+    private val allClients: MutableList<LockableSftpClient> = ArrayList()
+    private val idleClients: ListMultimap<SftpHost, LockableSftpClient> = ArrayListMultimap.create()
 
-    fun createSftpClient(uri: URI, credentials: PasswordCredentials): LockableSftpClient? {
+    fun createSftpClient(uri: URI, credentials: PasswordCredentials): LockableSftpClient {
         synchronized(lock) {
             val sftpHost = SftpHost(uri, credentials)
             return acquireClient(sftpHost)
         }
     }
 
-    private fun acquireClient(sftpHost: SftpHost): LockableSftpClient? {
+    private fun acquireClient(sftpHost: SftpHost): LockableSftpClient {
         return if (idleClients.containsKey(sftpHost)) reuseExistingOrCreateNewClient(sftpHost) else createNewClient(sftpHost)
     }
 
-    private fun reuseExistingOrCreateNewClient(sftpHost: SftpHost): LockableSftpClient? {
+    private fun reuseExistingOrCreateNewClient(sftpHost: SftpHost): LockableSftpClient {
         val clientsByHost = idleClients.get(sftpHost)
 
         var client: LockableSftpClient? = null
@@ -94,14 +94,14 @@ class SftpClientFactory : Stoppable {
 
         fun createNewClient(sftpHost: SftpHost): LockableSftpClient {
             try {
-                val session = createJsch()!!.getSession(sftpHost.getUsername(), sftpHost.getHostname(), sftpHost.getPort())
-                session.setPassword(sftpHost.getPassword())
+                val session = createJsch().getSession(sftpHost.username, sftpHost.hostname, sftpHost.port)
+                session.setPassword(sftpHost.password)
                 session.connect()
                 val channel = session.openChannel("sftp")
                 channel.connect()
                 return DefaultLockableSftpClient(sftpHost, channel as ChannelSftp, session)
             } catch (e: JSchException) {
-                val serverUri = URI.create(String.format("sftp://%s:%d", sftpHost.getHostname(), sftpHost.getPort()))
+                val serverUri = URI.create(String.format("sftp://%s:%d", sftpHost.hostname, sftpHost.port))
                 if (e.message == "Auth fail") {
                     throw ResourceException(serverUri, String.format("Password authentication not supported or invalid credentials for SFTP server at %s", serverUri), e)
                 }
@@ -109,7 +109,7 @@ class SftpClientFactory : Stoppable {
             }
         }
 
-        fun createJsch(): JSch? {
+        fun createJsch(): JSch {
             if (jsch == null) {
                 JSch.setConfig("PreferredAuthentications", "password")
                 JSch.setConfig("MaxAuthTries", "1")
@@ -152,7 +152,7 @@ class SftpClientFactory : Stoppable {
                     }
                 })
             }
-            return jsch
+            return jsch!!
         }
     }
 
@@ -173,13 +173,13 @@ class SftpClientFactory : Stoppable {
         }
     }
 
-    private class DefaultLockableSftpClient(val host: SftpHost?, val channelSftp: ChannelSftp, val session: Session) : LockableSftpClient {
+    private class DefaultLockableSftpClient(private val host: SftpHost, private val channelSftp: ChannelSftp, private val session: Session) : LockableSftpClient {
         override fun stop() {
             channelSftp.disconnect()
             session.disconnect()
         }
 
-        override fun getHost(): SftpHost? {
+        override fun getHost(): SftpHost {
             return host
         }
 
@@ -188,7 +188,7 @@ class SftpClientFactory : Stoppable {
         }
 
         override fun isConnected(): Boolean {
-            return channelSftp.isConnected()
+            return channelSftp.isConnected
         }
     }
 
