@@ -123,4 +123,5 @@ atlassian-ide-plugin.xml
 .claude/settings.local.json
 .claude/worktrees
 .harness.json
+.android-sdk/
 
