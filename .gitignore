@@ -1,127 +1,73 @@
-# Gradle
-# ------
-.gradle
-/build
-/*/build
-/*/*/build
-/*/*/*/build
-/*/*/*/*/*/build
-/**/docs/src/samples/**/build
-/**/docs/src/snippets/**/build
-/*/internal-android-performance-testing/build-android-libs
-test-splits/
-/gradle/verification-keyring.gpg
+# Kotlin/Gradle build artifacts
+build/
+.gradle/
+.kotlin/
+*.class
+*.jar
+*.war
+*.ear
 
-# Kotlin
-# ------
-.kotlin
+# Keep the Gradle wrapper jar checked in so CI can run `./gradlew`.
+!gradle/wrapper/gradle-wrapper.jar
 
-# IDEA
-# ----
-!/.idea
-/.idea/*
-# Needed to track entry points and nullability annotations (see https://youtrack.jetbrains.com/issue/IDEA-354114 and https://youtrack.jetbrains.com/issue/IDEA-354115)
-!/.idea/misc.xml
-!/.idea/codeStyles
-!/.idea/inspectionProfiles
-!/.idea/icon.png
-!/.idea/icon_dark.png
-*/**/.idea
-*/**/.shelf
-.shelf
-/*.iml
-/*/*.iml
-/*/*/*.iml
-/*/*/*/*.iml
-/*/*/*/*/*.iml
-/out
-/*/out
-/*/*/out
-/*/*/*/out
-/*/*/*/*/out
-/.teamcity/target
-/gradle.ipr
-/gradle.iws
+# IDE
+.idea/
+*.iml
+out/
 
-# Eclipse
-# -------
-*.classpath
-*.project
-*.settings
-/bin
-/subprojects/*/bin
-atlassian-ide-plugin.xml
-.metadata/
+# Upstream Rust source — clone freshly when porting begins
+tmp/
+!tmp/.gitkeep
 
-# NetBeans
-# --------
-.nb-gradle
-.nb-gradle-properties
+# AST distance reports and binaries
+port_status_report.md
+high_priority_ports.md
+NEXT_ACTIONS.md
+port_lint_proposed_changes.md
+ast_distance_*.txt
+.cache/
+*.lock
+kotlin-js-store/*
+!kotlin-js-store/package.json
+!kotlin-js-store/yarn.lock
+!kotlin-js-store/wasm/
+!kotlin-js-store/wasm/yarn.lock
+tools/ast_distance/ast_distance
+tools/ast_distance/build/
+tools/ast_distance
+tools/
 
-# Vim
-# ---
-*.sw[nop]
+# JVM heap dumps
+*.hprof
+java_pid*.hprof
 
-# Emacs
-# -----
-*~
-\#*\#
-.\#*
-
-# Textmate
-# --------
-.textmate
-
-# Sublime Text
-# ------------
-*.sublime-*
-
-# Draw.io
-# -------
-*.bkp
-*.dtmp
-
-# jEnv
-# ----
-.java-version
-
-# macOS
-# ----
+# macOS Finder metadata
 .DS_Store
 
-# HPROF
-# -----
-*.hprof
+# Python bytecode
+__pycache__/
+*.pyc
 
-# Work dirs
-# ---------
-/incoming-distributions
-/intTestHomeDir
+# Android SDK
+/.android-sdk/
+local.properties
 
-# Logs
-# ----
-/*.log
-
-# Thread dumps for troubleshooting
-*.threaddump
-# ps output for cleaning up leaking Java processes
-*.psoutput
-
-# oh-my-zsh gradle plugin
-.gradletasknamecache
-
-# Added GE support maven support to the maven build in .teamcity, per the GE docs, this dir is NOT to be committed
-.teamcity/.mvn/.develocity/
-/discoclient.properties
-
-# Ignore local configuration files for asdf, allowing the JDK to be configured for project (https://asdf-vm.com)
-.tool-versions
-
-# AI 
-# ---
-.claude/CLAUDE.local.md
-.claude/settings.local.json
-.claude/worktrees
-.harness.json
-.android-sdk/
-
+# Swift Package Manager / Xcode workspace state.
+#
+# `swift-test-harness/` is a real SPM package that exercises the Kotlin
+# Swift Export pipeline against the artifacts produced by
+# `embedSwiftExportForXcode`. Its `Package.swift`, `Tests/`, and
+# per-package `.gitignore` (which ignores its own `.build/`) are all
+# tracked. The patterns below cover the Swift/Xcode workspace state
+# that this harness — or any future Swift Package added under the
+# repo — would also produce.
+#
+# Note: the staging directory the Kotlin Swift Export pipeline writes
+# to (`build/swift-test/lib*.a` + `.swiftmodule/` bundles when run with
+# the Xcode-style env vars) is already covered by `build/` above.
+.swiftpm/
+DerivedData/
+*.xcuserstate
+*.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
+local.properties
