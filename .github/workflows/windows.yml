@@ -13,6 +13,10 @@ jobs:
     permissions:
       contents: read
     steps:
+      # Git must allow the vendored Gradle paths before checkout creates files.
+      - name: Enable long paths
+        run: git config --global core.longpaths true
+
       - name: Checkout
         uses: actions/checkout@v7
 
