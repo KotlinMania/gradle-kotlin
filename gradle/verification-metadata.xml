@@ -5301,5 +5301,95 @@
             <sha256 value="47dcde8986019314ef78ae7280a94973a21d2ed95075a40a000b42da956429e1" origin="Verified" reason="Artifact is not signed"/>
          </artifact>
       </component>
+      <component group="org.jetbrains.kotlin" name="fus-statistics-gradle-plugin" version="2.4.21">
+         <artifact name="fus-statistics-gradle-plugin-2.4.21-gradle96.jar">
+            <sha256 value="44a07b9203eb2c75ceb2d33327f89b991f2d35095a96a0f1c224a012c5465367" origin="Verified against Maven Central artifact SHA-256"/>
+         </artifact>
+      </component>
+      <component group="org.jetbrains.kotlin" name="kotlin-allopen" version="2.4.21">
+         <artifact name="kotlin-allopen-2.4.21-gradle96.jar">
+            <sha256 value="2905856d4ec096127792096610970fb01797dd9bacf1fb8ea1ebe7a4a0a9fde5" origin="Verified against Maven Central artifact SHA-256"/>
+         </artifact>
+      </component>
+      <component group="org.jetbrains.kotlin" name="kotlin-build-statistics" version="2.4.21">
+         <artifact name="kotlin-build-statistics-2.4.21.jar">
+            <sha256 value="f917249997fe48d1eb1204906b4cabc8230bf32a1d9fb385e52311acaa6ebc68" origin="Verified against Maven Central artifact SHA-256"/>
+         </artifact>
+      </component>
+      <component group="org.jetbrains.kotlin" name="kotlin-build-tools-api" version="2.4.21">
+         <artifact name="kotlin-build-tools-api-2.4.21.jar">
+            <sha256 value="c5cd6a49bd072b529ae10809111c16a7aa0f92147e95d288354017fd65799461" origin="Verified against Maven Central artifact SHA-256"/>
+         </artifact>
+      </component>
+      <component group="org.jetbrains.kotlin" name="kotlin-compiler-runner" version="2.4.21">
+         <artifact name="kotlin-compiler-runner-2.4.21.jar">
+            <sha256 value="75cd5956405697559e6925ebc5808449a2e12002d4f017275281ad3d4c0c7985" origin="Verified against Maven Central artifact SHA-256"/>
+         </artifact>
+      </component>
+      <component group="org.jetbrains.kotlin" name="kotlin-daemon-client" version="2.4.21">
+         <artifact name="kotlin-daemon-client-2.4.21.jar">
+            <sha256 value="095903c4c4713bf91a562d226d7ba0464cf5424e76342d487deec494451ab29b" origin="Verified against Maven Central artifact SHA-256"/>
+         </artifact>
+      </component>
+      <component group="org.jetbrains.kotlin" name="kotlin-gradle-plugin" version="2.4.21">
+         <artifact name="kotlin-gradle-plugin-2.4.21-gradle96.jar">
+            <sha256 value="d0a11912936c8801f1773a47e8fc51835a6ab568d73e4e1d188281955a7f575b" origin="Verified against Maven Central artifact SHA-256"/>
+         </artifact>
+      </component>
+      <component group="org.jetbrains.kotlin" name="kotlin-gradle-plugin-annotations" version="2.4.21">
+         <artifact name="kotlin-gradle-plugin-annotations-2.4.21.jar">
+            <sha256 value="5c386b0fa287584497b07d62af954e30d05907e6da867221124d0bb936989bbd" origin="Verified against Maven Central artifact SHA-256"/>
+         </artifact>
+      </component>
+      <component group="org.jetbrains.kotlin" name="kotlin-gradle-plugin-api" version="2.4.21">
+         <artifact name="kotlin-gradle-plugin-api-2.4.21-gradle96.jar">
+            <sha256 value="43b8c73f3e4f123b1a5e4bc8e62bd9b258dfa84129e6564bebb03c5fada84d23" origin="Verified against Maven Central artifact SHA-256"/>
+         </artifact>
+      </component>
+      <component group="org.jetbrains.kotlin" name="kotlin-gradle-plugin-idea" version="2.4.21">
+         <artifact name="kotlin-gradle-plugin-idea-2.4.21.jar">
+            <sha256 value="086734484c7edf19a620ab1a617d097c40e03bc52602e77840ea5ebd6380e514" origin="Verified against Maven Central artifact SHA-256"/>
+         </artifact>
+      </component>
+      <component group="org.jetbrains.kotlin" name="kotlin-gradle-plugin-idea-proto" version="2.4.21">
+         <artifact name="kotlin-gradle-plugin-idea-proto-2.4.21.jar">
+            <sha256 value="4559d92c5c1758a3e1ec5728822b059b2eb4aebef13c701ee86c7688acf164d5" origin="Verified against Maven Central artifact SHA-256"/>
+         </artifact>
+      </component>
+      <component group="org.jetbrains.kotlin" name="kotlin-klib-commonizer-api" version="2.4.21">
+         <artifact name="kotlin-klib-commonizer-api-2.4.21.jar">
+            <sha256 value="62ebe32fcf69600125b28388f0a80781276784d90e14d333bbd5080b4807220c" origin="Verified against Maven Central artifact SHA-256"/>
+         </artifact>
+      </component>
+      <component group="org.jetbrains.kotlin" name="kotlin-native-utils" version="2.4.21">
+         <artifact name="kotlin-native-utils-2.4.21.jar">
+            <sha256 value="e1858bf1fb5bbb1738c4fa0f9cfb502b911cabf313a5de4cae686d6c50d74814" origin="Verified against Maven Central artifact SHA-256"/>
+         </artifact>
+      </component>
+      <component group="org.jetbrains.kotlin" name="kotlin-serialization" version="2.4.21">
+         <artifact name="kotlin-serialization-2.4.21-gradle96.jar">
+            <sha256 value="f5b6f5fdf64ec7ae5716816e9e77baa9eda6ae76291ca17b38fe4241e99aad3c" origin="Verified against Maven Central artifact SHA-256"/>
+         </artifact>
+      </component>
+      <component group="org.jetbrains.kotlin" name="kotlin-tooling-core" version="2.4.21">
+         <artifact name="kotlin-tooling-core-2.4.21.jar">
+            <sha256 value="5fc5db083803232857408ed5c25bcc307c703b04bdef6cb2c34ebf4db611a622" origin="Verified against Maven Central artifact SHA-256"/>
+         </artifact>
+      </component>
+      <component group="org.jetbrains.kotlin" name="kotlin-util-io" version="2.4.21">
+         <artifact name="kotlin-util-io-2.4.21.jar">
+            <sha256 value="5821175f24578ca8f1ef405bc982b3668f3f40f1a5dd28bb3283dd5215a922d1" origin="Verified against Maven Central artifact SHA-256"/>
+         </artifact>
+      </component>
+      <component group="org.jetbrains.kotlin" name="kotlin-util-klib" version="2.4.21">
+         <artifact name="kotlin-util-klib-2.4.21.jar">
+            <sha256 value="f01f79d54968941dfa83a525ae173be93460bb85b0bf2cc9ff06f6eb0864691e" origin="Verified against Maven Central artifact SHA-256"/>
+         </artifact>
+      </component>
+      <component group="org.jetbrains.kotlin" name="kotlin-util-klib-metadata" version="2.4.21">
+         <artifact name="kotlin-util-klib-metadata-2.4.21.jar">
+            <sha256 value="a47f883b82fc3b99fe3d666498b22312628afb5cc1b9b26e8188175be2da6060" origin="Verified against Maven Central artifact SHA-256"/>
+         </artifact>
+      </component>
    </components>
 </verification-metadata>

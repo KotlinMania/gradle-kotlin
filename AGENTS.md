@@ -1,3 +1,5 @@
+> **Current storage instruction (2026-10-26):** The workspace-root `AGENTS.md` has been removed; do not recreate it. Keep source development in its owning repository and shared automation in the existing workspace `tools/` directory. Do not create `automation-artifacts/` or use `/tmp` or `/private/tmp` for storage. Remove temporary copies after use. Historical artifact paths below are provenance only and are not instructions to recreate those folders.
+
 # Kotlinmania — workspace agent guide
 
 This is the single sharp guide for agents (Claude, Codex, anyone else) doing
@@ -160,9 +162,9 @@ as the default next action when infra is clean.
 - **`port-lint: ignore` is not a real directive** (§3). Strip it when
   you see it. Only `port-lint: source <path>` and `port-lint: tests
   <path>` are recognized.
-- **Workspace artifacts go under**
-  `/Volumes/stuff/Projects/kotlinmania/automation-artifacts/`. No
-  `/tmp` scratch (§1).
+- **Keep development in the owning repository.** Shared automation belongs in
+  workspace `tools/`. Keep necessary outputs inside the project; clean up
+  temporary copies. Never store work in `automation-artifacts/`, `/tmp`, or `/private/tmp`.
 
 The yarn-resolution security block, the Android SDK installer pattern,
 the build-gate task list, the canonical Swift Export rollout recipe, the
@@ -247,10 +249,10 @@ These are non-negotiable. Violating any of them requires immediate repair.
 - **No worktrees.** The global pre-commit hook at
   `~/.config/git/hooks/pre-commit` refuses commits from linked worktrees.
   Do not bypass with `--no-verify`. Work in the repo's main checkout.
-- **No `/tmp` scratch.** Reports, logs, helper outputs go under the repo's
-  own `tmp/` or under
-  `/Volumes/stuff/Projects/kotlinmania/automation-artifacts/`. Future agents
-  need the raw data, not summaries.
+- **No shared scratch storage.** Keep source changes in the owning repository
+  and automation in workspace `tools/`. Keep necessary logs and test outputs
+  inside the project, then remove temporary copies. Never store work in
+  `automation-artifacts/`, `/tmp`, or `/private/tmp`; they are routinely deleted.
 - **Force-push requires explicit confirmation.** Codex `default.rules`
   marks `git push --force`, `--force-with-lease`, and `-f` as `ask`. Do
   not assume a generic "go ahead" covers it — the approval has to name
@@ -590,7 +592,7 @@ For each `tmp/**/tests/*.rs`, `tmp/**/benches/*.rs`, and `#[cfg(test)] mod
 tests { … }` block:
 
 - **If the test exercises behavior the Kotlin port can faithfully match,
-  port it** to `src/commonTest/.../<File>Test.kt` (or per-target test
+  port it** to `src/common/commonTest/.../<File>Test.kt` (or per-target test
   source where commonTest can't express it). Use the upstream Rust file's
   organization; preserve test names translated to camelCase.
 - **If the test depends on a Rust-specific semantic the Kotlin
@@ -610,7 +612,7 @@ schemars-kotlin / itertools-kotlin / kasuari-kotlin):
 ```kotlin
 val swiftTest by tasks.registering(Exec::class) {
     dependsOn("embedSwiftExportForXcode")
-    workingDir = file("swift-test-harness")
+    workingDir = file("src/swift/swift-test-harness")
     commandLine("swift", "test", "--package-path", ".")
     // Treat any non-zero exit as a build failure.
     isIgnoreExitValue = false
@@ -621,7 +623,7 @@ tasks.named("test") {
 }
 ```
 
-If `swift-test-harness/` isn't present yet, the per-repo
+If `src/swift/swift-test-harness/` isn't present yet, the per-repo
 `SWIFT_EXPORT_ROLLOUT.md` documents how to scaffold it — it's part of the
 five canonical rollout changes.
 
@@ -826,8 +828,7 @@ Every session ends with a report that includes:
 
 - Workspace root: `/Volumes/stuff/Projects/kotlinmania`
 - Per-repo: `/Volumes/stuff/Projects/kotlinmania/<repo>-kotlin/`
-- Automation artifacts:
-  `/Volumes/stuff/Projects/kotlinmania/automation-artifacts/`
+- Shared automation: workspace `tools/`; temporary build outputs: inside the owning repository only.
 - Canonical Swift Export rollout:
   `automation-artifacts/swift-export-rollout/` (apply.sh, blast.sh,
   PR_BODY.md, SWIFT_EXPORT_ROLLOUT.md, triage docs)

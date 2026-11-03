@@ -7,7 +7,7 @@ let package = Package(
         .macOS(.v15),
     ],
     dependencies: [
-        .package(name: "Gradle", path: "../build/SPMPackage/macosArm64/Debug")
+        .package(name: "Gradle", path: "../../../build/SPMPackage/macosArm64/Debug")
     ],
     targets: [
         .testTarget(
@@ -17,7 +17,7 @@ let package = Package(
             ],
             linkerSettings: [
                 .unsafeFlags([
-                    "-L", "../build/swift-test",
+                    "-L", "../../../build/swift-test",
                     "-lGradle",
                 ]),
             ]
