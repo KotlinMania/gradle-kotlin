@@ -166,19 +166,32 @@ val androidCommandLineToolsRevision =
     providers
         .gradleProperty(
             "android.commandLineTools.revision",
-        ).getOrElse("14742923")
+        ).getOrElse("16111833")
 val projectCompileSdk = providers.gradleProperty("android.compileSdk").getOrElse("34")
 val projectAndroidBuildTools = providers.gradleProperty("android.buildTools").getOrElse("36.0.0")
 val osName = providers.systemProperty("os.name").get().lowercase()
+val osArch = providers.systemProperty("os.arch").get().lowercase()
 val isWindowsHost = "windows" in osName
 val isMacHost = "mac" in osName
 val androidSdkOsName =
     when {
         isWindowsHost -> "win"
-        isMacHost -> "mac"
+        isMacHost -> {
+            val archSplitRevision =
+                androidCommandLineToolsRevision.isNotEmpty() &&
+                    androidCommandLineToolsRevision.all(Char::isDigit) &&
+                    androidCommandLineToolsRevision.toLong() >= 16_000_000L
+            when {
+                !archSplitRevision -> "mac"
+                osArch == "aarch64" || osArch == "arm64" -> "mac_arm64"
+                else -> "mac_x86_64"
+            }
+        }
         "linux" in osName -> "linux"
         else -> throw GradleException("Unsupported Android SDK setup OS: ${providers.systemProperty("os.name").get()}")
     }
+val expectedAndroidSdkStamp =
+    "sdkOs=$androidSdkOsName\nrevision=$androidCommandLineToolsRevision\ncompileSdk=$projectCompileSdk\nbuildTools=$projectAndroidBuildTools\n"
 val projectAndroidSdkDir = layout.projectDirectory.dir(".android-sdk").asFile
 val androidSdkManager =
     projectAndroidSdkDir.resolve(
@@ -205,9 +218,13 @@ fun writeAndroidLocalProperties() {
         .writeText("sdk.dir=$sdkDirPropertyValue\n")
 }
 
+fun hasMatchingAndroidSdkStamp(): Boolean =
+    androidSdkInstallMarker.isFile && androidSdkInstallMarker.readText() == expectedAndroidSdkStamp
+
 fun isProjectAndroidSdkInstalled(): Boolean =
-    androidSdkInstallMarker.exists() &&
+    hasMatchingAndroidSdkStamp() &&
         androidSdkManager.exists() &&
+        projectAndroidSdkDir.resolve("cmdline-tools/latest/source.properties").isFile &&
         requiredAndroidSdkPackageDirs.all { it.exists() }
 
 fun sdkManagerCommand(vararg args: String): List<String> =
@@ -264,7 +281,9 @@ fun installProjectAndroidSdk(execOperations: ExecOperations) {
         println("setup-android-sdk: SDK already installed at $projectAndroidSdkDir")
         return
     }
-    if (!androidSdkManager.exists()) downloadAndroidCommandLineTools()
+    if (!hasMatchingAndroidSdkStamp() || !androidSdkManager.exists() || !projectAndroidSdkDir.resolve("cmdline-tools/latest/source.properties").isFile) {
+        downloadAndroidCommandLineTools()
+    }
     println("setup-android-sdk: accepting licenses")
     val licenseAnswers = "y\n".repeat(200).toByteArray(Charsets.UTF_8)
     val licenseResult =
@@ -304,7 +323,7 @@ fun installProjectAndroidSdk(execOperations: ExecOperations) {
         }
     }
     writeAndroidLocalProperties()
-    androidSdkInstallMarker.writeText("")
+    androidSdkInstallMarker.writeText(expectedAndroidSdkStamp)
     println("setup-android-sdk: done; SDK at $projectAndroidSdkDir")
 }
 
