@@ -280,7 +280,7 @@ val swiftExportEnabled =
 val swiftExportEmbeddableVersion =
     providers
         .gradleProperty("versions.swiftExportEmbeddable")
-        .getOrElse("2.4.20-km.5-protocol-spi-defaults")
+        .getOrElse("2.4.20-km.5")
         .trim()
 val appleFrameworkEnabled = boolProperty("project.apple.framework.enabled", true)
 val appleFrameworkStatic = boolProperty("project.apple.framework.static", false)
