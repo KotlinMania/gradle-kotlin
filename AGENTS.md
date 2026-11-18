@@ -8,8 +8,9 @@ embedded hourly runbook, the per-repo `SWIFT_EXPORT_ROLLOUT.md` lessons, and
 the long trail of recovered field-feedback into one place. **When this file
 disagrees with anything you remember, this file wins.**
 
-> **Source-of-truth.** The workspace-root `AGENTS.md` (at
-> `/Volumes/stuff/Projects/kotlinmania/AGENTS.md`) is canonical.
+> **Source-of-truth.** The workspace-root `AGENTS.md` is canonical.
+> The workspace root is the folder that holds every `*-kotlin/` repo;
+> paths in this guide are relative to it (from inside a repo, prefix `../`).
 > Workspace-root `CLAUDE.md` is a tiny redirect file pointing here
 > (plain text — **never a symlink**: this workspace is Kotlin
 > Multiplatform and Windows is a first-class target, and Windows git
@@ -99,37 +100,43 @@ Do not treat an earlier item as permission to skip a later one. The §0
 completion contract requires the whole chain, and §3 names source porting
 as the default next action when infra is clean.
 
-1. **Read this file** (you're in it). The §0 contract is non-negotiable.
-   Read the focused repo's `README.md` and any `NEXT_ACTIONS.md` /
+1. **Read this file (`AGENTS.md`) and `SWIFT.md` in full** (you're in `AGENTS.md`, but note that IDE/Antigravity rule injection truncates files after ~21KB, so you MUST explicitly read the workspace-root `AGENTS.md` §3–§12 and `SWIFT.md`). The §0 contract is non-negotiable.
+   Read the focused repo's `README.md`, `SWIFT.md`, `RUST_CALLERS.md`, and any `NEXT_ACTIONS.md` /
    `PORT_REPORT.md`. There is no per-repo `CLAUDE.md` anymore (removed
    2026-05-24); the per-repo `AGENTS.md` is a copy of this file.
 2. **Audit + sync local main** (§11 step 1). `git fetch --prune`, inspect
    `git status --short --branch`, and if on `main` behind `origin/main`
    run `git pull --ff-only origin main`.
 3. **Workflow-shape audit** (§7). Fix or report any `push`/
-   `pull_request` regression on `ci.yml` / `codeql.yml` / `publish.yml` /
-   platform workflows.
+   `pull_request` regression on `ci.yml` / `publish.yml` / platform
+   workflows. Delete any `codeql.yml`: CodeQL does not run in CI.
 4. **Branch reconciliation** (§2). **PR-only** — never `git push origin
    main`, never local `git switch main && git merge --no-ff <branch>`.
    Reconcile every stranded `[gone]` branch via the documented PR flow.
    Carry dirty work forward (§1 — never stash, never orphan).
-5. **Infra defect repair**: build, CI, CodeQL (§8 "CodeQL `java-kotlin`
-   extraction"), Dependabot security (§9), JS-toolchain security
+5. **Infra defect repair**: build, CI, Dependabot security (§9), JS-toolchain security
    patching (§9), Android SDK normalization (§8), publishing, or
    workflow defect. Local verification first; commit; push the branch;
    `gh pr create` + `gh pr merge --merge --delete-branch`.
-6. **Swift Export sweep** (§4) if `swiftExport { … }` is configured. The
+6. **Swift Export sweep** (§4 and `SWIFT.md`) if `swiftExport { … }` is configured. The
    five-class sweep, then `./gradlew test` which must include
    `swift test` locally (§6).
 7. **Source porting** (§3) is the default next action when infra is
-   clean. Use `ast_distance` to inventory gaps — the binary at
-   `/Volumes/stuff/Projects/kotlinmania/bin/ast_distance` is **never a
-   blocker**; if a repo's `tools/ast_distance` is missing, copy the
-   workspace binary in (§3 gives the exact `cp` + `.gitignore` lines).
-   Translate from `tmp/` per the translation rules (one Rust file → one
-   Kotlin file, top-to-bottom, no stubs, no Rust syntax in
-   Kotlin/KDoc/comments, common sense applies). Check kotlinmania
-   siblings before declaring a dependency unportable.
+   clean. Before running the transpiler, configure sibling crate namespace
+   mappings in `gradle.properties` (`crate.core=io.github.kotlinmania.rustlang.core`,
+   `crate.alloc=io.github.kotlinmania.rustlang.alloc`, and `crate.<dep>=<namespace>`
+   matching each sibling repo's `project.namespace`, or `-c <crate>=<ns>`)
+   and wire the sibling dependencies so `rust-kotlin.kexe` imports sibling
+   crates directly. Then run a complete first pass with
+   `../rust-kotlin/build/**/rust-kotlin.kexe` (`--split-module-roots`) across
+   `tmp/`. **Never hand-edit anything before completing the transpiler first
+   pass, and never use hand-edits in place of transpiler work.** If
+   `rust-kotlin.kexe` misses or mis-emits something, fix the CLI flags/crate
+   mappings or fix `rust-kotlin` itself (recording defects in Hermes Kanban
+   using the `ren` profile), rebuild `rust-kotlin.kexe`, and regenerate.
+   `tools/ast_distance` can help identify drift and priorities; it does not
+   prove behavioral equivalence. Follow §3 for module-root handling, provenance
+   and validation.
 8. **Publish** if there's releasable code: bump version in
    `build.gradle.kts` + README install snippets, commit, push, `gh
    release create v<X.Y.Z>` to fire the `release[released]` publish
@@ -142,17 +149,37 @@ as the default next action when infra is clean.
 
 ### Hard constraints to remember while doing the above
 
+- **Transpiler-first — NEVER use hand-edits in place of `rust-kotlin.kexe`** (§3).
+  Do **not** hand-edit *anything* before running a full first pass with
+  `rust-kotlin.kexe` across `tmp/`, and **never** delete transpiler output
+  to hand-write Kotlin files. That is why the transpiler exists. Configure
+  sibling crate mappings (`crate.<name>=<namespace>` in `gradle.properties` /
+  `-c`) so the transpiler imports sibling crates directly; if `rust-kotlin.kexe`
+  misses or mis-emits a construct, fix the flags/mappings or fix `rust-kotlin`
+  and regenerate rather than hand-editing the target port.
+- **Module roots require faithful Kotlin API placement** (§3). The translator
+  may read and use `mod.rs`; `--split-module-roots` produces implementation
+  candidates, not a Rust-style crate facade. Parcel transpiler-emitted
+  `lib.rs` / `mod.rs` declarations into proper `.kt` files and package paths
+  (preserving algorithms, signatures, and comments) — **never** discard
+  transpiler output to hand-write implementations. Never create `Lib.kt` or
+  `Mod.kt`, never attach `// port-lint: source lib.rs` or
+  `// port-lint: source .../mod.rs`, and never create Kotlin re-export bridges.
+  Update callers to import canonical Kotlin declarations via `RUST_CALLERS.md`.
 - **`allWarningsAsErrors = true`** is the workspace default. Every warning
   is a build failure. Treat every warning as a real defect — never scope
   the flag down to silence Swift Export gate noise (§4 forbids it
   explicitly).
 - **All current KotlinMania targets build** (§0 condition 3 + §5
   `fullTargetBuildTaskNames`). Never shrink the gate to dodge a CI
-  failure. The exceptions are the documented retired targets:
-  `watchosArm32` (§5.5.1, retired 2026-05-24 — Apple Watch armv7k EOL +
-  Mach-O 24-bit scattered relocation limit) and the JetBrains-deprecated
-  x86_64 simulator targets `tvosX64` / `watchosX64` / `macosX64`
-  (§5.5.2). These are workspace-wide retirements, not per-repo shrinks.
+  failure. **We do not support 32-bit targets of any kind, and we do not
+  support Apple x86_64 targets** (§5.5). Retired: `watchosArm32`,
+  `watchosArm64` (arm64_32), `androidNativeArm32`, `androidNativeX86`,
+  `linuxArm32Hfp`, `mingwX86`, `iosX64`, `macosX64`, `tvosX64`,
+  `watchosX64`. Retained: JVM, Android, JS, Wasm (JS + WASI), Linux
+  x64/ARM64, Windows x64, Android Native ARM64/x64, and Apple ARM64 device
+  + simulator ARM64 targets. These are workspace-wide retirements, not
+  per-repo shrinks.
 - **Swift test passes locally** (§0 condition 4). Don't wait for GitHub
   to find Swift Export bugs — by then you've burned a CI run.
 - **Test parity with `tmp/` Rust** (§6). Every upstream `#[test]` /
@@ -162,9 +189,18 @@ as the default next action when infra is clean.
 - **`port-lint: ignore` is not a real directive** (§3). Strip it when
   you see it. Only `port-lint: source <path>` and `port-lint: tests
   <path>` are recognized.
-- **Keep development in the owning repository.** Shared automation belongs in
-  workspace `tools/`. Keep necessary outputs inside the project; clean up
-  temporary copies. Never store work in `automation-artifacts/`, `/tmp`, or `/private/tmp`.
+- **Pure Kotlin Multiplatform + sibling Rust ports — never Java, raw `platform.posix`, or ad-hoc `cinterop`** (§3). No
+  `java.*` / `javax.*` imports, no JVM-only or third-party Java artifacts
+  (okio, Guava, Bouncy Castle, Jackson, ...), and no reaching for
+  `platform.posix.*`, `kotlinx.cinterop.*`, or raw `@WasmImport` / JS host
+  shims in consumer ports when workspace Rust crate ports (`rust-lang-kotlin`,
+  `libc-kotlin`, `windows-sys-kotlin`, `km-io`, etc.) exist. Only low-level
+  `*-sys-kotlin` / `libc-kotlin` / `rust-lang-kotlin` FFI crates own
+  `cinterop` / JNI / N-API bindings (§10).
+- **Keep source development inside its owning repository.** Shared automation
+  belongs in the existing workspace `tools/` directory. Build logs and temporary
+  outputs stay inside the focused repository and are cleaned up after use.
+  Never use `automation-artifacts/`, `/tmp`, or `/private/tmp` for storage.
 
 The yarn-resolution security block, the Android SDK installer pattern,
 the build-gate task list, the canonical Swift Export rollout recipe, the
@@ -233,7 +269,7 @@ unavailable, gate failure with root cause outside the focused repo). A
 no-change report without that level of blocker is a failed session.
 
 > **`ast_distance` is never a blocker.** The workspace ships a runnable
-> binary at `/Volumes/stuff/Projects/kotlinmania/bin/ast_distance`
+> binary at `bin/ast_distance` in the workspace root
 > (Mach-O arm64). If a repo requires it and does not ship its own under
 > `tools/ast_distance/`, copy the workspace binary into the repo's
 > `tools/` folder and add the path to `.gitignore` (it's a local
@@ -250,9 +286,10 @@ These are non-negotiable. Violating any of them requires immediate repair.
   `~/.config/git/hooks/pre-commit` refuses commits from linked worktrees.
   Do not bypass with `--no-verify`. Work in the repo's main checkout.
 - **No shared scratch storage.** Keep source changes in the owning repository
-  and automation in workspace `tools/`. Keep necessary logs and test outputs
-  inside the project, then remove temporary copies. Never store work in
-  `automation-artifacts/`, `/tmp`, or `/private/tmp`; they are routinely deleted.
+  and shared automation in the existing workspace `tools/` directory. Keep
+  necessary logs and test outputs inside the focused repository; remove
+  temporary copies after use. Never store work in `automation-artifacts/`,
+  `/tmp`, or `/private/tmp`; those locations are routinely deleted.
 - **Force-push requires explicit confirmation.** Codex `default.rules`
   marks `git push --force`, `--force-with-lease`, and `-f` as `ask`. Do
   not assume a generic "go ahead" covers it — the approval has to name
@@ -298,7 +335,7 @@ These are non-negotiable. Violating any of them requires immediate repair.
   `session/<date>-<topic>`); land every commit in the session onto it as
   separate commits; ship as one PR.
 - **No broad recursive `find`.** Do not walk
-  `/Volumes/stuff/Projects/kotlinmania`, all `*-kotlin/` repos, or `find .`
+  the workspace root, all `*-kotlin/` repos, or `find .`
   from a repo root without prunes. It monopolizes the workspace and disables
   required tooling. Use `rg --files` with explicit `-g` patterns, or scope
   to small named subtrees (`src/`, `.github/`, `tools/`). If a recursive
@@ -389,7 +426,7 @@ lockfile workflow.
 
 ### Why PR-only (no local main merges)
 
-- The repo's required CI gates (CodeQL, dependabot, target builds, Swift
+- The repo's required CI gates (dependabot, target builds, Swift
   Export, publish dry-run) only fire on the PR event. A local push to
   `main` bypasses them.
 - The branch-protection rules on `KotlinMania/*` reject direct pushes to
@@ -407,124 +444,230 @@ lockfile workflow.
 
 These defaults apply unless a repo's own docs explicitly say otherwise.
 
-### Translation rules
+### Transliteration and porting workflow
 
-- **Kotlin stays Kotlin.** `PascalCase` types, `camelCase` functions/locals,
-  lowercase packages. Never `snake_case` Kotlin identifiers to match Rust.
-- **No Rust in source.** No Rust syntax in `.kt`, no Rust syntax in KDoc, no
-  Rust syntax in inline comments. Translate `Vec<T>` → `List<T>`,
-  `Option<&str>` → `String?`, `Self::foo()` → `foo()`, drop lifetimes, lift
-  `cfg(...)` / `#[derive(...)]` into prose.
-- **Comments are translated upstream content.** Not a place for porting
-  notes, "Rust vs Kotlin" rationale, ast_distance strategy, or workaround
-  explanations. Those go in commit messages, `NEXT_ACTIONS.md`, or review
-  notes. **No deferred language** in any tracked file: no "deferred,"
-  "next pass," "out of scope," "blocked on X" written into `CLAUDE.md` /
-  `README.md` / `NEXT_ACTIONS.md` / PR descriptions. Finish the work; don't
-  inventory what isn't done.
-- **No stubs.** No `TODO()`, no placeholder bodies, no `@Suppress(...)`. If
-  something is missing, port the dependency. If a Rust test depends on
-  semantics Kotlin can't reproduce (mem::forget, pin-poll-once, Drop),
-  leave it unported with an honest one-line comment naming the specific
-  semantic; never write a "simulation" that tests a different invariant.
-- **Translation happens in the main loop.** No subagent-driven `.kt` edits.
-- **One Rust file → one Kotlin file.** Translate top-to-bottom in upstream
-  order. Read the whole upstream file before editing the Kotlin file. Two
-  approved exceptions:
-  - An upstream `mod.rs` with real implementation may be parceled into
-    focused Kotlin files; the Kotlin `Mod.kt` stays a module-tracking
-    ledger. Each derived `.kt` carries
-    `// port-lint: source <that mod.rs path>` so `ast_distance` knows
-    what is tied to what.
-  - An upstream `lib.rs` with real implementation (not just re-exports)
-    follows the same parceling rule: per-symbol `.kt` files, `Mod.kt` as
-    a ledger only, never a typealias bridge.
-- **`mod.rs` / `lib.rs` re-exports → caller migration, not central
-  typealias.** When an upstream `mod.rs` only re-exports a symbol that
-  lives elsewhere, do **not** mint a central Kotlin `typealias` for it.
-  Rewrite callers to the original symbol; use `import <upstream-fq> as
-  <Name>` if the caller still needs the re-exported spelling. `Mod.kt`
-  records each migrated caller under a `// Callers migrated:` ledger
-  (append-only). Reference example: `serde-kotlin/.../private/Mod.kt`
-  vs `serde-kotlin/tmp/serde/serde_core/src/private/mod.rs`.
+1. **Configure sibling crate mappings before invoking `rust-kotlin.kexe`.**
+   Inspect upstream `Cargo.toml` and each dependency's `<crate>-kotlin/gradle.properties`
+   (`project.namespace` is not always `io.github.kotlinmania.<crate>` — e.g.
+   `anstyle-kotlin` uses `ai.solace.tui.anstyle`). Declare
+   `crate.core=io.github.kotlinmania.rustlang.core`,
+   `crate.alloc=io.github.kotlinmania.rustlang.alloc`, and
+   `crate.<dep>=<namespace>` in `gradle.properties` (or pass `-c <crate>=<ns>`),
+   and wire the matching Gradle dependencies in `gradle.properties` and
+   `gradle/libs.versions.toml` so `rust-kotlin.kexe` imports sibling crates
+   directly on the first pass.
+2. **Run a complete transpiler first pass across `tmp/` — zero hand-edits beforehand.**
+   Resolve `../rust-kotlin/build/**/rust-kotlin.kexe` (prefer
+   `releaseExecutable/rust-kotlin.kexe`, or invoke `../tools/kexe_regen_crate.sh`)
+   with `--split-module-roots`. Translate every Rust file in `tmp/`,
+   including comments, and retain the complete generated Kotlin files as the
+   working tree. Do **not** hand-edit *anything* before this first pass
+   completes across the crate, and do not silently omit files that fail
+   translation.
+3. **Fresh project vs existing port — never discard transpiler output.**
+   For a fresh transliteration project copied/renamed from the canonical
+   template, place the complete transpiler-generated files under
+   `commonMain/kotlin/io/github/kotlinmania/<path>/` and
+   `commonTest/kotlin/io/github/kotlinmania/<path>/`, parceling
+   `--split-module-roots` module-root buckets into focused `.kt` files
+   without rewriting their transpiled logic. For existing ports, diff fresh
+   `rust-kotlin.kexe` output against existing files to audit drift against
+   upstream Rust. **Never** delete transpiler output to replace it with
+   hand-authored Kotlin.
+4. **Record transliterator defects in Hermes Kanban using the `ren` profile.**
+   When a difference is caused by a transliteration error, describe the issue
+   in detail: original Rust file and relevant code, translator binary and
+   command/target profile, generated Kotlin, existing port where relevant,
+   expected behavior, actual behavior or compiler diagnostic, and a focused
+   reproduction. Check for an existing card first and add evidence to it
+   instead of creating duplicates.
+5. **NEVER hand-edit in place of transpiler work — fix `rust-kotlin` and regenerate.**
+   `rust-kotlin` exists specifically to stop hand-edited ports and ad-hoc
+   workarounds. When `rust-kotlin.kexe` rejects an input, drops sibling
+   imports, mis-evaluates `cfg` predicates, or mis-emits Kotlin or KDoc, first
+   verify CLI flags (`-c`, `--package-properties`, `--target-os`,
+   `--target-family`, `--feature`, `--cfg`, `--scalar-char`) and `gradle.properties`
+   `crate.*` entries; if it is a genuine transpiler or shared-runtime gap
+   (`rust-kotlin`, `rust-lang-kotlin`, `libc-kotlin`, `windows-sys-kotlin`),
+   fix it in `rust-kotlin` (or the owning shared sibling crate), rebuild
+   `rust-kotlin.kexe`, and re-run the transpiler. Never hand-write substitute
+   Kotlin, custom `expect`/`actual` `platform.posix` / `cinterop` / `@WasmImport`
+   wrappers, or fallback logic in the target crate.
+6. **Validate the generated port.** Run `./gradlew test` and `./gradlew build`
+   across all 17 retained targets + Swift Export (`allWarningsAsErrors = true`)
+   and verify upstream behavioral test parity. Generation success alone does
+   not establish compilation, behavioral equivalence, or a complete port:
+   diagnose failures back to their transpiler, dependency-pin, or upstream
+   cause, fix at the source, regenerate if code changed, and retry.
 
-### Drift measurement — `ast_distance` is how we measure "how close to done"
+Preserve source provenance on derived files, using paths relative to the
+upstream root:
 
-There is **no "parity mode"** on/off. Every `*-kotlin/` repo with upstream
-Rust under `tmp/` uses `ast_distance` as the way to answer "what's left to
-port?" — that's the whole point of the tool, and it applies to every
-repo whether or not it ships its own `tools/ast_distance/` binary.
+```kotlin
+// port-lint: source <path-relative-to-upstream-root>
+```
 
-- Prefer the repo-local `tools/ast_distance` binary/script when present.
-- If the repo does not ship one, copy the workspace binary into the
-  repo's `tools/` folder and add the path to `.gitignore`:
-  ```bash
-  mkdir -p tools
-  cp /Volumes/stuff/Projects/kotlinmania/bin/ast_distance tools/
-  grep -qxF 'tools/ast_distance' .gitignore 2>/dev/null \
-    || echo 'tools/ast_distance' >> .gitignore
-  ```
-  The binary is a developer artifact, not a tracked dependency.
-- **A missing or unrunnable `ast_distance` is NEVER a blocker.**
-  Continue transliterating from `tmp/` per the translation rules above
-  (read the whole upstream file, one Rust file → one Kotlin file,
-  top-to-bottom order, Kotlin-facing comments, no stubs). The measurement
-  is for "what gap to attack next" — useful, but absence of measurement
-  is not absence of work. Translate. Then run the tool when you can.
-- When `ast_distance` *is* runnable, measure before choosing work and
-  after completed file/phase boundaries. Don't chase similarity scores
-  while half-translating; don't Rustify Kotlin to appease the tool.
-- Port-lint provenance headers are required on derived files:
-  ```kotlin
-  // port-lint: source <path-relative-to-upstream-root>
-  package <repo package>
-  ```
-  The only valid `port-lint:` directives are `source <path>` (for
-  ports of Rust source files) and `tests <path>` (for ports of Rust
-  test files). **There is no `port-lint: ignore` directive.** Past
-  agents have written `// port-lint: ignore — ...` as if it were one;
-  it isn't recognized by `ast_distance` or any tooling. Strip those
-  lines when you see them; they are noise, not configuration. The
-  only legitimate reason a Kotlin file lacks a `port-lint: source`
-  header is that it has no upstream Rust counterpart (Kotlin-side
-  glue, repo-specific helpers, or new APIs), in which case it simply
-  has no header — not a fake "ignore" directive.
+Use `// port-lint: tests <path-relative-to-upstream-root>` for upstream test
+ports. Do not use fake ignore directives, placeholder bodies or simulated tests
+that verify a different invariant from the Rust source.
 
-A repo that no longer has upstream Rust under `tmp/` and has no
-`.ast_distance_config.json` is a mature Kotlin-first repo: it's
-optimizing for idiomatic Kotlin, not against an upstream Rust oracle.
-That's a state, not a "mode."
+### Comments and examples must describe the Kotlin API
+
+Preserve the meaning and coverage of upstream comments while translating Rust
+API references, inline code, links and examples to the actual Kotlin APIs in
+this port. This applies to KDoc and inline implementation comments. Preserving
+comments does not mean leaving Rust API names or Rust code examples unchanged
+where readers need the corresponding Kotlin API. Keep documentation useful to
+Kotlin callers and consistent with the implemented signatures and package paths.
+
+`rust-kotlin.kexe` includes comment and documentation translation support
+(`KotlinComments.kt`, including inline-comment rendering and Rust documentation
+code-block translation). Review its output against both the original comments
+and the actual Kotlin declarations; support in the translator does not guarantee
+every reference or example is correct.
+
+Do not paste Rust code into comments to inflate AST-distance similarity; that
+was the reason for the original anti-cheating rule. Do not delete useful
+upstream documentation to avoid translating it either. If comment/API/example
+transliteration is missing or wrong, file or update a detailed Hermes Kanban
+card using the `ren` profile following the defect-reporting requirements
+above, and fix comment/doc lowering in `rust-kotlin` (`KotlinComments.kt`)
+and regenerate rather than hand-patching generated documentation.
+
+### Module roots: generated candidates and API placement
+
+`--split-module-roots` is intentional translator support, not permission to
+reproduce Rust crate re-export layers in Kotlin. In the current source:
+
+- Input discovery admits `mod.rs` and `lib.rs`, which ordinary recursive
+  translation skips. The translator may read and use `mod.rs` for module
+  structure, context and implementation.
+- Module-root translation expands macros and groups substantive declarations
+  into generated `<Module>Types.kt`, `<Module>Structs.kt`,
+  `<Module>Constants.kt` and `<Module>Functions.kt` candidates, with additional
+  numbered chunks for large groups. Attachable implementations accompany their
+  owning types. `use` and `extern crate` items and external module declarations
+  do not become standalone implementation chunks; inline modules can contribute
+  implementation. A root with no substantive implementation emits no chunks.
+- Package calculation normally adds a leaf Rust file's module name as a
+  subpackage; module roots retain their directory package. There are exceptions
+  for files shared with inline modules. Generated companion binding files must
+  be reviewed together with their Kotlin candidates.
+
+**Parcel `--split-module-roots` module-root chunks into proper Kotlin files and package paths.**
+Move and split transpiler-emitted `lib.rs` / `mod.rs` declarations (functions,
+interfaces, types, constants, and implementations) into appropriately named
+`.kt` files under `commonMain/kotlin/io/github/kotlinmania/<path>/<package paths>/`
+while preserving their transpiled logic, signatures, generics, visibility, and
+comments. **Never** delete transpiled chunks to rewrite implementations from
+scratch, never leave a catch-all `Lib.kt` or `Mod.kt`, never attach
+`// port-lint: source lib.rs` or `// port-lint: source .../mod.rs`, and never
+invent replacement APIs.
+
+**Do not re-export upstream Kotlin crates as Rust does.** Do not reproduce
+`pub use` or crate/module facades with Kotlin re-export typealiases or forwarding
+wrappers. Resolve each symbol to its canonical Kotlin declaration/package and
+update the callers directly, using `RUST_CALLERS.md` where available.
+
+Implementation references: `rust-kotlin/src/common/commonMain/kotlin/io/github/kotlinmania/rustkotlin/CliRunner.kt`
+(`discoverInputs`, `computeEffectiveRelativePackageSegments`, `executeTranslate`)
+and `SourceTranslation.kt` (`translateModuleRootIntoFocusedChunks`).
+
+### Structural drift and priorities — `tools/ast_distance`
+
+**Transliterate first, then diff the generated Kotlin against the existing port.**
+`rust-kotlin.kexe` output followed by direct Kotlin-to-Kotlin file comparisons is
+stronger source-comparison evidence than Rust-to-Kotlin AST distance. Review
+those differences against the original Rust, fix translator defects in
+`rust-kotlin`, and regenerate as described above. Generated output can contain
+bugs; neither a matching diff nor successful generation proves behavior.
+
+`tools/ast_distance` is a guide for finding areas to work on and prioritizing
+structural gaps, not a scoring system for achieving perfect parity. Rust is not
+Kotlin: language and representation differences mean a faithful port should not
+be expected to achieve a perfect score. Do not make a perfect score a completion
+gate, rewrite useful translated comments, or alter correct APIs or behavior to
+raise it. Validate behavior with the upstream tests and applicable platform checks.
+
+Commit the reports generated by `ast_distance` routinely alongside the
+associated source changes. Keep them as a versioned measure of structural
+progress and remaining work, interpreted with the language differences above.
+These tool-generated reports are part of the normal change, not disposable
+fix metadata.
+
+Do not create additional developer-agent metadata artifacts during fixes: no
+handwritten progress reports, manifests, receipts, status inventories or parallel
+tracking documents. Use source changes, tests, normal tool-generated reports,
+Hermes defect cards and concise chat updates. This does not remove metadata
+required by the implementation, build or published API. Preserve existing files;
+this instruction does not authorize deleting earlier work.
+
+Use the project-local tool when available; the workspace binary is also at
+`../bin/ast_distance`. If it is unavailable, continue transliterating, diffing
+and repairing the port. Missing upstream files or configuration does not establish
+that a port is complete.
+
+### Pure Kotlin Multiplatform + sibling Rust ports — never Java, `platform.posix`, or ad-hoc `cinterop`
+
+Every repo is strictly pure Kotlin on KMP. Never add a Java or JVM-only
+dependency, never import `java.*` / `javax.*` in common code, never reach
+for `platform.posix.*`, `kotlinx.cinterop.*`, or raw `@WasmImport` / JS host
+shims in consumer crates, and never invent platform workarounds when a
+workspace Rust port exists. The workspace's 200+ Rust ports
+(`ls -d ../*-kotlin` from any repo) replace both Java libraries and raw OS
+bindings. Common needs and the port to use:
+
+| Need | Use |
+|---|---|
+| Core intrinsics, pointers, libc/OS/env, Win32, terminal | `rust-lang-kotlin` (`core`/`alloc`, `CStr`/`CString`, `MutPtr`/`ConstPtr`, `TypeLayout`, `kmAlloc`/`kmLoad*`), `libc-kotlin` (`getenv`, POSIX/C ABI across all 17 targets), `windows-sys-kotlin` (Win32 Console/Foundation/System), `anstyle-kotlin` (`ai.solace.tui.anstyle`) |
+| Hashing, MAC, signatures | `sha1-kotlin`, `sha2-kotlin`, `sha3-kotlin`, `digest-kotlin`, `hmac-kotlin`, `ed25519-dalek-kotlin`, `p256-kotlin`, `crypto-box-kotlin`, `constant-time-eq-kotlin`, `zeroize-kotlin` |
+| IO, buffers, files | `km-io` (`io.github.kotlinmania:km-io`; replaces okio and kotlinx-io), `bytes-kotlin`, `tempfile-kotlin`, `memmap2-kotlin`, `walkdir-kotlin`, `glob-kotlin` |
+| Encoding, text | `base64-kotlin` (or stdlib `kotlin.io.encoding.Base64`), `encoding-rs-kotlin`, `unicode-*-kotlin`, `regex-kotlin`, `fancy-regex-kotlin` |
+| Data formats | `serde-kotlin`, `serde-json-kotlin`, `serde-yaml-kotlin`, `toml-kotlin`, `csv-kotlin`, `quick-xml-kotlin`, `bincode-kotlin`, `prost-kotlin` |
+| Compression, archives | `flate2-kotlin`, `zlib-kotlin`, `zstd-kotlin`, `zip-kotlin`, `tar-kotlin` |
+| Time, ids, random | `chrono-kotlin`, `time-kotlin`, `uuid-kotlin`, `rand-kotlin`, `getrandom-kotlin` |
+| Networking, async | `tokio-kotlin`, `http-kotlin`, `reqwest-kotlin`, `url-kotlin`, `rustls-kotlin`, `tungstenite-kotlin`, `futures-kotlin` |
+
+If a needed capability has no port yet, port it via the transpiler (see
+below); do not paper over the gap with a Java library, raw `platform.posix` /
+`kotlinx.cinterop` / `@WasmImport` shims, or hand-rolled `expect`/`actual`
+platform wrappers.
 
 ### When you can't port a Rust dependency: check kotlinmania siblings first
 
-Before declaring a Rust dependency unportable, **check whether
-kotlinmania already ships it.** The workspace has 224 `*-kotlin/`
-repos, many of which are Maven Central publications. A "missing"
-dependency is often a `*-kotlin/` sibling away. Order of attack:
+**Dependency failures are work to fix, not blockers to defer.** Every agent
+is responsible for unblocking the current project by following the upstream
+import discipline, repairing the owning upstream implementation and retrying
+the consuming project. All work is our responsibility, regardless of authorship;
+coordinate with active writers to avoid conflicting edits, then carry the repair
+through. Do not stop at "blocked on X," "out of scope" or "next pass."
 
-1. **Look for a `<crate>-kotlin/` sibling repo** in the workspace.
-   ```bash
-   ls -d /Volumes/stuff/Projects/kotlinmania/<crate>-kotlin 2>/dev/null
-   ```
-2. **Check if that sibling publishes to Maven Central.** Look at its
-   `build.gradle.kts` for `publishAndReleaseToMavenCentral` wiring and
-   confirm a recent release tag (`gh release list -R
-   KotlinMania/<crate>-kotlin`). If yes, declare the Gradle dep:
-   ```kotlin
-   commonMain.dependencies {
-       implementation("io.github.kotlinmania:<crate>-kotlin:<version>")
-   }
-   ```
-3. **If the sibling exists but isn't on Maven Central**, that's the
-   real blocker — port progress depends on publishing the sibling
-   first. Memory has prior examples: `clap-complete-kotlin` blocked on
-   `clap-kotlin` publish, `nucleo-kotlin` blocked on `nucleo-matcher`,
-   `indexmap-kotlin` blocked on `hashbrown-kotlin` +
-   `equivalent-kotlin`, `tonic-prost-kotlin` blocked on tonic + prost.
-4. **If no sibling exists**, you have two options: port it in a new
-   `*-kotlin/` repo, or note the genuine impossibility in the current
-   repo's session report. Don't stub. Don't write a Kotlin
-   "simulation" that tests a different invariant.
+1. **Find the owning `<crate>-kotlin/` sibling** and its actual upstream Rust
+   in `tmp/`. Use the transliterator, direct diffs, and upstream
+   transpiler/crate fixes above to fix the defect at its source. If the dependency needs a new port,
+   follow the template/new-project discipline rather than substituting a fake
+   implementation or invented API in the consumer.
+2. **Use the local Maven repository for the upstream-to-consumer cycle.**
+   Bump the repaired upstream project's version and publish its required KMP
+   artifacts to local Maven using the project's established tasks. Keep the
+   project's local Maven resolution wiring. Do not bypass this cycle with
+   copied dependency sources, ad hoc jars, composite-build substitutions,
+   repository-order tricks or stale artifacts under an unchanged version.
+3. **Update version pins on every downstream caller.** Inspect the dependency
+   graph, `RUST_CALLERS.md` and dependency declarations/catalogs for direct
+   callers. Update every affected downstream pin to the repaired version;
+   propagate version bumps and pins through further downstream callers when
+   those projects change. Keep required install snippets consistent. Do not
+   downgrade pins or leave callers on the broken artifact to obtain a green run.
+4. **Retry and fix the current project and affected callers.** Validate against
+   the newly versioned local Maven artifacts, fix remaining upstream/current
+   project defects and repeat until the issues are resolved. Record the versions,
+   updated pins and actual validation outcomes. A missing Maven Central release
+   does not excuse stopping this local repair cycle.
+
+This repair responsibility does not override explicit approval requirements or
+CI/remote-publication holds. Respect those holds while completing permitted local
+work; never conceal a failure, weaken a test or invent fallback behavior.
 
 ### Common sense applies
 
@@ -548,7 +691,7 @@ Don't keep gnawing the same handful of projects (regex-syntax-kotlin,
 starlark-syntax-kotlin, codex-kotlin). Every `*-kotlin/` repo is in scope.
 
 ```bash
-for d in /Volumes/stuff/Projects/kotlinmania/*-kotlin /Volumes/stuff/Projects/kotlinmania/klang; do
+for d in ../*-kotlin ../klang; do
     [ -d "$d/.git" ] || continue
     ts=$(git -C "$d" log -1 --format=%ct 2>/dev/null) || continue
     printf '%s\t%s\t%s\n' "$ts" "$(date -r "$ts" +%Y-%m-%d)" "$(basename "$d")"
@@ -565,7 +708,7 @@ same file three runs in a row, pick a different file (or repo) first.
 
 Two artifacts at the workspace root answer "what should I port next?" without anyone needing to hit Jira directly: `PORT_PRIORITY.md` and `port_priority.json`.
 
-For detailed information on the `ordered_priority` schema, Kahn-style layers, graph analysis metrics, and the catalog of scaffold scripts (`scaffold/analysis/*` and `scaffold/jira/*`), please refer to [JIRA_INTEGRATION.md](file:///Volumes/stuff/Projects/kotlinmania/JIRA_INTEGRATION.md).
+For detailed information on the `ordered_priority` schema, Kahn-style layers, graph analysis metrics, and the catalog of scaffold scripts (`scaffold/analysis/*` and `scaffold/jira/*`), please refer to [JIRA_INTEGRATION.md](JIRA_INTEGRATION.md).
 
 ---
 
@@ -573,7 +716,7 @@ For detailed information on the `ordered_priority` schema, Kahn-style layers, gr
 
 Every `*-kotlin` repo with `swiftExport { … }` carries a `SWIFT.md` file (which is the renamed `SWIFT_EXPORT_ROLLOUT.md`).
 
-For detailed instructions on the 5-class sweep, the mandatory infrastructure pins, structural rename rules for Swift/Java emitted-name collisions, the strong-typing checklists, and the SAM interface / flat-class patterns, please refer to [SWIFT.md](file:///Volumes/stuff/Projects/kotlinmania/SWIFT.md).
+For detailed instructions on the 5-class sweep, the mandatory infrastructure pins, structural rename rules for Swift/Java emitted-name collisions, the strong-typing checklists, and the SAM interface / flat-class patterns, please refer to [SWIFT.md](SWIFT.md).
 
 ---
 
@@ -581,6 +724,37 @@ For detailed instructions on the 5-class sweep, the mandatory infrastructure pin
 
 The build-gate contract in this file is the source of truth. Do not use a
 separate build-gate document as source-of-truth.
+
+### 5.5 Retired targets — workspace-wide, never re-add
+
+Every repo declares exactly the retained target set, and
+`fullTargetBuildTaskNames` mirrors the `kotlin { }` target block. Do not
+re-add a retired target's declaration, source set, CI task, or workflow
+step. Removing a retired target from a repo is policy alignment, not a
+gate shrink.
+
+**Retained:** JVM, Android, JS, Wasm JS, Wasm WASI, `linuxX64`,
+`linuxArm64`, `mingwX64`, `androidNativeArm64`, `androidNativeX64`,
+`iosArm64`, `iosSimulatorArm64`, `macosArm64`, `tvosArm64`,
+`tvosSimulatorArm64`, `watchosDeviceArm64`, `watchosSimulatorArm64`.
+
+#### 5.5.1 No 32-bit targets of any kind
+
+`watchosArm32` (armv7k; retired 2026-05-24, Apple Watch armv7k EOL plus
+the Mach-O 24-bit scattered relocation limit), `watchosArm64` (arm64_32,
+a 32-bit pointer ABI), `linuxArm32Hfp`, and `mingwX86`. Recorded as
+Sydney's standing policy on 2026-10-16: no 32-bit targets of any sort.
+
+#### 5.5.2 No Apple x86_64 targets
+
+`iosX64`, `macosX64`, `tvosX64`, `watchosX64`. Apple is dropping Intel
+support and JetBrains has deprecated these targets. Apple Silicon device
+and simulator targets cover every supported Apple platform.
+
+#### 5.5.3 No 32-bit Android Native
+
+`androidNativeArm32` and `androidNativeX86` (retired 2026-06-25). Android
+Native keeps ARM64 and x64 only.
 
 ---
 
@@ -592,7 +766,7 @@ For each `tmp/**/tests/*.rs`, `tmp/**/benches/*.rs`, and `#[cfg(test)] mod
 tests { … }` block:
 
 - **If the test exercises behavior the Kotlin port can faithfully match,
-  port it** to `src/common/commonTest/.../<File>Test.kt` (or per-target test
+  port it** to `src/common/commonTest` (or per-target test
   source where commonTest can't express it). Use the upstream Rust file's
   organization; preserve test names translated to camelCase.
 - **If the test depends on a Rust-specific semantic the Kotlin
@@ -623,7 +797,7 @@ tasks.named("test") {
 }
 ```
 
-If `src/swift/swift-test-harness/` isn't present yet, the per-repo
+If `src/swift/swift-test-harness` isn't present yet, the per-repo
 `SWIFT_EXPORT_ROLLOUT.md` documents how to scaffold it — it's part of the
 five canonical rollout changes.
 
@@ -651,8 +825,8 @@ The quiet patterns to enforce:
 | File | Triggers |
 |---|---|
 | `ci.yml` | `workflow_dispatch:` only |
-| `codeql.yml` | weekly `schedule` + `workflow_dispatch:` |
 | `publish.yml` | `release` `types: [released]` + `workflow_dispatch:` |
+| `codeql.yml` | none: the file must not exist. CodeQL runs locally only (§13). |
 | `swift.yml`, `ios.yml`, `linux.yml`, `windows.yml`, `js.yml`, `macos.yml`, `tvos.yml`, `watchos.yml`, `android.yml`, `android-native.yml`, `wasm.yml`, `wasm-wasi.yml` | `workflow_call:` only |
 
 When a workflow still has the old paid trigger AND is enabled remotely,
@@ -670,13 +844,20 @@ disabled/re-enabled, and the commit that changed them.
 
 ## 8. Android SDK normalization (Gradle-backed, no shell)
 
-For repos that target Android, we use a Gradle-backed SDK installer. For complete migration steps, import lists, local.properties logic, CodeQL `java-kotlin` extraction workflows, and verification commands, please refer to [ANDROID.md](file:///Volumes/stuff/Projects/kotlinmania/ANDROID.md).
+For repos that target Android, we use a Gradle-backed SDK installer. For complete migration steps, import lists, local.properties logic, and verification commands, please refer to [ANDROID.md](ANDROID.md).
 
 ---
 
 ## 9. JS test-toolchain security patching
 
-For JS npm warning mitigation, resolutions, vendored karma-webpack setups, and Dependabot vulnerability resolutions, please refer to [JS_SECURITY.md](file:///Volumes/stuff/Projects/kotlinmania/JS_SECURITY.md).
+For JS npm warning mitigation, resolutions, vendored karma-webpack setups, and Dependabot vulnerability resolutions, please refer to [JS_SECURITY.md](JS_SECURITY.md).
+
+### Automated yarn lock upgrades — do NOT run manually
+`kotlinUpgradeYarnLock` and `kotlinWasmUpgradeYarnLock` are wired directly into `build.gradle.kts` as pre-requisite dependencies for all JS and WASM compile/test tasks (`jsTasksNeedingYarnLock`, `wasmTasksNeedingYarnLock`), `hostTests`, and `fullTargetBuildTaskNames` (`./gradlew build`).
+
+**Never run `./gradlew kotlinUpgradeYarnLock` or `./gradlew kotlinWasmUpgradeYarnLock` manually.**
+Running `./gradlew test` or `./gradlew build` automatically triggers lockfile upgrades before any compilation or testing begins. Running them manually is redundant and forbidden.
+
 
 ---
 
@@ -742,15 +923,49 @@ Always wrap: `({ KEY: "value" })`.
 64-bit targets (`size_t = ULong`). Use `fgetc` / `Int`-returning
 helpers or push the call to per-leaf-target Platform files.
 
-*Historical note.* This used to bite `watchosArm32` too — armv7k is
-also 32-bit. After the 2026-05-24 retirement of `watchosArm32` (§5.5),
-the surviving 32-bit native targets are all Android Native. The rule
-is the same; only the offending target list shrank.
+*Historical note.* Every 32-bit native target is now retired (§5.5), so
+no retained target has a 32-bit `size_t`. Keep shared signatures free of
+`size_t` anyway: it keeps `posixMain` metadata portable and stops a
+retired target from sneaking back in through a type mismatch.
 
 ### `*-sys-kotlin` ports — port real FFI, don't punt
 
-Wire Kotlin/Native `cinterop` and (where applicable) Node N-API in the
-same session. Never label FFI work "next pass."
+Only low-level FFI foundation crates (`libc-kotlin`, `windows-sys-kotlin`,
+`rust-lang-kotlin`, and dedicated `*-sys-kotlin` C-binding crates, using
+`rust-kotlin.kexe`'s FFI interop emitter where applicable) wire Kotlin/Native
+`cinterop`, `platform.posix`, JNI, and Node N-API, and must do so in the same
+session (never label FFI work "next pass"). Ordinary Rust crate ports must
+**never** define their own `platform.posix.*`, `kotlinx.cinterop.*`, or
+`@WasmImport` bindings — they depend on `libc-kotlin` / `rust-lang-kotlin` /
+`windows-sys-kotlin` so the transpiler imports them directly.
+
+### Default hierarchy template — `nativeMain` covers all native targets
+
+The workspace uses `applyDefaultHierarchyTemplate()` (already in every
+repo's `build.gradle.kts`). This auto-creates intermediate source sets
+like `nativeMain`, `appleMain`, `iosMain`, `linuxMain`,
+`androidNativeMain`, etc. based on which targets are declared.
+
+For `expect`/`actual` declarations:
+
+- An `actual fun` in `nativeMain` satisfies the `expect fun` for **all**
+  native targets at once — no need to write one per target.
+- If a function's implementation differs between platforms (e.g. Linux
+  vs macOS), put that `actual fun` in the appropriate intermediate source
+  set (`linuxMain`, `appleMain`, etc.) or the leaf target source set.
+- The compiler matches `actual` declarations from the closest source set
+  in the hierarchy. A `nativeMain` actual is used by all native targets
+  unless a more specific source set overrides it.
+
+This means the FFI layer for a `*-sys-kotlin` port (like `libc-kotlin`)
+needs `actual fun` written once in `nativeMain` (delegating to
+`platform.posix.*` or a `cinterop` C++ wrapper), not duplicated across
+every individual native target.
+
+For JS/WASM targets: use a Node N-API C++ addon (no insecure NPM
+libraries). For JVM: JNA or JNI bindings. These are separate source
+sets (`jsMain`/`wasmJsMain`/`jvmMain`) and do not share the
+`nativeMain` actuals.
 
 ---
 
@@ -804,7 +1019,9 @@ A normal session is:
 
 ## 12. Session report — always at the end
 
-Every session ends with a report that includes:
+Every session ends with a concise update in the existing task/chat, not a
+new report file or metadata artifact. Commit the normal `ast_distance` reports
+with associated changes as required in §3. The chat update includes:
 
 - **Workflow-shape audit** per focused repo (which files checked, what
   triggers remain, anything disabled/re-enabled).
@@ -826,8 +1043,8 @@ Every session ends with a report that includes:
 
 ## 13. Quick reference — directories and tools
 
-- Workspace root: `/Volumes/stuff/Projects/kotlinmania`
-- Per-repo: `/Volumes/stuff/Projects/kotlinmania/<repo>-kotlin/`
+- Workspace root: the folder holding every `*-kotlin/` repo
+- Per-repo: `<repo>-kotlin/`
 - Shared automation: workspace `tools/`; temporary build outputs: inside the owning repository only.
 - Canonical Swift Export rollout:
   `automation-artifacts/swift-export-rollout/` (apply.sh, blast.sh,
@@ -840,8 +1057,7 @@ Every session ends with a report that includes:
   don't hand-edit)
 - Generator: `python scaffold/analysis/generate_port_priority.py`
 - Apply to Jira: `python scaffold/jira/apply_ordered_priority.py`
-- Local CodeQL: `codeql` 2.25.4 at `/Volumes/stuff/tools/codeql`,
-  symlinked to `/opt/homebrew/bin/codeql`
+- Local CodeQL: `codeql` 2.25.4 on `PATH`
 - Local Dependabot: `dependabot` 1.86.0 via Homebrew; needs
   `LOCAL_GITHUB_ACCESS_TOKEN=$(gh auth token)` env var
 
@@ -872,8 +1088,8 @@ Every session ends with a report that includes:
 
 ### Authority files in this workspace (read order)
 
-1. `/Volumes/stuff/Projects/kotlinmania/AGENTS.md` (this file).
-2. `/Volumes/stuff/Projects/kotlinmania/CLAUDE.md` (legacy; this file
+1. The workspace-root `AGENTS.md` (this file).
+2. The workspace-root `CLAUDE.md` (legacy; this file
    is the merged authority).
 3. Per-repo `AGENTS.md`, `CLAUDE.md`, `README.md`,
    `SWIFT_EXPORT_ROLLOUT.md`.

@@ -21,49 +21,38 @@ calls into the NDK pthread / libm / etc. symbols at link time.
 
 ## Android ABIs and the K/N target mapping
 
-Android NDK currently ships 4 ABIs (NDK r17 removed ARMv5 and 32/64-bit MIPS).
-Each one is its own Kotlin/Native leaf target.
+KotlinMania supports **64-bit targets only** (`AGENTS.md` §5.5). All 32-bit
+Android ABIs (`armeabi-v7a` / `androidNativeArm32` and `x86` /
+`androidNativeX86`) are permanently retired across the workspace. Only the two
+64-bit Android NDK leaf targets are retained:
 
 | Android ABI    | Kotlin/Native target      | Bitness | Notes                                                                                   |
 |----------------|---------------------------|---------|-----------------------------------------------------------------------------------------|
-| `armeabi-v7a`  | `androidNativeArm32`      | 32-bit  | ARMv7-A + Thumb-2 + Neon. Soft-float ABI (`-mfloat-abi=softfp`). 64-bit `long double`.  |
 | `arm64-v8a`    | `androidNativeArm64`      | 64-bit  | ARMv8.0. x18 reserved for ShadowCallStack. 128-bit `long double`. PAC/BTI optional.     |
-| `x86`          | `androidNativeX86`        | 32-bit  | IA-32 with MMX/SSE/SSE2/SSE3/SSSE3. No SSE4 or MOVBE in the baseline. 64-bit `long double`. |
 | `x86_64`       | `androidNativeX64`        | 64-bit  | x86-64-v2: MMX/SSE/SSE2/SSE3/SSSE3/SSE4.1/SSE4.2/POPCNT/CMPXCHG16B/LAHF-SAHF. 128-bit `long double`. |
 
-All four are little-endian. All four use ELF binaries. C++ name mangling is
-the Itanium ABI. The Android NDK toolchain enforces 16-byte stack alignment
-on x86 and x86-64.
+Both retained targets are 64-bit little-endian ELF binaries using the Itanium
+C++ ABI, and the Android NDK toolchain enforces 16-byte stack alignment on
+x86-64 and AArch64.
 
 > Source: https://developer.android.com/ndk/guides/abis
 
 ### What this means for the libc port
 
-- A function whose Rust signature mentions `size_t` / `off_t` / `pthread_t`
-  will have a **different Kotlin numeric width** on the two 32-bit targets
-  (`androidNativeArm32`, `androidNativeX86`) versus the two 64-bit targets
-  (`androidNativeArm64`, `androidNativeX64`).
-- Use `kotlinx.cinterop.convert()` on a commonMain `Long` handle so the
-  same actual body compiles for both 32- and 64-bit Android Native leaf
-  targets:
+- Both retained Android Native targets (`androidNativeArm64`,
+  `androidNativeX64`) are LP64 (`size_t`, `off_t`, and `pthread_t` are 64-bit).
+- Use `kotlinx.cinterop.convert()` when bridging a `commonMain` `Long` handle
+  to unsigned or platform typedefs such as `size_t` / `pthread_t`:
 
   ```kotlin
   public actual fun pthreadKill(thread: PthreadT, sig: Int): Int =
       platform.posix.pthread_kill(thread.rawValue.toLong().convert(), sig)
   ```
 
-  The bare `.toLong()` would compile only for 64-bit (`pthread_t = Long`)
-  and break on 32-bit (`pthread_t = Int`). `.convert()` polymorphically
-  selects.
-- The 32-bit ABI bugs page at
-  https://developer.android.com/ndk/guides/abis#32-bit-abi-bugs catalogs the
-  cases where Android decided not to fix a 32-bit-only quirk; consult it
-  before claiming a 32-bit behaviour is "the same as 64-bit".
-
 ## Bionic — Android's libc
 
 > Source: https://android.googlesource.com/platform/bionic
-> Clone (sparse, libc-only): `/Volumes/stuff/tools/bionic/libc/`
+> Clone (sparse, libc-only): `git clone --filter=blob:none --sparse https://android.googlesource.com/platform/bionic && git -C bionic sparse-checkout set libc`
 
 Bionic is not glibc and not musl. It is a small, Android-specific C library
 plus math library plus dynamic linker. When porting a libc surface, the
@@ -226,8 +215,8 @@ Bucket 3 gaps above.
 
 Process when you need to confirm whether a symbol is present:
 
-1. `grep -n '<symbol>' /Volumes/stuff/tools/bionic/libc/include/**/*.h`
-   (or use `git -C /Volumes/stuff/tools/bionic grep`).
+1. `grep -n '<symbol>' bionic/libc/include/**/*.h` in your sparse clone
+   (or use `git -C bionic grep`).
 2. Read the declaration. Note any `__INTRODUCED_IN(N)`.
 3. If `__INTRODUCED_IN(N)` puts it above the K/N min-API ceiling, the symbol
    needs the **dlsym pattern** (Bucket 2). It is not "missing"; it is
@@ -244,7 +233,7 @@ The `androidMain` source set's actuals are different in shape:
 - The actual is `external fun jniSymbolName(...)` declared on a Kotlin class
   marked `@JvmStatic`, with `System.loadLibrary("libc_kotlin_pthread")` (or
   the right shared library name).
-- The shared library is a C/C++ file under `src/android/jvm/androidMain/jni/` that calls
+- The shared library is a C/C++ file under `src/android` that calls
   into bionic, with a `JNI_OnLoad` and a JNIEXPORT-tagged C entry point per
   exported Kotlin symbol.
 - The Android Gradle plugin's `externalNativeBuild { ndkBuild { ... } }` or
@@ -291,9 +280,9 @@ The full pattern (not just the task name):
 
 1. Delete tracked `setup-android-sdk.sh` / `setup-android-sdk.bat`.
 2. Add imports to `build.gradle.kts`: `ByteArrayInputStream`, `URI`, `Files`, `StandardCopyOption`, `ZipInputStream`, `GradleException`.
-3. Pin SDK versions exactly:
+3. Pin SDK versions (note: command-line tools revisions `>= 16000000` such as `16111833` require `AndroidSdkSupport.resolveSdkOsName(...)` to fetch `mac_arm64` / `mac_x86_64` archives instead of `mac`):
    ```kotlin
-   val androidCommandLineToolsRevision = "14742923"
+   val androidCommandLineToolsRevision = "16111833"
    val projectCompileSdk = "34"
    val projectAndroidBuildTools = "36.0.0"
    ```
@@ -326,7 +315,6 @@ The full pattern (not just the task name):
 ### Workflow integration
 Every workflow command that touches Android must invoke `setupAndroidSdk` first:
 - `android.yml`: before `compileAndroidMain`, `assembleUnitTest`, `assembleAndroidTest`.
-- `codeql.yml`: before `compileAndroidMain`, `compileKotlinJs`, `compileKotlinWasmJs`.
 - `publish.yml`: before the dry-run `compileAndroidMain androidSourcesJar` and before `publishAndReleaseToMavenCentral`.
 - `windows.yml`: even for `mingwX64Test`, run `setupAndroidSdk` first — it's the Windows-runner proof that `setupAndroidSdk` is callable through Gradle alone. No WSL, no bash, no batch, no PowerShell duplicate installer.
 
@@ -344,11 +332,6 @@ rg -n "setupAndroidSdk|compileAndroidMain|assembleUnitTest|androidSourcesJar|ass
 git diff --check
 ```
 
-### CodeQL `java-kotlin` extraction
-KMP repos with an `android` target use `compileAndroidMain` as the CodeQL extraction command (the Android target emits real `.class` files the LD_PRELOAD tracer can hook). `compileKotlinMetadata` extracts zero TRAP. The full pattern + the required `--rerun-tasks --no-build-cache -Pkotlin.compiler.execution.strategy=out-of-process --no-configuration-cache --no-daemon` flags must be preserved when porting workflow YAML.
-
-`codeqlAndroidAar` extraction must use the dedicated configuration pattern from `syn-kotlin`, not mix AARs into `codeqlSourceClasspath`. If no real published Android AAR dependency exists yet, do not add fake coordinates — note in the PR/run report that no published AAR dependency exists.
-
 ---
 
 ## Sources
@@ -358,4 +341,4 @@ KMP repos with an `android` target use `compileAndroidMain` as the CodeQL extrac
 - Bionic pthread.h: https://android.googlesource.com/platform/bionic/+/HEAD/libc/include/pthread.h
 - Bionic libc.map.txt (per-API symbol versioning): https://android.googlesource.com/platform/bionic/+/HEAD/libc/libc.map.txt
 - Android API level constants: https://android.googlesource.com/platform/bionic/+/HEAD/libc/include/android/api_level.h
-- Local sparse clone: `/Volumes/stuff/tools/bionic/libc/`
+- Local sparse clone: see "Clone" at the top of this section.
